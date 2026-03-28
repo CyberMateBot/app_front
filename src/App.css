@@ -1,0 +1,217 @@
+/* Сброс базовых стилей и настройка темной темы */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #040507; /* Очень темный фон */
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* Контейнер приложения с фоновыми эффектами */
+.app-container {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+/* Эффект свечения на фоне (сверху и снизу) */
+.bg-glow-top {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(40, 50, 70, 0.4) 0%, rgba(0, 0, 0, 0) 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.bg-glow-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(0deg, rgba(20, 25, 35, 0.3) 0%, rgba(0,0,0,0) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.cyber-layout {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 450px; /* Ограничение ширины для мобильного вида */
+  padding: 40px 20px 20px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- ШАПКА --- */
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 35px;
+}
+
+/* Временный логотип (текстовый с градиентом) */
+.logo-placeholder {
+  position: relative;
+  font-size: 56px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -3px;
+  background: linear-gradient(180deg, #ffffff 0%, #4a505c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.8));
+  display: flex;
+  align-items: flex-end;
+}
+
+.main-logo {
+  width: 120px;
+  height: auto;
+  filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.8));
+}
+
+.status-dot {
+  position: absolute;
+  bottom: 12px;
+  right: -5px;
+  width: 8px;
+  height: 8px;
+  background-color: #64ff00; /* Яркий зеленый неон */
+  border-radius: 50%;
+  box-shadow: 0 0 10px #64ff00, 0 0 20px #64ff00;
+}
+
+.username {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 15px 0 8px 0;
+  letter-spacing: 0.5px;
+}
+
+.id-badge {
+  font-size: 11px;
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 4px 14px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px);
+}
+
+/* --- СЕКЦИИ И КАРТОЧКИ --- */
+.section {
+  width: 100%;
+  margin-bottom: 25px;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.cyber-card {
+  width: 100%;
+  background: linear-gradient(180deg, #181a20 0%, #0d0f12 100%);
+  border-radius: 22px;
+  padding: 0 20px;
+
+  /* Эффект металлического глянца: светлая обводка сверху, тени внутри и снаружи */
+  box-shadow:
+          0 10px 30px rgba(0, 0, 0, 0.7), /* Внешняя тень */
+          inset 0 1px 1px rgba(255, 255, 255, 0.2), /* Верхний светлый блик */
+          inset 0 -2px 5px rgba(0, 0, 0, 0.5); /* Нижняя темная тень внутри */
+
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.clickable-card {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.clickable-card:active {
+  opacity: 0.7;
+}
+
+/* --- СТРОКИ В КАРТОЧКАХ --- */
+.card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.card-row.no-border {
+  border-bottom: none;
+}
+
+.row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: #9a9ca3;
+}
+
+.row-icon {
+  font-size: 18px;
+  color: #6c707a;
+}
+
+.row-value {
+  font-size: 15px;
+  color: #e4e5e8;
+  font-weight: 400;
+}
+
+.row-right-clickable {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chevron-icon {
+  color: #555;
+  font-size: 16px;
+}
+
+/* --- ПОДВАЛ --- */
+.footer {
+  text-align: center;
+  margin-top: auto;
+  padding-top: 20px;
+  font-size: 12px;
+  color: #444;
+  letter-spacing: 0.5px;
+}
+
+.loading-screen {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #64ff00;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
