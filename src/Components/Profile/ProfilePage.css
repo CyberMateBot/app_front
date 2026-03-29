@@ -1,0 +1,190 @@
+/* Базовые стили для страницы (без изменений) */
+.profile-page {
+    background-color: #050505;
+    background-image: radial-gradient(circle at 50% 20%, #1a1a24 0%, #050505 60%);
+    min-height: 100vh;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    padding: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: #8e8e93;
+    background-color: #050505;
+}
+
+/* Навигация (Header) */
+.profile-header-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: #ffffff;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.5px;
+    color: #e0e0e0;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================
+   Секция Аватара Пользователя (НОВОЕ)
+   ========================================== */
+.profile-avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+/* Контейнер для аватарки */
+.avatar-container {
+    margin-bottom: 20px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+}
+
+/* Стилизация самой аватарки (круглая, с обводкой и тенью) */
+.user-avatar {
+    width: 96px; /* Размер аватарки */
+    height: 96px;
+    border-radius: 50%; /* Делаем круглой */
+    object-fit: cover; /* Чтобы изображение не искажалось */
+
+    /* Элементы неоморфизма: тонкая обводка и глубокая тень */
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    /* Плавный переход для ховера (если нужно) */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Эффект при наведении (для десктопа) */
+.user-avatar:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+}
+
+.username {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+}
+
+.user-id {
+    font-size: 12px;
+    color: #55555c;
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Карточки с информацией (без изменений) */
+.cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+}
+
+.info-card {
+    background: linear-gradient(180deg, rgba(35, 35, 40, 0.6) 0%, rgba(20, 20, 25, 0.6) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 16px 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.card-header-title {
+    font-size: 10px;
+    color: #6e6e73;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.row-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.row-icon {
+    color: #8e8e93;
+}
+
+.row-label {
+    font-size: 15px;
+    color: #e0e0e0;
+}
+
+.row-right {
+    font-size: 15px;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+}
+
+.row-right.clickable {
+    color: #a0a0a5;
+    cursor: pointer;
+}
+
+.chevron-icon {
+    margin-left: 4px;
+    color: #6e6e73;
+}
+
+.divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.05);
+    margin: 4px 0;
+}
+
+/* Интерактивная карточка (анимация при нажатии) */
+.interactive-card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+}
+
+/* Footer (без изменений) */
+.profile-footer {
+    text-align: center;
+    font-size: 12px;
+    color: #3a3a40;
+    padding: 24px 0 8px 0;
+    margin-top: auto;
+}
