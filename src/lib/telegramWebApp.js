@@ -1,20 +1,36 @@
 import { ENABLE_TELEGRAM_MOCK } from '../config/env.js';
 
+function buildMockInitData(user, startParam) {
+    const params = new URLSearchParams();
+
+    params.set('user', JSON.stringify(user));
+
+    if (startParam) {
+        params.set('start_param', startParam);
+    }
+
+    return params.toString();
+}
+
 function createBrowserMock() {
+    const user = {
+        id: 777000,
+        first_name: 'Local',
+        last_name: 'Preview',
+        username: 'browser_preview',
+        photo_url: '',
+        language_code: 'ru',
+    };
+    const startParam = 'dev-preview';
+
     return {
         ready: () => {},
         expand: () => {},
         disableVerticalSwipes: () => {},
-        initData: '',
+        initData: buildMockInitData(user, startParam),
         initDataUnsafe: {
-            user: {
-                id: 777000,
-                first_name: 'Local',
-                last_name: 'Preview',
-                username: 'browser_preview',
-                language_code: 'ru',
-            },
-            start_param: 'dev-preview',
+            user,
+            start_param: startParam,
         },
     };
 }

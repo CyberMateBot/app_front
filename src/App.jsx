@@ -6,7 +6,7 @@ import {
     normalizeProfileResponse,
     registerTelegramUser,
 } from './api/telegramApi.js';
-import { APP_NAME } from './config/env.js';
+import { APP_NAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
 import { initTelegramMiniApp } from './lib/telegramWebApp.js';
 
 const globalStyles = {
@@ -49,17 +49,15 @@ function App() {
                 setStartParam(currentStartParam);
 
                 if (!tg) {
-                    setStatusMessage('Telegram WebApp SDK не найден. Откройте Mini App внутри Telegram.');
+                    setStatusMessage(
+                        ENABLE_TELEGRAM_MOCK
+                            ? 'Не удалось инициализировать Telegram mock.'
+                            : 'Telegram WebApp SDK не найден. Откройте Mini App внутри Telegram или включите VITE_ENABLE_TELEGRAM_MOCK=true.',
+                    );
                     return;
                 }
 
-                if (!tg.initData) {
-                    setProfile(normalizeProfileResponse(null, currentTelegramUser));
-                    setStatusMessage('initData пока отсутствует. Для реальной регистрации запустите Mini App из Telegram.');
-                    return;
-                }
-
-                await registerTelegramUser();
+                const registrationResult = await registerTelegramUser();
                 const backendProfile = await getMyProfile();
 
                 if (!isMounted) {
@@ -68,7 +66,11 @@ function App() {
 
                 if (backendProfile) {
                     setProfile(normalizeProfileResponse(backendProfile, currentTelegramUser));
-                    setStatusMessage('Профиль успешно получен с backend.');
+                    setStatusMessage(
+                        registrationResult?.alreadyRegistered
+                            ? 'Профиль найден на backend.'
+                            : 'Пользователь зарегистрирован и профиль получен с backend.',
+                    );
                 } else {
                     setProfile(normalizeProfileResponse(null, currentTelegramUser));
                     setStatusMessage('Пользователь зарегистрирован, но профиль на backend пока пустой.');

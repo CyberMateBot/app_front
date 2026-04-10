@@ -16,11 +16,29 @@ function encodeBase64(value) {
     return window.btoa(binary);
 }
 
+function buildInitDataFromUnsafe(tg) {
+    const user = tg?.initDataUnsafe?.user;
+
+    if (!user) {
+        return '';
+    }
+
+    const params = new URLSearchParams();
+    params.set('user', JSON.stringify(user));
+
+    if (tg?.initDataUnsafe?.start_param) {
+        params.set('start_param', tg.initDataUnsafe.start_param);
+    }
+
+    return params.toString();
+}
+
 export async function registerTelegramUser() {
     const tg = getTelegramWebApp();
+    const initData = tg?.initData || buildInitDataFromUnsafe(tg);
 
-    if (!tg?.initData) {
-        throw new Error('Telegram initData not found. Open this Mini App inside Telegram.');
+    if (!initData) {
+        throw new Error('Telegram initData not found. Open this Mini App inside Telegram or enable local mock mode.');
     }
 
     const res = await fetch(resolveApiUrl('/v1/register'), {
@@ -30,10 +48,14 @@ export async function registerTelegramUser() {
             Accept: 'application/json',
         },
         body: JSON.stringify({
-            initDataRaw: encodeBase64(tg.initData),
-            startParam: tg.initDataUnsafe?.start_param ?? '',
+            initDataRaw: encodeBase64(initData),
+            startParam: tg?.initDataUnsafe?.start_param ?? '',
         }),
     });
+
+    if (res.status === 409) {
+        return { alreadyRegistered: true };
+    }
 
     if (!res.ok) {
         throw new Error((await res.text()) || 'Failed to register Telegram user.');
