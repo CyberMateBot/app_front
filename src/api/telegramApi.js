@@ -64,7 +64,7 @@ export async function registerTelegramUser() {
     return res.json();
 }
 
-export async function getMyProfile() {
+function getCurrentTelegramId() {
     const tg = getTelegramWebApp();
     const telegramId = tg?.initDataUnsafe?.user?.id;
 
@@ -72,7 +72,11 @@ export async function getMyProfile() {
         throw new Error('Telegram user id not found.');
     }
 
-    const res = await fetch(resolveApiUrl(`/v1/users/telegram/${telegramId}`), {
+    return telegramId;
+}
+
+async function fetchTelegramResource(pathname, fallbackMessage) {
+    const res = await fetch(resolveApiUrl(pathname), {
         headers: {
             Accept: 'application/json',
         },
@@ -83,7 +87,54 @@ export async function getMyProfile() {
     }
 
     if (!res.ok) {
-        throw new Error((await res.text()) || 'Failed to load Telegram profile.');
+        throw new Error((await res.text()) || fallbackMessage);
+    }
+
+    return res.json();
+}
+
+export async function getMyProfile() {
+    const telegramId = getCurrentTelegramId();
+
+    return fetchTelegramResource(`/v1/users/telegram/${telegramId}`, 'Failed to load Telegram profile.');
+}
+
+export async function getMyWallet() {
+    const telegramId = getCurrentTelegramId();
+
+    return fetchTelegramResource(`/v1/wallet/telegram/${telegramId}`, 'Failed to load wallet data.');
+}
+
+export async function getMyReferrals() {
+    const telegramId = getCurrentTelegramId();
+
+    return fetchTelegramResource(`/v1/referrals/telegram/${telegramId}`, 'Failed to load referrals.');
+}
+
+export async function getMyPromptHistory() {
+    const telegramId = getCurrentTelegramId();
+
+    return fetchTelegramResource(`/v1/prompts/history/telegram/${telegramId}`, 'Failed to load prompt history.');
+}
+
+export async function savePromptHistory({ prompt, category = 'general' }) {
+    const telegramId = getCurrentTelegramId();
+
+    const res = await fetch(resolveApiUrl('/v1/prompts/history'), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+        },
+        body: JSON.stringify({
+            telegramId: String(telegramId),
+            prompt,
+            category,
+        }),
+    });
+
+    if (!res.ok) {
+        throw new Error((await res.text()) || 'Failed to save prompt history.');
     }
 
     return res.json();
@@ -93,13 +144,14 @@ export function normalizeProfileResponse(payload, telegramUser) {
     const profile = payload?.data ?? payload ?? {};
 
     return {
+        ...profile,
         backendId: profile?.id ? String(profile.id) : '',
         telegramId: telegramUser?.id ? String(telegramUser.id) : '',
         name: profile?.name ?? telegramUser?.first_name ?? 'Telegram User',
         surname: profile?.surname ?? telegramUser?.last_name ?? '',
-        username: telegramUser?.username ?? profile?.surname ?? '',
-        avatarUrl: telegramUser?.photo_url ?? '',
-        language: telegramUser?.language_code ?? 'ru',
+        username: telegramUser?.username ?? profile?.username ?? profile?.surname ?? '',
+        avatarUrl: telegramUser?.photo_url ?? profile?.avatarUrl ?? '',
+        language: telegramUser?.language_code ?? profile?.language ?? 'ru',
     };
 }
 

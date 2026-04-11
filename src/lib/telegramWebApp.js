@@ -15,9 +15,9 @@ function buildMockInitData(user, startParam) {
 function createBrowserMock() {
     const user = {
         id: 777000,
-        first_name: 'Local',
-        last_name: 'Preview',
-        username: 'browser_preview',
+        first_name: 'Dev_User',
+        last_name: '',
+        username: 'Dev_User',
         photo_url: '',
         language_code: 'ru',
     };
