@@ -32,10 +32,13 @@
 
 .app-shell {
   position: relative;
-  min-height: 100vh;
+  min-height: var(--app-height, 100dvh);
+  width: 100%;
+  max-width: 100%;
   color: var(--text-primary);
   background: linear-gradient(180deg, var(--shell-bg-start) 0%, var(--shell-bg-end) 100%);
-  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  padding-top: var(--page-pad-top, 0px);
+  padding-bottom: calc(72px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
   overflow-x: hidden;
 }
 
@@ -43,9 +46,10 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 390px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 0 26px;
+  padding: 0 var(--page-pad-x, 16px);
+  box-sizing: border-box;
 }
 
 .info-screen {
@@ -54,7 +58,7 @@
 
 .home-screen--concept {
   width: 100%;
-  margin: 0 -10px;
+  margin: 0;
   padding: 8px 0 24px;
   font-family: 'K2D', 'Inter', sans-serif;
   color: #e0e2ec;
@@ -118,6 +122,7 @@
 
 .home-concept__greeting h2 {
   margin: 0;
+  font-size: clamp(1.15rem, 4.8vw, 1.35rem);
   font-size: 20px;
   font-weight: 500;
   color: #e0e2ec;
@@ -552,7 +557,7 @@
 
 .profile-screen--concept {
   width: 100%;
-  margin: 0 -10px;
+  margin: 0;
   padding: 8px 0 24px;
   font-family: 'K2D', 'Inter', sans-serif;
   color: #e0e2ec;
@@ -1059,7 +1064,7 @@
 .referral-screen--concept,
 .wallet-screen--concept {
   width: 100%;
-  margin: 0 -10px;
+  margin: 0;
   padding: 8px 4px 24px;
   font-family: 'K2D', 'Inter', sans-serif;
   color: #e0e2ec;
@@ -1399,7 +1404,7 @@
 
 .settings-screen--concept {
   width: 100%;
-  margin: 0 -10px;
+  margin: 0;
   padding: 8px 4px 24px;
   font-family: 'K2D', 'Inter', sans-serif;
   color: #e0e2ec;
@@ -2100,7 +2105,7 @@
 /* Catalog screen (concept) */
 .catalog-screen--concept {
   width: 100%;
-  margin: 0 -10px;
+  margin: 0;
   padding: 8px 4px 16px;
   font-family: 'K2D', 'Inter', sans-serif;
   color: #e0e2ec;
@@ -2115,7 +2120,7 @@
 
 .catalog-concept__title {
   margin: 0;
-  font-size: 15px;
+  font-size: clamp(0.95rem, 4vw, 1.05rem);
   font-weight: 500;
   color: #e0e2ec;
 }
@@ -2304,6 +2309,11 @@
   color: #60a5fa;
 }
 
+.catalog-concept__icon--teal {
+  background: #0e1a1c;
+  color: #2dd4bf;
+}
+
 .catalog-concept__icon--red {
   background: #1a1010;
   color: #f87171;
@@ -2331,7 +2341,7 @@
 /* History screen (concept) */
 .history-screen--concept {
   width: 100%;
-  margin: 0 -10px;
+  margin: 0;
   padding: 8px 4px 16px;
   font-family: 'K2D', 'Inter', sans-serif;
   color: #e0e2ec;
@@ -2566,15 +2576,16 @@
   max-width: none;
 }
 
-.ai-chat-screen--concept {
+.ai-chat-screen--concept,
+.ai-image-screen--concept {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 390px;
-  margin: 0 auto;
-  min-height: calc(100dvh - env(safe-area-inset-top));
-  max-height: calc(100dvh - env(safe-area-inset-top));
-  padding: 8px 14px 0;
+  max-width: 100%;
+  margin: 0;
+  min-height: calc(var(--app-height, 100dvh) - var(--page-pad-top, 0px));
+  max-height: calc(var(--app-height, 100dvh) - var(--page-pad-top, 0px));
+  padding: 8px var(--page-pad-x, 14px) 0;
   font-family: 'K2D', 'Inter', sans-serif;
   color: #e0e2ec;
   background: #0a0b10;
@@ -2632,6 +2643,16 @@
 .ai-chat__model-icon--blue {
   background: #101420;
   color: #60a5fa;
+}
+
+.ai-chat__model-icon--teal {
+  background: #0e1a1c;
+  color: #2dd4bf;
+}
+
+.ai-chat__model-icon--pink {
+  background: #1a1018;
+  color: #f472b6;
 }
 
 .ai-chat__title {
@@ -2740,6 +2761,50 @@
   word-break: break-word;
 }
 
+/* Markdown + KaTeX (assistant messages) */
+.markdown-message {
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.markdown-message__p,
+.markdown-message p {
+  margin: 0 0 0.65em;
+  white-space: pre-wrap;
+}
+
+.markdown-message__p:last-child,
+.markdown-message p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-message strong {
+  font-weight: 600;
+  color: #e8eaf4;
+}
+
+.markdown-message ol,
+.markdown-message ul {
+  margin: 0.35em 0 0.65em;
+  padding-left: 1.25em;
+}
+
+.markdown-message li {
+  margin: 0.25em 0;
+}
+
+.markdown-message .katex {
+  font-size: 1.05em;
+}
+
+.markdown-message .katex-display {
+  margin: 0.5em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25em 0;
+}
+
 .ai-chat__bubble--user {
   align-self: flex-end;
   background: #1a1428;
@@ -2765,7 +2830,7 @@
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  padding: 10px 0 calc(12px + env(safe-area-inset-bottom));
+  padding: 10px 0 calc(12px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
   border-top: 0.5px solid #1e2030;
   background: #0a0b10;
 }
@@ -2815,16 +2880,7 @@
 }
 
 .ai-image-screen--concept {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 390px;
-  margin: 0 auto;
-  min-height: calc(100dvh - env(safe-area-inset-top));
-  padding: 8px 14px calc(16px + env(safe-area-inset-bottom));
-  font-family: 'K2D', 'Inter', sans-serif;
-  color: #e0e2ec;
-  background: #0a0b10;
+  padding-bottom: calc(16px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 .ai-image__body {
@@ -2911,9 +2967,9 @@
 
 .bottom-nav__inner {
   width: 100%;
-  max-width: 390px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 8px 0 calc(14px + env(safe-area-inset-bottom));
+  padding: 8px var(--page-pad-x, 12px) calc(14px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
   display: flex;
   align-items: stretch;
   justify-content: space-between;
@@ -2943,6 +2999,91 @@
 .nav-button__label {
   font-size: 10px;
   line-height: 1;
+}
+
+.app-notice {
+  position: fixed;
+  left: var(--page-pad-x, 16px);
+  right: var(--page-pad-x, 16px);
+  bottom: calc(78px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  z-index: 30;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 0.5px solid rgba(164, 245, 248, 0.2);
+  background: rgba(18, 20, 30, 0.94);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.app-shell[data-page='ai-chat'] .app-notice,
+.app-shell[data-page='ai-image'] .app-notice,
+.app-shell[data-page='settings'] .app-notice,
+.app-shell[data-page='wallet'] .app-notice,
+.app-shell[data-page='referrals'] .app-notice {
+  bottom: calc(16px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+.app-notice--error {
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.app-notice--success {
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.app-notice__text {
+  flex: 1;
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: #e0e2ec;
+}
+
+.app-notice--error .app-notice__text {
+  color: #fecaca;
+}
+
+.app-notice--success .app-notice__text {
+  color: #bbf7d0;
+}
+
+.app-notice__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #9aa0b8;
+  cursor: pointer;
+}
+
+.ai-image__inline-error {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 0.5px solid rgba(248, 113, 113, 0.28);
+  background: rgba(127, 29, 29, 0.22);
+  color: #fecaca;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.ai-chat__inline-error {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 0.5px solid rgba(248, 113, 113, 0.28);
+  background: rgba(127, 29, 29, 0.22);
+  color: #fecaca;
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .sr-only {
@@ -3220,10 +3361,6 @@
 }
 
 @media (max-width: 390px) {
-  .app-main {
-    padding: 0 16px;
-  }
-
   .updates-layout {
     grid-template-columns: 1fr;
   }

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import MarkdownMessage from './MarkdownMessage.jsx';
 
 const DEFAULT_CHAR_DELAY_MS = 16;
 
@@ -6,6 +7,7 @@ export default function TypingMessage({
     text,
     onComplete,
     charDelayMs = DEFAULT_CHAR_DELAY_MS,
+    renderMarkdown = false,
 }) {
     const [visibleLength, setVisibleLength] = useState(0);
     const [isDone, setIsDone] = useState(false);
@@ -52,6 +54,10 @@ export default function TypingMessage({
     }, [text, charDelayMs]);
 
     const visibleText = text.slice(0, visibleLength);
+
+    if (renderMarkdown && isDone) {
+        return <MarkdownMessage content={text} />;
+    }
 
     return (
         <p>

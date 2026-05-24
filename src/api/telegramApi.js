@@ -1,5 +1,6 @@
 import { BOT_USERNAME } from '../config/env.js';
 import { getTelegramWebApp } from '../lib/telegramWebApp.js';
+import { errorFromResponse } from './apiError.js';
 import { apiFetch } from './httpClient.js';
 
 function encodeBase64(value) {
@@ -114,11 +115,11 @@ export async function getMyPromptHistory() {
     return fetchTelegramResource(`/v1/prompts/history/telegram/${telegramId}`, 'Failed to load prompt history.');
 }
 
-export const TEXT_MODEL_IDS = ['yandexgpt', 'gemini-flash', 'openai'];
-export const IMAGE_MODEL_IDS = ['nano-banana'];
+export const TEXT_MODEL_IDS = ['yandexgpt', 'deepseek', 'gemini-flash', 'openai'];
+export const IMAGE_MODEL_IDS = ['nano-banana', 'alice-ai-art'];
 
 export function getTextCategoryLabel() {
-    return 'Текст';
+    return 'text';
 }
 
 export async function generateText({ prompt, model = 'yandexgpt', messages = [], category }) {
@@ -162,7 +163,7 @@ export async function generateText({ prompt, model = 'yandexgpt', messages = [],
     });
 
     if (!res.ok) {
-        throw new Error((await res.text()) || 'Failed to generate text.');
+        throw await errorFromResponse(res, 'Failed to generate text.');
     }
 
     const payload = await res.json();
@@ -175,13 +176,35 @@ export async function generateText({ prompt, model = 'yandexgpt', messages = [],
     };
 }
 
-export async function generateImage({ prompt, model = 'nano-banana' }) {
+export async function generateImage({ prompt, model = 'nano-banana', messages = [] }) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim();
     const normalizedModel = IMAGE_MODEL_IDS.includes(model) ? model : 'nano-banana';
+    const normalizedMessages = Array.isArray(messages)
+        ? messages
+            .map((message) => ({
+                role: String(message.role || '').trim(),
+                content: String(message.content || '').trim(),
+            }))
+            .filter((message) => (
+                (message.role === 'user' || message.role === 'assistant')
+                && message.content
+            ))
+        : [];
 
     if (!trimmedPrompt) {
         throw new Error('Prompt is required.');
+    }
+
+    const body = {
+        telegramId: String(telegramId),
+        prompt: trimmedPrompt,
+        category: 'image',
+        model: normalizedModel,
+    };
+
+    if (normalizedMessages.length > 0) {
+        body.messages = normalizedMessages;
     }
 
     const res = await apiFetch('/v1/generate/image', {
@@ -190,16 +213,11 @@ export async function generateImage({ prompt, model = 'nano-banana' }) {
             'Content-Type': 'application/json',
             Accept: 'application/json',
         },
-        body: JSON.stringify({
-            telegramId: String(telegramId),
-            prompt: trimmedPrompt,
-            category: 'image',
-            model: normalizedModel,
-        }),
+        body: JSON.stringify(body),
     });
 
     if (!res.ok) {
-        throw new Error((await res.text()) || 'Failed to generate image.');
+        throw await errorFromResponse(res, 'Failed to generate image.');
     }
 
     const payload = await res.json();

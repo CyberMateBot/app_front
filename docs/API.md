@@ -63,17 +63,21 @@
 }
 ```
 
-**Модели:** `yandexgpt`, `gemini-flash`, `openai`.
+**Модели:** `yandexgpt`, `deepseek`, `gemini-flash`, `openai`.
+
+**Категория:** `text` (или `Текст` — бэкенд принимает оба варианта).
 
 ### `POST /v1/generate/image`
-Генерация изображения (**Nano Banana**, Gemini `gemini-2.5-flash-image` на бэкенде).
+Генерация изображения.
+
+**Модели:** `nano-banana` (Gemini Flash Image), `alice-ai-art` (Yandex Alice AI ART).
 
 ```json
 {
   "telegramId": "777000",
   "prompt": "кот в киберпанк-городе",
   "category": "image",
-  "model": "nano-banana"
+  "model": "alice-ai-art"
 }
 ```
 

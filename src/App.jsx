@@ -55,9 +55,11 @@ import {
 } from './api/telegramApi.js';
 import {
     buildChatContextMessages,
+    buildImageContextMessages,
     getChatTopicTitle,
     groupHistoryIntoTopics,
 } from './lib/chatContext.js';
+import AppNotice from './Components/AppNotice.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
 import {
     IMAGE_MODEL_DEFINITIONS,
@@ -160,9 +162,9 @@ const translations = {
         badgePro: 'PRO',
         badgeFree: 'FREE',
         toolChatTitle: 'AI Чат',
-        toolChatSub: 'YandexGPT, Gemini, OpenAI',
+        toolChatSub: 'YandexGPT, DeepSeek, Gemini, OpenAI',
         toolImagesTitle: 'Генерация фото',
-        toolImagesSub: 'Nano Banana',
+        toolImagesSub: 'Nano Banana, Alice AI ART',
         toolVideoTitle: 'Видео',
         toolVideoSub: 'Runway, Kling AI',
         toolMusicTitle: 'Музыка',
@@ -190,8 +192,12 @@ const translations = {
         modelGeminiSub: 'Быстрые ответы Google AI',
         modelOpenAiName: 'OpenAI',
         modelOpenAiSub: 'Универсальный чат и код',
+        modelDeepSeekName: 'DeepSeek',
+        modelDeepSeekSub: 'Мощная модель для текста и кода',
         modelNanoBananaName: 'Nano Banana',
         modelNanoBananaSub: 'Gemini 2.5 Flash Image',
+        modelAliceAIArtName: 'Alice AI ART',
+        modelAliceAIArtSub: 'Yandex · генерация изображений',
         imageGenerateTitle: 'Генерация фото',
         imagePromptLabel: 'Описание',
         imagePromptPlaceholder: 'Опишите изображение, которое нужно создать...',
@@ -199,6 +205,8 @@ const translations = {
         imageGenerating: 'Генерация...',
         imageResultTitle: 'Результат',
         imageGenerateEmpty: 'Изображение не получено. Попробуйте другой промт.',
+        imageGeneratedNote: 'Изображение создано.',
+        imageContentPolicy: 'Модель отклонила запрос. Попробуйте другую формулировку без запрещённых тем.',
         chatTitle: 'AI Чат',
         chatEmpty: 'Напишите сообщение — модель ответит здесь.',
         chatPlaceholder: 'Сообщение...',
@@ -371,9 +379,9 @@ const translations = {
         badgePro: 'PRO',
         badgeFree: 'FREE',
         toolChatTitle: 'AI Chat',
-        toolChatSub: 'YandexGPT, Gemini, OpenAI',
+        toolChatSub: 'YandexGPT, DeepSeek, Gemini, OpenAI',
         toolImagesTitle: 'Image generation',
-        toolImagesSub: 'Nano Banana',
+        toolImagesSub: 'Nano Banana, Alice AI ART',
         toolVideoTitle: 'Video',
         toolVideoSub: 'Runway, Kling AI',
         toolMusicTitle: 'Music',
@@ -401,8 +409,12 @@ const translations = {
         modelGeminiSub: 'Fast responses from Google AI',
         modelOpenAiName: 'OpenAI',
         modelOpenAiSub: 'General chat and code',
+        modelDeepSeekName: 'DeepSeek',
+        modelDeepSeekSub: 'Strong model for text and code',
         modelNanoBananaName: 'Nano Banana',
         modelNanoBananaSub: 'Gemini 2.5 Flash Image',
+        modelAliceAIArtName: 'Alice AI ART',
+        modelAliceAIArtSub: 'Yandex · генерация изображений',
         imageGenerateTitle: 'Image generation',
         imagePromptLabel: 'Description',
         imagePromptPlaceholder: 'Describe the image you want to create...',
@@ -410,6 +422,8 @@ const translations = {
         imageGenerating: 'Generating...',
         imageResultTitle: 'Result',
         imageGenerateEmpty: 'No image returned. Try a different prompt.',
+        imageGeneratedNote: 'Image created.',
+        imageContentPolicy: 'The model rejected this prompt. Try a different wording.',
         chatTitle: 'AI Chat',
         chatEmpty: 'Send a message — the model will reply here.',
         chatPlaceholder: 'Message...',
@@ -620,7 +634,9 @@ function App() {
     const [profile, setProfile] = useState(null);
     const [telegramUser, setTelegramUser] = useState(null);
     const [startParam, setStartParam] = useState('');
-    const [statusMessage, setStatusMessage] = useState('');
+    const [appNotice, setAppNotice] = useState(null);
+    const [chatError, setChatError] = useState('');
+    const [imageError, setImageError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [walletData, setWalletData] = useState(null);
     const [referralData, setReferralData] = useState(null);
@@ -636,6 +652,7 @@ function App() {
     const [textModel, setTextModel] = useState('yandexgpt');
     const [imageModel, setImageModel] = useState('nano-banana');
     const [imagePrompt, setImagePrompt] = useState('');
+    const [imageSessionMessages, setImageSessionMessages] = useState([]);
     const [generatedImageUrl, setGeneratedImageUrl] = useState('');
     const [chatMessages, setChatMessages] = useState([]);
     const [chatTopicTitle, setChatTopicTitle] = useState('');
@@ -648,6 +665,31 @@ function App() {
     const [catalogSearch, setCatalogSearch] = useState('');
     const [historyFilter, setHistoryFilter] = useState('all');
 
+    const clearAppNotice = useCallback(() => {
+        setAppNotice(null);
+    }, []);
+
+    const showAppNotice = useCallback((message, variant = 'error') => {
+        if (!message) {
+            setAppNotice(null);
+            return;
+        }
+
+        setAppNotice({ message, variant });
+    }, []);
+
+    useEffect(() => {
+        if (appNotice?.variant !== 'success') {
+            return undefined;
+        }
+
+        const timer = window.setTimeout(() => {
+            setAppNotice(null);
+        }, 3200);
+
+        return () => window.clearTimeout(timer);
+    }, [appNotice]);
+
     useEffect(() => {
         let isMounted = true;
 
@@ -655,7 +697,7 @@ function App() {
             let currentTelegramUser = null;
 
             setIsLoading(true);
-            setStatusMessage('');
+            setAppNotice(null);
 
             try {
                 const tg = initTelegramMiniApp();
@@ -670,7 +712,7 @@ function App() {
                 setStartParam(currentStartParam);
 
                 if (!tg) {
-                    setStatusMessage(
+                    showAppNotice(
                         ENABLE_TELEGRAM_MOCK
                             ? 'Не удалось инициализировать Telegram mock.'
                             : 'Telegram WebApp SDK не найден. Откройте Mini App внутри Telegram или включите VITE_ENABLE_TELEGRAM_MOCK=true.',
@@ -678,31 +720,21 @@ function App() {
                     return;
                 }
 
-                const registrationResult = await registerTelegramUser();
+                await registerTelegramUser();
                 const backendProfile = await getMyProfile();
 
                 if (!isMounted) {
                     return;
                 }
 
-                if (backendProfile) {
-                    setProfile(normalizeProfileResponse(backendProfile, currentTelegramUser));
-                    setStatusMessage(
-                        registrationResult?.alreadyRegistered
-                            ? 'Профиль синхронизирован с backend.'
-                            : 'Пользователь зарегистрирован и профиль получен.',
-                    );
-                } else {
-                    setProfile(normalizeProfileResponse(null, currentTelegramUser));
-                    setStatusMessage('Пользователь зарегистрирован, но профиль на backend пока пустой.');
-                }
+                setProfile(normalizeProfileResponse(backendProfile, currentTelegramUser));
             } catch (error) {
                 if (!isMounted) {
                     return;
                 }
 
                 setProfile((prevProfile) => prevProfile ?? normalizeProfileResponse(null, currentTelegramUser));
-                setStatusMessage(error instanceof Error ? error.message : 'Не удалось связаться с backend.');
+                showAppNotice(error instanceof Error ? error.message : 'Не удалось связаться с backend.');
             } finally {
                 if (isMounted) {
                     setIsLoading(false);
@@ -715,7 +747,7 @@ function App() {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [showAppNotice]);
 
     useEffect(() => {
         if (typeof document !== 'undefined') {
@@ -790,7 +822,7 @@ function App() {
                 }
             } catch (error) {
                 if (!isCancelled) {
-                    setStatusMessage(error instanceof Error ? error.message : 'Не удалось загрузить данные страницы.');
+                    showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить данные страницы.');
                 }
             } finally {
                 if (!isCancelled) {
@@ -809,7 +841,7 @@ function App() {
         return () => {
             isCancelled = true;
         };
-    }, [currentPage, telegramUser, walletData, referralData, promptHistoryData]);
+    }, [currentPage, telegramUser, walletData, referralData, promptHistoryData, showAppNotice]);
 
     const userData = useMemo(() => buildProfileView({
         ...profile,
@@ -998,7 +1030,7 @@ function App() {
         setChatTopicTitle('');
         setTextPrompt('');
         setChatReturnPage(returnPage);
-        setStatusMessage('');
+        setChatError('');
         setCurrentPage('ai-chat');
     };
 
@@ -1007,14 +1039,25 @@ function App() {
         setChatMessages([]);
         setChatTopicTitle('');
         setTextPrompt('');
+        setChatError('');
+    };
+
+    const handleImageModelChange = (modelId) => {
+        setImageModel(modelId);
+        setImagePrompt('');
+        setGeneratedImageUrl('');
+        setImageError('');
     };
 
     const openAiImage = (modelId, returnPage = currentPage) => {
         if (modelId) {
             setImageModel(modelId);
         }
+        setImageSessionMessages([]);
+        setImagePrompt('');
+        setGeneratedImageUrl('');
         setImageReturnPage(returnPage);
-        setStatusMessage('');
+        setImageError('');
         setCurrentPage('ai-image');
     };
 
@@ -1037,22 +1080,38 @@ function App() {
         const trimmedPrompt = imagePrompt.trim();
 
         if (!trimmedPrompt) {
-            setStatusMessage(text.textPromptEmpty);
+            setImageError(text.textPromptEmpty);
             return;
         }
 
+        const contextMessages = buildImageContextMessages(imageSessionMessages);
+
         try {
             setIsGeneratingImage(true);
-            setStatusMessage('');
+            setImageError('');
             setGeneratedImageUrl('');
-            const response = await generateImage({ prompt: trimmedPrompt, model: imageModel });
+            const response = await generateImage({
+                prompt: trimmedPrompt,
+                model: imageModel,
+                messages: contextMessages,
+            });
             const imageUrl = response?.imageUrl?.trim() ?? '';
 
             if (!imageUrl) {
-                setStatusMessage(text.imageGenerateEmpty);
+                setImageError(text.imageGenerateEmpty);
                 return;
             }
 
+            setImageSessionMessages((prev) => [
+                ...prev,
+                { id: `img-user-${Date.now()}`, role: 'user', content: trimmedPrompt },
+                {
+                    id: `img-assistant-${Date.now()}`,
+                    role: 'assistant',
+                    content: text.imageGeneratedNote,
+                },
+            ]);
+            setImagePrompt('');
             setGeneratedImageUrl(imageUrl);
 
             try {
@@ -1072,7 +1131,10 @@ function App() {
             }
         } catch (error) {
             setGeneratedImageUrl('');
-            setStatusMessage(error instanceof Error ? error.message : 'Не удалось сгенерировать изображение.');
+            const message = error instanceof Error ? error.message : '';
+            setImageError(
+                error?.code === 'CONTENT_POLICY' ? text.imageContentPolicy : (message || 'Не удалось сгенерировать изображение.'),
+            );
         } finally {
             setIsGeneratingImage(false);
         }
@@ -1082,7 +1144,7 @@ function App() {
         setChatMessages([]);
         setChatTopicTitle('');
         setTextPrompt('');
-        setStatusMessage('');
+        setChatError('');
     };
 
     const handleReferralLinkCopy = async () => {
@@ -1092,7 +1154,7 @@ function App() {
 
         try {
             await navigator.clipboard.writeText(referralLink);
-            setStatusMessage(text.referralCopied);
+            showAppNotice(text.referralCopied, 'success');
         } catch {
             // noop
         }
@@ -1167,7 +1229,7 @@ function App() {
         const trimmedPrompt = textPrompt.trim();
 
         if (!trimmedPrompt) {
-            setStatusMessage(text.textPromptEmpty);
+            setChatError(text.textPromptEmpty);
             return;
         }
 
@@ -1188,7 +1250,7 @@ function App() {
 
         try {
             setIsGeneratingText(true);
-            setStatusMessage('');
+            setChatError('');
             const response = await generateText({
                 prompt: trimmedPrompt,
                 model: textModel,
@@ -1197,7 +1259,7 @@ function App() {
             const resultText = response?.text?.trim() ?? '';
 
             if (!resultText) {
-                setStatusMessage(text.textGenerateEmpty);
+                setChatError(text.textGenerateEmpty);
                 return;
             }
 
@@ -1213,7 +1275,7 @@ function App() {
                 },
             ]);
         } catch (error) {
-            setStatusMessage(error instanceof Error ? error.message : 'Не удалось получить ответ.');
+            setChatError(error instanceof Error ? error.message : 'Не удалось получить ответ.');
         } finally {
             setIsGeneratingText(false);
         }
@@ -1239,7 +1301,7 @@ function App() {
         const trimmedCategory = promptCategory.trim() || 'general';
 
         if (!trimmedPrompt) {
-            setStatusMessage(text.promptEmpty);
+            showAppNotice(text.promptEmpty);
             return;
         }
 
@@ -1255,9 +1317,9 @@ function App() {
             }
 
             setPromptDraft('');
-            setStatusMessage(text.promptSaved);
+            showAppNotice(text.promptSaved, 'success');
         } catch (error) {
-            setStatusMessage(error instanceof Error ? error.message : 'Не удалось сохранить промт.');
+            showAppNotice(error instanceof Error ? error.message : 'Не удалось сохранить промт.');
         } finally {
             setIsSavingPrompt(false);
         }
@@ -1527,6 +1589,10 @@ function App() {
                     ) : null}
                 </div>
 
+                {chatError ? (
+                    <p className="ai-chat__inline-error" role="alert">{chatError}</p>
+                ) : null}
+
                 <footer className="ai-chat__composer">
                     <textarea
                         className="ai-chat__input"
@@ -1577,6 +1643,28 @@ function App() {
                     </div>
                 </header>
 
+                <div className="ai-chat__models" role="tablist" aria-label={text.imageGenerateTitle}>
+                    {IMAGE_MODEL_DEFINITIONS.map((model) => {
+                        const ModelIcon = model.icon;
+                        const isActive = imageModel === model.id;
+
+                        return (
+                            <button
+                                key={model.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={isActive}
+                                className={`ai-chat__model-chip ${isActive ? 'ai-chat__model-chip--active' : ''}`}
+                                onClick={() => handleImageModelChange(model.id)}
+                                disabled={isGeneratingImage}
+                            >
+                                <ModelIcon size={14} aria-hidden="true" />
+                                <span>{text[model.nameKey]}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
                 <div className="ai-image__body">
                     <label className="ai-image__label" htmlFor="ai-image-prompt">{text.imagePromptLabel}</label>
                     <textarea
@@ -1588,6 +1676,10 @@ function App() {
                         rows={4}
                         disabled={isGeneratingImage}
                     />
+
+                    {imageError ? (
+                        <p className="ai-image__inline-error" role="alert">{imageError}</p>
+                    ) : null}
 
                     <button
                         type="button"
@@ -2138,11 +2230,6 @@ function App() {
     return (
         <div className="app-shell" data-page={currentPage}>
             <main className="app-main">
-                {statusMessage ? (
-                    <div className="referral-card referral-card--intro" style={{ marginBottom: '16px' }}>
-                        <p className="referral-card__text">{statusMessage}</p>
-                    </div>
-                ) : null}
                 {currentPage === 'home'
                     ? renderHomeScreen()
                     : currentPage === 'catalog'
@@ -2191,6 +2278,8 @@ function App() {
                     </div>
                 </nav>
             ) : null}
+
+            <AppNotice notice={appNotice} onDismiss={clearAppNotice} />
         </div>
     );
 }

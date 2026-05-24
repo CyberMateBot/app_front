@@ -59,12 +59,36 @@ export function getTelegramWebApp() {
     return telegramWebApp;
 }
 
+function applyTelegramLayoutVars(tg) {
+    if (typeof document === 'undefined' || !tg) {
+        return;
+    }
+
+    const root = document.documentElement;
+    const height = tg.viewportStableHeight || tg.viewportHeight;
+
+    if (height) {
+        root.style.setProperty('--app-height', `${height}px`);
+    }
+
+    const inset = tg.safeAreaInset ?? tg.contentSafeAreaInset;
+
+    if (inset) {
+        root.style.setProperty('--page-pad-top', `${inset.top ?? 0}px`);
+        root.style.setProperty('--page-pad-bottom', `${inset.bottom ?? 0}px`);
+    }
+}
+
 export function initTelegramMiniApp() {
     const tg = getTelegramWebApp();
 
     tg?.ready();
     tg?.expand();
     tg?.disableVerticalSwipes?.();
+    applyTelegramLayoutVars(tg);
+
+    tg?.onEvent?.('viewportChanged', () => applyTelegramLayoutVars(tg));
+    tg?.onEvent?.('safeAreaChanged', () => applyTelegramLayoutVars(tg));
 
     return tg;
 }

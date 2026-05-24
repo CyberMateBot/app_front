@@ -1,4 +1,4 @@
-import { Bot, Image as ImageIcon, Sparkles, Zap } from 'lucide-react';
+import { Bot, Brain, Image as ImageIcon, Palette, Sparkles, Zap } from 'lucide-react';
 import { IMAGE_MODEL_IDS, TEXT_MODEL_IDS } from '../api/telegramApi.js';
 
 export const TEXT_MODEL_DEFINITIONS = [
@@ -11,6 +11,17 @@ export const TEXT_MODEL_DEFINITIONS = [
         accent: 'violet',
         icon: Bot,
         badge: null,
+        page: 'ai-chat',
+    },
+    {
+        id: 'deepseek',
+        nameKey: 'modelDeepSeekName',
+        subKey: 'modelDeepSeekSub',
+        tab: 'chat',
+        categories: ['chat', 'code'],
+        accent: 'teal',
+        icon: Brain,
+        badge: 'pro',
         page: 'ai-chat',
     },
     {
@@ -49,6 +60,18 @@ export const IMAGE_MODEL_DEFINITIONS = [
         badge: 'new',
         page: 'ai-image',
         backendModel: 'nano-banana',
+    },
+    {
+        id: 'alice-ai-art',
+        nameKey: 'modelAliceAIArtName',
+        subKey: 'modelAliceAIArtSub',
+        tab: 'photo',
+        categories: ['photo'],
+        accent: 'violet',
+        icon: Palette,
+        badge: 'new',
+        page: 'ai-image',
+        backendModel: 'alice-ai-art',
     },
 ];
 

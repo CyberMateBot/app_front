@@ -39,13 +39,13 @@ export const API_ENDPOINTS = {
         method: 'POST',
         path: '/v1/generate/text',
         when: 'Отправка сообщения в AI-чате',
-        body: '{ telegramId, prompt, category: "Текст", model, messages?: [{ role, content }] }',
+        body: '{ telegramId, prompt, category: "text", model: "yandexgpt"|"deepseek"|"gemini-flash"|"openai", messages?: [{ role, content }] }',
     },
     generateImage: {
         method: 'POST',
         path: '/v1/generate/image',
         when: 'Генерация изображения (Nano Banana)',
-        body: '{ telegramId, prompt, category: "image", model: "nano-banana" }',
+        body: '{ telegramId, prompt, category: "image", model: "nano-banana"|"alice-ai-art", messages?: [{ role, content }] }',
     },
 };
 

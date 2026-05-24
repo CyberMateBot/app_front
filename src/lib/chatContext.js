@@ -1,9 +1,38 @@
-export const MAX_CHAT_CONTEXT_TURNS = 20;
+export const MAX_CHAT_CONTEXT_TURNS = 12;
+
+const MAX_CONTEXT_USER_CHARS = 8000;
+const MAX_CONTEXT_ASSISTANT_CHARS = 5000;
+
+function truncateContextContent(content, role) {
+    const text = String(content ?? '').trim();
+    const maxLen = role === 'assistant' ? MAX_CONTEXT_ASSISTANT_CHARS : MAX_CONTEXT_USER_CHARS;
+    if (text.length <= maxLen) {
+        return text;
+    }
+    const head = 400;
+    const tail = maxLen - head - 20;
+    return `${text.slice(0, head)}\n\n…\n\n${text.slice(-tail)}`;
+}
 
 /**
  * Собирает messages для API из локального чата (только завершённые пары user/assistant).
  * Текущий ввод передаётся отдельно в prompt.
  */
+const IMAGE_ASSISTANT_PLACEHOLDER = 'Изображение создано.';
+
+/**
+ * Контекст для image API: предыдущие запросы и короткие ответы ассистента.
+ */
+export function buildImageContextMessages(imageMessages) {
+    return buildChatContextMessages(
+        imageMessages.map((message) => (
+            message.role === 'assistant' && !message.content?.trim()
+                ? { ...message, content: IMAGE_ASSISTANT_PLACEHOLDER, isTyping: false }
+                : message
+        )),
+    );
+}
+
 export function buildChatContextMessages(chatMessages) {
     const turns = [];
     let pendingUser = null;
@@ -19,7 +48,10 @@ export function buildChatContextMessages(chatMessages) {
             const botText = message.content?.trim() ?? '';
 
             if (userText && botText) {
-                turns.push({ userText, botText });
+                turns.push({
+                    userText: truncateContextContent(userText, 'user'),
+                    botText: truncateContextContent(botText, 'assistant'),
+                });
             }
             pendingUser = null;
         }

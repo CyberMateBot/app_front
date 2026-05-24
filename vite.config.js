@@ -12,6 +12,9 @@ export default defineConfig({
             '/v1': {
                 target: 'http://localhost:8090',
                 changeOrigin: true,
+                // Match backend SERVER_*_TIMEOUT and AI provider calls (~90s)
+                timeout: 120_000,
+                proxyTimeout: 120_000,
             },
         },
     },
