@@ -85,7 +85,7 @@ async function fetchTelegramResource(pathname, fallbackMessage) {
     }
 
     if (!res.ok) {
-        throw new Error((await res.text()) || fallbackMessage);
+        throw await errorFromResponse(res, fallbackMessage);
     }
 
     return res.json();
@@ -122,7 +122,13 @@ export function getTextCategoryLabel() {
     return 'text';
 }
 
-export async function generateText({ prompt, model = 'yandexgpt', messages = [], category }) {
+export async function generateText({
+    prompt,
+    model = 'yandexgpt',
+    messages = [],
+    category,
+    signal,
+}) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim();
     const normalizedModel = TEXT_MODEL_IDS.includes(model) ? model : 'yandexgpt';
@@ -160,13 +166,19 @@ export async function generateText({ prompt, model = 'yandexgpt', messages = [],
             Accept: 'application/json',
         },
         body: JSON.stringify(body),
+        signal,
     });
 
     if (!res.ok) {
         throw await errorFromResponse(res, 'Failed to generate text.');
     }
 
-    const payload = await res.json();
+    let payload;
+    try {
+        payload = await res.json();
+    } catch {
+        throw new Error('API вернул не-JSON ответ. Проверьте VITE_API_BASE_URL (должен указывать на бэкенд, не на фронт).');
+    }
     const data = payload?.data ?? payload;
 
     return {

@@ -18,7 +18,9 @@ VITE_API_BASE_URL=https://tgapp-production-469a.up.railway.app
 
 (не `VITE_API_URL` — в коде используется именно `VITE_API_BASE_URL`)
 
-Redeploy after changing `VITE_*` (baked in at build time).
+**Обязательно `https://` в начале.** Если указать только `tgapp-production-469a.up.railway.app`, в Telegram (Safari) будет ошибка *«the string did not match the expected pattern»*.
+
+Redeploy after changing `VITE_*` (baked in at build time — переменная должна быть на сервисе **фронта** до `npm run build`).
 
 ## Networking (важно)
 

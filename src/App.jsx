@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ArrowLeft,
     Bell,
@@ -30,6 +30,7 @@ import {
     Settings,
     SlidersHorizontal,
     Send,
+    Square,
     Sparkles,
     Trash2,
     Download,
@@ -211,6 +212,7 @@ const translations = {
         chatEmpty: 'Напишите сообщение — модель ответит здесь.',
         chatPlaceholder: 'Сообщение...',
         chatSend: 'Отправить',
+        chatStop: 'Остановить',
         chatTyping: 'Модель печатает...',
         chatNewDialog: 'Новый диалог',
         historyTitle: 'История',
@@ -428,6 +430,7 @@ const translations = {
         chatEmpty: 'Send a message — the model will reply here.',
         chatPlaceholder: 'Message...',
         chatSend: 'Send',
+        chatStop: 'Stop',
         chatTyping: 'Model is typing...',
         chatNewDialog: 'New chat',
         historyTitle: 'History',
@@ -659,6 +662,7 @@ function App() {
     const [chatReturnPage, setChatReturnPage] = useState('catalog');
     const [imageReturnPage, setImageReturnPage] = useState('catalog');
     const [isGeneratingText, setIsGeneratingText] = useState(false);
+    const textGenerationAbortRef = useRef(null);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
     const [homeCategoryChip, setHomeCategoryChip] = useState('all');
     const [catalogTab, setCatalogTab] = useState('all');
@@ -796,34 +800,72 @@ function App() {
         let isCancelled = false;
 
         const loadPageData = async () => {
+            const needWallet = (currentPage === 'wallet' || currentPage === 'profile') && walletData === null;
+            const needReferrals = (currentPage === 'referrals' || currentPage === 'profile') && referralData === null;
+            const needHistory = currentPage === 'history' || (currentPage === 'profile' && promptHistoryData === null);
+
+            if (needWallet) {
+                setPageLoading((prev) => ({ ...prev, wallet: true }));
+            }
+            if (needReferrals) {
+                setPageLoading((prev) => ({ ...prev, referrals: true }));
+            }
+            if (needHistory) {
+                setPageLoading((prev) => ({ ...prev, history: true }));
+            }
+
             try {
-                if ((currentPage === 'wallet' || currentPage === 'profile') && walletData === null) {
-                    setPageLoading((prev) => ({ ...prev, wallet: true }));
-                    const data = await getMyWallet();
-                    if (!isCancelled) {
-                        setWalletData(data ?? { wallet: null, transactions: [] });
-                    }
+                const tasks = [];
+
+                if (needWallet) {
+                    tasks.push(
+                        getMyWallet()
+                            .then((data) => {
+                                if (!isCancelled) {
+                                    setWalletData(data ?? { wallet: null, transactions: [] });
+                                }
+                            })
+                            .catch((error) => {
+                                if (!isCancelled) {
+                                    showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить кошелёк.');
+                                }
+                            }),
+                    );
                 }
 
-                if ((currentPage === 'referrals' || currentPage === 'profile') && referralData === null) {
-                    setPageLoading((prev) => ({ ...prev, referrals: true }));
-                    const data = await getMyReferrals();
-                    if (!isCancelled) {
-                        setReferralData(data ?? { items: [] });
-                    }
+                if (needReferrals) {
+                    tasks.push(
+                        getMyReferrals()
+                            .then((data) => {
+                                if (!isCancelled) {
+                                    setReferralData(data ?? { items: [] });
+                                }
+                            })
+                            .catch((error) => {
+                                if (!isCancelled) {
+                                    showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить рефералов.');
+                                }
+                            }),
+                    );
                 }
 
-                if (currentPage === 'history' || (currentPage === 'profile' && promptHistoryData === null)) {
-                    setPageLoading((prev) => ({ ...prev, history: true }));
-                    const data = await getMyPromptHistory();
-                    if (!isCancelled) {
-                        setPromptHistoryData(data ?? { items: [] });
-                    }
+                if (needHistory) {
+                    tasks.push(
+                        getMyPromptHistory()
+                            .then((data) => {
+                                if (!isCancelled) {
+                                    setPromptHistoryData(data ?? { items: [] });
+                                }
+                            })
+                            .catch((error) => {
+                                if (!isCancelled) {
+                                    showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить историю.');
+                                }
+                            }),
+                    );
                 }
-            } catch (error) {
-                if (!isCancelled) {
-                    showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить данные страницы.');
-                }
+
+                await Promise.allSettled(tasks);
             } finally {
                 if (!isCancelled) {
                     setPageLoading((prev) => ({
@@ -1035,6 +1077,7 @@ function App() {
     };
 
     const handleTextModelChange = (modelId) => {
+        handleStopChatGeneration();
         setTextModel(modelId);
         setChatMessages([]);
         setChatTopicTitle('');
@@ -1141,6 +1184,7 @@ function App() {
     };
 
     const handleNewChatDialog = () => {
+        handleStopChatGeneration();
         setChatMessages([]);
         setChatTopicTitle('');
         setTextPrompt('');
@@ -1225,7 +1269,17 @@ function App() {
         })
     );
 
+    const handleStopChatGeneration = useCallback(() => {
+        textGenerationAbortRef.current?.abort();
+        textGenerationAbortRef.current = null;
+        setIsGeneratingText(false);
+    }, []);
+
     const handleSendChatMessage = async () => {
+        if (isGeneratingText) {
+            return;
+        }
+
         const trimmedPrompt = textPrompt.trim();
 
         if (!trimmedPrompt) {
@@ -1248,6 +1302,9 @@ function App() {
         setChatMessages((prev) => [...prev, userMessage]);
         setTextPrompt('');
 
+        const abortController = new AbortController();
+        textGenerationAbortRef.current = abortController;
+
         try {
             setIsGeneratingText(true);
             setChatError('');
@@ -1255,6 +1312,7 @@ function App() {
                 prompt: trimmedPrompt,
                 model: textModel,
                 messages: contextMessages,
+                signal: abortController.signal,
             });
             const resultText = response?.text?.trim() ?? '';
 
@@ -1275,18 +1333,34 @@ function App() {
                 },
             ]);
         } catch (error) {
+            if (error?.name === 'AbortError' || abortController.signal.aborted) {
+                return;
+            }
+
             setChatError(error instanceof Error ? error.message : 'Не удалось получить ответ.');
         } finally {
+            if (textGenerationAbortRef.current === abortController) {
+                textGenerationAbortRef.current = null;
+            }
+
             setIsGeneratingText(false);
         }
     };
 
     const handleChatComposerKeyDown = (event) => {
+        if (isGeneratingText) {
+            return;
+        }
+
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             handleSendChatMessage();
         }
     };
+
+    useEffect(() => () => {
+        textGenerationAbortRef.current?.abort();
+    }, []);
 
     const handleChatMessageTyped = useCallback((messageId) => {
         setChatMessages((prev) => prev.map((message) => (
@@ -1605,12 +1679,15 @@ function App() {
                     />
                     <button
                         type="button"
-                        className="ai-chat__send"
-                        aria-label={text.chatSend}
-                        onClick={handleSendChatMessage}
-                        disabled={isGeneratingText}
+                        className={`ai-chat__send ${isGeneratingText ? 'ai-chat__send--stop' : ''}`}
+                        aria-label={isGeneratingText ? text.chatStop : text.chatSend}
+                        onClick={isGeneratingText ? handleStopChatGeneration : handleSendChatMessage}
                     >
-                        <Send size={18} aria-hidden="true" />
+                        {isGeneratingText ? (
+                            <Square size={16} aria-hidden="true" fill="currentColor" />
+                        ) : (
+                            <Send size={18} aria-hidden="true" />
+                        )}
                     </button>
                 </footer>
             </section>

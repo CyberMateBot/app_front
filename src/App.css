@@ -2879,6 +2879,15 @@
   cursor: not-allowed;
 }
 
+.ai-chat__send--stop {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.25);
+}
+
+.ai-chat__send--stop:hover {
+  filter: brightness(1.06);
+}
+
 .ai-image-screen--concept {
   padding-bottom: calc(16px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
 }
