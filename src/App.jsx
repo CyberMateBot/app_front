@@ -51,7 +51,13 @@ import {
     generateText,
     registerTelegramUser,
     savePromptHistory,
+    TEXT_MODEL_IDS,
 } from './api/telegramApi.js';
+import {
+    buildChatContextMessages,
+    getChatTopicTitle,
+    groupHistoryIntoTopics,
+} from './lib/chatContext.js';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
 import {
     IMAGE_MODEL_DEFINITIONS,
@@ -208,6 +214,7 @@ const translations = {
         historyFilterVideo: 'Видео',
         historyFilterMusic: 'Музыка',
         historyEmpty: 'История промтов пока пуста.',
+        historyTopicMessages: '{count} сообщ.',
         promptPlaceholder: 'Введите промт, который хотите сохранить',
         promptCategoryPlaceholder: 'Категория (например, marketing)',
         savePromptButton: 'Сохранить промт',
@@ -418,6 +425,7 @@ const translations = {
         historyFilterVideo: 'Video',
         historyFilterMusic: 'Music',
         historyEmpty: 'Prompt history is empty.',
+        historyTopicMessages: '{count} messages',
         promptPlaceholder: 'Enter a prompt to save',
         promptCategoryPlaceholder: 'Category (for example, marketing)',
         savePromptButton: 'Save prompt',
@@ -630,6 +638,7 @@ function App() {
     const [imagePrompt, setImagePrompt] = useState('');
     const [generatedImageUrl, setGeneratedImageUrl] = useState('');
     const [chatMessages, setChatMessages] = useState([]);
+    const [chatTopicTitle, setChatTopicTitle] = useState('');
     const [chatReturnPage, setChatReturnPage] = useState('catalog');
     const [imageReturnPage, setImageReturnPage] = useState('catalog');
     const [isGeneratingText, setIsGeneratingText] = useState(false);
@@ -772,7 +781,7 @@ function App() {
                     }
                 }
 
-                if ((currentPage === 'history' || currentPage === 'profile') && promptHistoryData === null) {
+                if (currentPage === 'history' || (currentPage === 'profile' && promptHistoryData === null)) {
                     setPageLoading((prev) => ({ ...prev, history: true }));
                     const data = await getMyPromptHistory();
                     if (!isCancelled) {
@@ -864,7 +873,12 @@ function App() {
             const category = String(item.category || '').toLowerCase();
 
             if (historyFilter === 'chat') {
-                return category.includes('chat') || category.includes('text') || category === 'gpt';
+                const modelId = String(item.model || '').toLowerCase();
+                return TEXT_MODEL_IDS.includes(modelId)
+                    || category.includes('chat')
+                    || category.includes('text')
+                    || category === 'текст'
+                    || category === 'gpt';
             }
             if (historyFilter === 'photo') {
                 return category.includes('photo') || category.includes('image');
@@ -880,50 +894,55 @@ function App() {
         });
     }, [historyItems, historyFilter]);
 
-    const historyGroups = useMemo(() => {
-        const todayItems = [];
-        const yesterdayItems = [];
-        const otherItems = [];
+    const historyTopics = useMemo(
+        () => groupHistoryIntoTopics(filteredHistoryItems),
+        [filteredHistoryItems],
+    );
+
+    const historyTopicGroups = useMemo(() => {
+        const todayTopics = [];
+        const yesterdayTopics = [];
+        const otherTopics = [];
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startOfYesterday = new Date(startOfToday);
         startOfYesterday.setDate(startOfYesterday.getDate() - 1);
 
-        filteredHistoryItems.forEach((item) => {
-            const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+        historyTopics.forEach((topic) => {
+            const createdAt = new Date(topic.latestAt);
 
-            if (!createdAt || Number.isNaN(createdAt.getTime())) {
-                todayItems.push(item);
+            if (Number.isNaN(createdAt.getTime())) {
+                todayTopics.push(topic);
                 return;
             }
 
             if (createdAt >= startOfToday) {
-                todayItems.push(item);
+                todayTopics.push(topic);
             } else if (createdAt >= startOfYesterday) {
-                yesterdayItems.push(item);
+                yesterdayTopics.push(topic);
             } else {
-                otherItems.push(item);
+                otherTopics.push(topic);
             }
         });
 
         const groups = [];
 
-        if (todayItems.length > 0) {
-            groups.push({ id: 'today', label: text.historyToday, items: todayItems });
+        if (todayTopics.length > 0) {
+            groups.push({ id: 'today', label: text.historyToday, topics: todayTopics });
         }
-        if (yesterdayItems.length > 0) {
-            groups.push({ id: 'yesterday', label: text.historyYesterday, items: yesterdayItems });
+        if (yesterdayTopics.length > 0) {
+            groups.push({ id: 'yesterday', label: text.historyYesterday, topics: yesterdayTopics });
         }
-        if (otherItems.length > 0) {
+        if (otherTopics.length > 0) {
             groups.push({
                 id: 'older',
                 label: language === 'ru' ? 'Ранее' : 'Earlier',
-                items: otherItems,
+                topics: otherTopics,
             });
         }
 
         return groups;
-    }, [filteredHistoryItems, text.historyToday, text.historyYesterday, language]);
+    }, [historyTopics, text.historyToday, text.historyYesterday, language]);
 
     const formatHistoryTime = (createdAt) => {
         if (!createdAt) {
@@ -975,9 +994,19 @@ function App() {
         if (modelId) {
             setTextModel(modelId);
         }
+        setChatMessages([]);
+        setChatTopicTitle('');
+        setTextPrompt('');
         setChatReturnPage(returnPage);
         setStatusMessage('');
         setCurrentPage('ai-chat');
+    };
+
+    const handleTextModelChange = (modelId) => {
+        setTextModel(modelId);
+        setChatMessages([]);
+        setChatTopicTitle('');
+        setTextPrompt('');
     };
 
     const openAiImage = (modelId, returnPage = currentPage) => {
@@ -1051,6 +1080,7 @@ function App() {
 
     const handleNewChatDialog = () => {
         setChatMessages([]);
+        setChatTopicTitle('');
         setTextPrompt('');
         setStatusMessage('');
     };
@@ -1141,6 +1171,12 @@ function App() {
             return;
         }
 
+        const contextMessages = buildChatContextMessages(chatMessages);
+
+        if (!chatTopicTitle) {
+            setChatTopicTitle(getChatTopicTitle(trimmedPrompt));
+        }
+
         const userMessage = {
             id: `user-${Date.now()}`,
             role: 'user',
@@ -1153,7 +1189,11 @@ function App() {
         try {
             setIsGeneratingText(true);
             setStatusMessage('');
-            const response = await generateText({ prompt: trimmedPrompt, model: textModel });
+            const response = await generateText({
+                prompt: trimmedPrompt,
+                model: textModel,
+                messages: contextMessages,
+            });
             const resultText = response?.text?.trim() ?? '';
 
             if (!resultText) {
@@ -1172,22 +1212,6 @@ function App() {
                     isTyping: true,
                 },
             ]);
-
-            try {
-                const historyResponse = await savePromptHistory({
-                    prompt: trimmedPrompt,
-                    category: textModel,
-                });
-                const savedItem = historyResponse?.item;
-
-                if (savedItem) {
-                    setPromptHistoryData((prev) => ({
-                        items: [savedItem, ...(Array.isArray(prev?.items) ? prev.items : [])],
-                    }));
-                }
-            } catch {
-                // History save is optional for chat flow.
-            }
         } catch (error) {
             setStatusMessage(error instanceof Error ? error.message : 'Не удалось получить ответ.');
         } finally {
@@ -1475,7 +1499,7 @@ function App() {
                                 role="tab"
                                 aria-selected={isActive}
                                 className={`ai-chat__model-chip ${isActive ? 'ai-chat__model-chip--active' : ''}`}
-                                onClick={() => setTextModel(model.id)}
+                                onClick={() => handleTextModelChange(model.id)}
                                 disabled={isGeneratingText}
                             >
                                 <ModelIcon size={14} aria-hidden="true" />
@@ -1942,35 +1966,42 @@ function App() {
                 <p className="history-concept__empty">{text.loading}</p>
             ) : null}
 
-            {!pageLoading.history && historyGroups.length === 0 ? (
+            {!pageLoading.history && historyTopicGroups.length === 0 ? (
                 <p className="history-concept__empty">{text.historyEmpty}</p>
             ) : null}
 
-            {historyGroups.map((group) => (
+            {historyTopicGroups.map((group) => (
                 <div key={group.id} className="history-concept__group">
                     <p className="history-concept__group-label">{group.label}</p>
                     <div className="history-concept__list">
-                        {group.items.map((item) => {
-                            const visual = getHistoryVisual(item.category);
+                        {group.topics.map((topic) => {
+                            const visual = getHistoryVisual(topic.model);
                             const ThumbIcon = visual.icon;
-                            const tagLabel = item.category || (language === 'ru' ? 'Чат' : 'Chat');
+                            const modelDef = getTextModelDefinition(
+                                TEXT_MODEL_IDS.includes(topic.model) ? topic.model : 'yandexgpt',
+                            );
+                            const toolName = TEXT_MODEL_IDS.includes(topic.model)
+                                ? text[modelDef.nameKey]
+                                : visual.toolName;
 
                             return (
-                                <article key={item.id} className="history-concept__item">
+                                <article key={topic.id} className="history-concept__item">
                                     <div className={`history-concept__thumb history-concept__thumb--${visual.accent}`}>
                                         <ThumbIcon size={18} aria-hidden="true" />
                                     </div>
                                     <div className="history-concept__info">
                                         <div className="history-concept__top">
                                             <span className={`history-concept__tool history-concept__tool--${visual.accent}`}>
-                                                {visual.toolName}
+                                                {toolName}
                                             </span>
-                                            <span className="history-concept__time">{formatHistoryTime(item.createdAt)}</span>
+                                            <span className="history-concept__time">
+                                                {formatHistoryTime(topic.lastItem?.createdAt)}
+                                            </span>
                                         </div>
-                                        <p className="history-concept__prompt">{item.prompt}</p>
+                                        <p className="history-concept__prompt">{topic.topicTitle}</p>
                                         <div className="history-concept__meta">
                                             <span className={`history-concept__tag history-concept__tag--${visual.accent}`}>
-                                                {tagLabel}
+                                                {formatTemplate(text.historyTopicMessages, { count: topic.messageCount })}
                                             </span>
                                         </div>
                                     </div>

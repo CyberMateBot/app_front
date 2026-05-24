@@ -117,13 +117,39 @@ export async function getMyPromptHistory() {
 export const TEXT_MODEL_IDS = ['yandexgpt', 'gemini-flash', 'openai'];
 export const IMAGE_MODEL_IDS = ['nano-banana'];
 
-export async function generateText({ prompt, model = 'yandexgpt' }) {
+export function getTextCategoryLabel() {
+    return 'Текст';
+}
+
+export async function generateText({ prompt, model = 'yandexgpt', messages = [], category }) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim();
     const normalizedModel = TEXT_MODEL_IDS.includes(model) ? model : 'yandexgpt';
+    const normalizedMessages = Array.isArray(messages)
+        ? messages
+            .map((message) => ({
+                role: String(message.role || '').trim(),
+                content: String(message.content || '').trim(),
+            }))
+            .filter((message) => (
+                (message.role === 'user' || message.role === 'assistant')
+                && message.content
+            ))
+        : [];
 
     if (!trimmedPrompt) {
         throw new Error('Prompt is required.');
+    }
+
+    const body = {
+        telegramId: String(telegramId),
+        prompt: trimmedPrompt,
+        category: category?.trim() || getTextCategoryLabel(),
+        model: normalizedModel,
+    };
+
+    if (normalizedMessages.length > 0) {
+        body.messages = normalizedMessages;
     }
 
     const res = await apiFetch('/v1/generate/text', {
@@ -132,12 +158,7 @@ export async function generateText({ prompt, model = 'yandexgpt' }) {
             'Content-Type': 'application/json',
             Accept: 'application/json',
         },
-        body: JSON.stringify({
-            telegramId: String(telegramId),
-            prompt: trimmedPrompt,
-            category: 'text',
-            model: normalizedModel,
-        }),
+        body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -191,8 +212,18 @@ export async function generateImage({ prompt, model = 'nano-banana' }) {
     };
 }
 
-export async function savePromptHistory({ prompt, category = 'general' }) {
+export async function savePromptHistory({ prompt, category = 'general', model }) {
     const telegramId = getCurrentTelegramId();
+
+    const body = {
+        telegramId: String(telegramId),
+        prompt,
+        category,
+    };
+
+    if (model) {
+        body.model = model;
+    }
 
     const res = await apiFetch('/v1/prompts/history', {
         method: 'POST',
@@ -200,11 +231,7 @@ export async function savePromptHistory({ prompt, category = 'general' }) {
             'Content-Type': 'application/json',
             Accept: 'application/json',
         },
-        body: JSON.stringify({
-            telegramId: String(telegramId),
-            prompt,
-            category,
-        }),
+        body: JSON.stringify(body),
     });
 
     if (!res.ok) {

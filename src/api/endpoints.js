@@ -39,7 +39,7 @@ export const API_ENDPOINTS = {
         method: 'POST',
         path: '/v1/generate/text',
         when: 'Отправка сообщения в AI-чате',
-        body: '{ telegramId, prompt, category: "text", model: "yandexgpt" | "gemini-flash" | "openai" }',
+        body: '{ telegramId, prompt, category: "Текст", model, messages?: [{ role, content }] }',
     },
     generateImage: {
         method: 'POST',
