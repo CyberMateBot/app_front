@@ -311,6 +311,7 @@ const translations = {
         profileLeft: 'left:',
         back: 'Назад',
         profileTitle: 'Профиль',
+        profileAppUserId: 'ID',
         profilePlanBadge: '{plan} подписка',
         profileStatRequests: 'Запросов',
         profileStatProjects: 'Проектов',
@@ -539,6 +540,7 @@ const translations = {
         profileLeft: 'left:',
         back: 'Back',
         profileTitle: 'Profile',
+        profileAppUserId: 'ID',
         profilePlanBadge: '{plan} plan',
         profileStatRequests: 'Requests',
         profileStatProjects: 'Projects',
@@ -614,22 +616,32 @@ const translations = {
 };
 
 function buildProfileView(profile, telegramUser) {
-    const displayName = [profile?.name, profile?.surname].filter(Boolean).join(' ')
-        || telegramUser?.first_name
-        || 'Telegram User';
+    const tgFirst = (telegramUser?.first_name || '').trim();
+    const tgLast = (telegramUser?.last_name || '').trim();
+    const tgNick = [tgFirst, tgLast].filter(Boolean).join(' ').trim();
 
-    const rawUsername = profile?.username || telegramUser?.username || '';
-    const fallbackHandle = telegramUser?.id ? `@${telegramUser.id}` : '@2281448';
-    const handle = rawUsername && rawUsername !== 'username_not_set' ? `@${rawUsername}` : fallbackHandle;
+    const rawUsername = (profile?.username || telegramUser?.username || '')
+        .trim()
+        .replace(/^@/, '');
+    const profileName = (profile?.name || '').trim();
+
+    let displayName = tgNick || profileName || 'Telegram User';
+    if (rawUsername && displayName.toLowerCase() === rawUsername.toLowerCase()) {
+        displayName = tgFirst || profileName || displayName;
+    }
+
+    const handle = rawUsername && rawUsername !== 'username_not_set' ? `@${rawUsername}` : '';
+    const appUserId = profile?.backendId || (profile?.id != null ? String(profile.id) : '');
     const balance = String(profile?.balance ?? profile?.coins ?? profile?.points ?? 0);
     const tokens = String(profile?.tokens ?? profile?.tokenBalance ?? profile?.points ?? balance);
 
     return {
         displayName,
-        username: rawUsername || 'username_not_set',
+        username: rawUsername || '',
         handle,
+        appUserId: appUserId || '—',
         telegramId: profile?.telegramId || (telegramUser?.id ? String(telegramUser.id) : '—'),
-        backendId: profile?.backendId || '—',
+        backendId: profile?.backendId || (profile?.id != null ? String(profile.id) : '—'),
         language: profile?.language || telegramUser?.language_code || 'ru',
         avatarUrl: profile?.avatarUrl || telegramUser?.photo_url || '',
         balance,
@@ -2153,9 +2165,6 @@ function App() {
             .join('')
             .slice(0, 2)
             .toUpperCase() || 'CM';
-        const profileMemberId = userData.telegramId && userData.telegramId !== '—'
-            ? `#CM-${String(userData.telegramId).slice(-4)}`
-            : '#CM-0000';
         const cyberCoins = Number(walletData?.wallet?.balance ?? userData.balance ?? userData.tokens) || 0;
         const usageLimitRaw = walletData?.wallet?.monthlyLimit;
         const usageUsedRaw = walletData?.wallet?.usedThisMonth;
@@ -2205,7 +2214,10 @@ function App() {
                         ) : null}
                     </div>
                     <h3 className="profile-concept__user-name">{userData.displayName}</h3>
-                    <p className="profile-concept__user-id">{userData.handle} · {profileMemberId}</p>
+                    {userData.handle ? (
+                        <p className="profile-concept__user-handle">{userData.handle}</p>
+                    ) : null}
+                    <p className="profile-concept__user-id">{text.profileAppUserId}: {userData.appUserId}</p>
                     <div className={`profile-concept__plan-badge ${subscriptionPlanId === 'free' ? 'profile-concept__plan-badge--free' : ''}`}>
                         <Zap size={12} aria-hidden="true" />
                         {subscriptionPlanId === 'free'
@@ -2263,7 +2275,9 @@ function App() {
                         <span className="profile-concept__menu-text">
                             <span className="profile-concept__menu-title">{text.profileMenuSubscription}</span>
                             <span className="profile-concept__menu-sub">
-                                {formatTemplate(text.profileMenuSubscriptionSub, { plan: subscriptionPlanName, date: subscriptionUntil })}
+                                {subscriptionPlanId === 'free'
+                                    ? subscriptionPlanName
+                                    : formatTemplate(text.profileMenuSubscriptionSub, { plan: subscriptionPlanName, date: subscriptionUntil })}
                             </span>
                         </span>
                         <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />

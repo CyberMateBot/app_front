@@ -349,7 +349,7 @@ export function normalizeProfileResponse(payload, telegramUser) {
         telegramId: telegramUser?.id ? String(telegramUser.id) : '',
         name: profile?.name ?? telegramUser?.first_name ?? 'Telegram User',
         surname: profile?.surname ?? telegramUser?.last_name ?? '',
-        username: telegramUser?.username ?? profile?.username ?? profile?.surname ?? '',
+        username: profile?.username ?? telegramUser?.username ?? '',
         avatarUrl: telegramUser?.photo_url ?? profile?.avatarUrl ?? '',
         language: telegramUser?.language_code ?? profile?.language ?? 'ru',
         theme: profile?.theme === 'light' ? 'light' : 'dark',
