@@ -230,7 +230,7 @@ export async function generateText({
     };
 }
 
-export async function generateImage({ prompt, model = 'nano-banana', messages = [] }) {
+export async function generateImage({ prompt, model = 'nano-banana', messages = [], sessionId }) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim();
     const normalizedModel = IMAGE_MODEL_IDS.includes(model) ? model : 'nano-banana';
@@ -259,6 +259,11 @@ export async function generateImage({ prompt, model = 'nano-banana', messages = 
 
     if (normalizedMessages.length > 0) {
         body.messages = normalizedMessages;
+    }
+
+    const trimmedSessionId = sessionId?.trim();
+    if (trimmedSessionId) {
+        body.sessionId = trimmedSessionId;
     }
 
     const res = await apiFetch('/v1/generate/image', {

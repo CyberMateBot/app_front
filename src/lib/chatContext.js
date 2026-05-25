@@ -20,16 +20,31 @@ function truncateContextContent(content, role) {
  */
 const IMAGE_ASSISTANT_PLACEHOLDER = 'Изображение создано.';
 
+function isImageAssistantPlaceholder(text) {
+    const normalized = String(text ?? '').trim().toLowerCase();
+    return normalized === IMAGE_ASSISTANT_PLACEHOLDER.toLowerCase()
+        || normalized === 'image created.'
+        || normalized === 'image created'
+        || normalized === 'изображение создано';
+}
+
 /**
- * Контекст для image API: предыдущие запросы и короткие ответы ассистента.
+ * Контекст для image API: пары user/assistant (assistant хранит scenePrompt — описание сцены).
  */
 export function buildImageContextMessages(imageMessages) {
     return buildChatContextMessages(
-        imageMessages.map((message) => (
-            message.role === 'assistant' && !message.content?.trim()
-                ? { ...message, content: IMAGE_ASSISTANT_PLACEHOLDER, isTyping: false }
-                : message
-        )),
+        imageMessages.map((message) => {
+            if (message.role !== 'assistant') {
+                return { ...message, isTyping: false };
+            }
+
+            const scene = String(message.scenePrompt ?? message.content ?? '').trim();
+            const content = scene && !isImageAssistantPlaceholder(scene)
+                ? scene
+                : IMAGE_ASSISTANT_PLACEHOLDER;
+
+            return { ...message, content, isTyping: false };
+        }),
     );
 }
 

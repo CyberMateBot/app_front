@@ -77,18 +77,13 @@
   gap: 8px;
 }
 
-.home-concept__logo-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  border: 1px solid #3a3d50;
-  background: linear-gradient(135deg, #3a3d50, #1e2030);
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #c8cad8;
-  letter-spacing: -0.5px;
+.home-concept__logo-image {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 12px rgba(167, 139, 250, 0.5));
 }
 
 .home-concept__logo-name {

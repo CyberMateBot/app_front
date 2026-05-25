@@ -676,6 +676,7 @@ function App() {
     const [imageModel, setImageModel] = useState('nano-banana');
     const [imagePrompt, setImagePrompt] = useState('');
     const [imageSessionMessages, setImageSessionMessages] = useState([]);
+    const [imageSessionId, setImageSessionId] = useState(() => createChatSessionId());
     const [generatedImageUrl, setGeneratedImageUrl] = useState('');
     const [chatMessages, setChatMessages] = useState([]);
     const [chatTopicTitle, setChatTopicTitle] = useState('');
@@ -1218,19 +1219,27 @@ function App() {
         const isImageTopic = IMAGE_MODEL_IDS.includes(modelId);
 
         if (isImageTopic) {
-            handleStopChatGeneration();
-            setImageModel(modelId);
-            setImageSessionMessages(
-                buildChatMessagesFromHistoryTopic(topic).map((message) => ({
+            const imageSessionFromHistory = topic.sessionId
+                || topic.items?.[0]?.sessionId
+                || topic.items?.[0]?.session_id
+                || null;
+
+            const restored = buildChatMessagesFromHistoryTopic(topic).map((message, index, list) => {
+                if (message.role !== 'assistant') {
+                    return message;
+                }
+
+                const prevUser = list.slice(0, index).reverse().find((item) => item.role === 'user');
+                return {
                     ...message,
-                    content: message.content,
-                })),
-            );
-            setImagePrompt('');
-            setGeneratedImageUrl('');
-            setImageReturnPage('history');
-            setImageError('');
-            setCurrentPage('ai-image');
+                    scenePrompt: prevUser?.content || message.content,
+                };
+            });
+
+            openAiImage(modelId, 'history', {
+                messages: restored,
+                sessionId: imageSessionFromHistory,
+            });
             return;
         }
 
@@ -1262,16 +1271,35 @@ function App() {
 
     const handleImageModelChange = (modelId) => {
         setImageModel(modelId);
+        startNewImageSession();
+        setImageSessionMessages([]);
         setImagePrompt('');
         setGeneratedImageUrl('');
         setImageError('');
     };
 
-    const openAiImage = (modelId, returnPage = currentPage) => {
+    const handleNewImageDialog = () => {
+        startNewImageSession();
+        setImageSessionMessages([]);
+        setImagePrompt('');
+        setGeneratedImageUrl('');
+        setImageError('');
+    };
+
+    const startNewImageSession = useCallback(() => {
+        setImageSessionId(createChatSessionId());
+    }, []);
+
+    const openAiImage = (modelId, returnPage = currentPage, options = {}) => {
         if (modelId) {
             setImageModel(modelId);
         }
-        setImageSessionMessages([]);
+        if (options.sessionId) {
+            setImageSessionId(options.sessionId);
+        } else if (!options.messages?.length) {
+            startNewImageSession();
+        }
+        setImageSessionMessages(options.messages ?? []);
         setImagePrompt('');
         setGeneratedImageUrl('');
         setImageReturnPage(returnPage);
@@ -1312,6 +1340,7 @@ function App() {
                 prompt: trimmedPrompt,
                 model: imageModel,
                 messages: contextMessages,
+                sessionId: imageSessionId,
             });
             const imageUrl = response?.imageUrl?.trim() ?? '';
 
@@ -1327,6 +1356,7 @@ function App() {
                     id: `img-assistant-${Date.now()}`,
                     role: 'assistant',
                     content: text.imageGeneratedNote,
+                    scenePrompt: trimmedPrompt,
                 },
             ]);
             setImagePrompt('');
@@ -1676,7 +1706,11 @@ function App() {
         <section className="home-screen home-screen--concept" aria-label="Главная">
             <header className="home-concept__header">
                 <div className="home-concept__logo-area">
-                    <div className="home-concept__logo-icon">CM</div>
+                    <img
+                        className="home-concept__logo-image"
+                        src="/cybermate-logo-transparent.png"
+                        alt=""
+                    />
                     <span className="home-concept__logo-name">{APP_NAME}</span>
                 </div>
                 <div className="home-concept__header-actions">
@@ -2002,6 +2036,14 @@ function App() {
                             <p className="ai-chat__subtitle">{text[activeModel.subKey]}</p>
                         </div>
                     </div>
+                    <button
+                        type="button"
+                        className="ai-chat__new"
+                        onClick={handleNewImageDialog}
+                        disabled={isGeneratingImage}
+                    >
+                        {text.chatNewDialog}
+                    </button>
                 </header>
 
                 <div className="ai-chat__models" role="tablist" aria-label={text.imageGenerateTitle}>
