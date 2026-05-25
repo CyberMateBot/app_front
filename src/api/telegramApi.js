@@ -1,5 +1,5 @@
 import { BOT_USERNAME } from '../config/env.js';
-import { getTelegramWebApp } from '../lib/telegramWebApp.js';
+import { getTelegramWebApp, hydrateTelegramUser, readLaunchInitData } from '../lib/telegramWebApp.js';
 import { errorFromResponse } from './apiError.js';
 import { apiFetch } from './httpClient.js';
 
@@ -33,7 +33,11 @@ function buildInitDataFromUnsafe(tg) {
 
 export async function registerTelegramUser() {
     const tg = getTelegramWebApp();
-    const initData = tg?.initData || buildInitDataFromUnsafe(tg);
+    let initData = tg?.initData || buildInitDataFromUnsafe(tg);
+
+    if (!initData) {
+        initData = readLaunchInitData();
+    }
 
     if (!initData) {
         throw new Error('Telegram initData not found. Open this Mini App inside Telegram or enable local mock mode.');
@@ -64,6 +68,11 @@ export async function registerTelegramUser() {
 
 function getCurrentTelegramId() {
     const tg = getTelegramWebApp();
+
+    if (tg) {
+        hydrateTelegramUser(tg);
+    }
+
     const telegramId = tg?.initDataUnsafe?.user?.id;
 
     if (!telegramId) {

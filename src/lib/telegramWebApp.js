@@ -25,9 +25,61 @@ function parseUserFromInitData(initData) {
     }
 }
 
+/** Reads tgWebAppData from launch URL (Telegram Desktop / deep links). */
+export function readLaunchInitData() {
+    if (typeof window === 'undefined') {
+        return '';
+    }
+
+    const search = new URLSearchParams(window.location.search);
+    const fromSearch = search.get('tgWebAppData');
+
+    if (fromSearch) {
+        return fromSearch;
+    }
+
+    const hash = window.location.hash.replace(/^#/, '');
+
+    if (!hash) {
+        return '';
+    }
+
+    const hashParams = new URLSearchParams(hash);
+
+    return hashParams.get('tgWebAppData') || '';
+}
+
+function applyLaunchParamsToWebApp(tg) {
+    if (!tg) {
+        return tg;
+    }
+
+    if (!tg.initData) {
+        const launchInitData = readLaunchInitData();
+
+        if (launchInitData) {
+            tg.initData = launchInitData;
+        }
+    }
+
+    return hydrateTelegramUser(tg);
+}
+
 /** Desktop/WebView sometimes exposes initData before initDataUnsafe.user. */
 export function hydrateTelegramUser(tg) {
-    if (!tg || hasTelegramUser(tg)) {
+    if (!tg) {
+        return tg;
+    }
+
+    if (!tg.initData) {
+        const launchInitData = readLaunchInitData();
+
+        if (launchInitData) {
+            tg.initData = launchInitData;
+        }
+    }
+
+    if (hasTelegramUser(tg)) {
         return tg;
     }
 
@@ -91,35 +143,54 @@ function createBrowserMock() {
     };
 }
 
-export function getTelegramWebApp() {
+function getNativeTelegramWebApp() {
     if (typeof window === 'undefined') {
         return null;
     }
 
-    const telegramWebApp = window.Telegram?.WebApp ?? null;
+    return window.Telegram?.WebApp ?? null;
+}
 
-    if (telegramWebApp) {
-        hydrateTelegramUser(telegramWebApp);
+export function isTelegramClientPresent() {
+    return Boolean(getNativeTelegramWebApp()) || Boolean(readLaunchInitData());
+}
+
+export function getTelegramWebApp() {
+    const native = getNativeTelegramWebApp();
+
+    if (native) {
+        return applyLaunchParamsToWebApp(native);
     }
 
-    const shouldUseMock = ENABLE_TELEGRAM_MOCK
-        || (import.meta.env.DEV && telegramWebApp && !hasTelegramUser(telegramWebApp));
-
-    if (telegramWebApp && hasTelegramUser(telegramWebApp) && !ENABLE_TELEGRAM_MOCK) {
-        return telegramWebApp;
-    }
-
-    if (shouldUseMock) {
+    if (ENABLE_TELEGRAM_MOCK) {
         return createBrowserMock();
     }
 
-    return telegramWebApp;
+    const launchInitData = readLaunchInitData();
+
+    if (launchInitData) {
+        return applyLaunchParamsToWebApp({
+            platform: 'browser',
+            ready: () => {},
+            expand: () => {},
+            initData: launchInitData,
+            initDataUnsafe: {},
+        });
+    }
+
+    return null;
+}
+
+function wait(ms) {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, ms);
+    });
 }
 
 /**
  * Waits for telegram-web-app.js (race on Telegram Desktop) then resolves WebApp/mock.
  */
-export function waitForTelegramWebApp({ timeoutMs = 5000, intervalMs = 50 } = {}) {
+export function waitForTelegramWebApp({ timeoutMs = 12000, intervalMs = 50 } = {}) {
     if (typeof window === 'undefined') {
         return Promise.resolve(null);
     }
@@ -127,11 +198,18 @@ export function waitForTelegramWebApp({ timeoutMs = 5000, intervalMs = 50 } = {}
     return new Promise((resolve) => {
         const startedAt = Date.now();
 
-        const tick = () => {
-            const tg = getTelegramWebApp();
+        const tick = async () => {
+            if (getNativeTelegramWebApp() || readLaunchInitData()) {
+                const tg = getTelegramWebApp();
 
-            if (tg && (hasTelegramUser(tg) || tg.initData || ENABLE_TELEGRAM_MOCK)) {
-                resolve(hydrateTelegramUser(tg));
+                if (tg && (hasTelegramUser(tg) || tg.initData)) {
+                    resolve(applyLaunchParamsToWebApp(tg));
+                    return;
+                }
+            }
+
+            if (ENABLE_TELEGRAM_MOCK && Date.now() - startedAt > 400) {
+                resolve(getTelegramWebApp());
                 return;
             }
 
@@ -170,19 +248,19 @@ function applyTelegramLayoutVars(tg) {
 export function initTelegramMiniApp() {
     const tg = getTelegramWebApp();
 
-    tg?.ready();
-    tg?.expand();
+    tg?.ready?.();
+    tg?.expand?.();
     tg?.disableVerticalSwipes?.();
     applyTelegramLayoutVars(tg);
 
     tg?.onEvent?.('viewportChanged', () => applyTelegramLayoutVars(tg));
     tg?.onEvent?.('safeAreaChanged', () => applyTelegramLayoutVars(tg));
 
-    return tg;
+    return applyLaunchParamsToWebApp(tg);
 }
 
-export async function initTelegramMiniAppAsync(options) {
-    const tg = await waitForTelegramWebApp(options);
+export async function initTelegramMiniAppAsync(options = {}) {
+    let tg = await waitForTelegramWebApp(options);
 
     if (!tg) {
         return null;
@@ -191,10 +269,32 @@ export async function initTelegramMiniAppAsync(options) {
     tg.ready?.();
     tg.expand?.();
     tg.disableVerticalSwipes?.();
+
+    if (!hasTelegramUser(tg) && typeof tg.onEvent === 'function') {
+        await new Promise((resolve) => {
+            let settled = false;
+            const done = () => {
+                if (!settled) {
+                    settled = true;
+                    resolve();
+                }
+            };
+
+            tg.onEvent('ready', done);
+            window.setTimeout(done, 600);
+        });
+        tg = applyLaunchParamsToWebApp(tg);
+    }
+
+    if (!hasTelegramUser(tg)) {
+        await wait(250);
+        tg = applyLaunchParamsToWebApp(tg);
+    }
+
     applyTelegramLayoutVars(tg);
 
     tg.onEvent?.('viewportChanged', () => applyTelegramLayoutVars(tg));
     tg.onEvent?.('safeAreaChanged', () => applyTelegramLayoutVars(tg));
 
-    return hydrateTelegramUser(tg);
+    return applyLaunchParamsToWebApp(tg);
 }

@@ -73,7 +73,7 @@ import './App.css';
 import { formatUserFacingError } from './api/apiError.js';
 import { APP_NAME, BOT_USERNAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
 import { deriveSubscriptionView } from './lib/subscriptionView.js';
-import { initTelegramMiniAppAsync } from './lib/telegramWebApp.js';
+import { getTelegramWebApp, hydrateTelegramUser, initTelegramMiniAppAsync } from './lib/telegramWebApp.js';
 
 const navigationItems = [
     { key: 'home', labelKey: 'navHome', icon: House },
@@ -293,6 +293,7 @@ const translations = {
         profilePlanBadge: '{plan} подписка',
         profileStatRequests: 'Запросов',
         profileStatProjects: 'Проектов',
+        profileStatReferrals: 'Рефералов',
         profileStatCoins: 'CyberCoins',
         profileBalanceLabel: 'Баланс CyberCoins',
         profileTopUp: 'Пополнить',
@@ -513,6 +514,7 @@ const translations = {
         profilePlanBadge: '{plan} plan',
         profileStatRequests: 'Requests',
         profileStatProjects: 'Projects',
+        profileStatReferrals: 'Referrals',
         profileStatCoins: 'CyberCoins',
         profileBalanceLabel: 'CyberCoins balance',
         profileTopUp: 'Top up',
@@ -642,6 +644,8 @@ function App() {
     const [referralData, setReferralData] = useState(null);
     const [promptHistoryData, setPromptHistoryData] = useState(null);
     const [pageLoading, setPageLoading] = useState({ wallet: false, referrals: false, history: false });
+    const pageDataLoadedRef = useRef({ wallet: false, referrals: false, history: false });
+    const pageDataInFlightRef = useRef({ wallet: false, referrals: false, history: false });
     const [promptDraft, setPromptDraft] = useState('');
     const [promptCategory, setPromptCategory] = useState('general');
     const [isSavingPrompt, setIsSavingPrompt] = useState(false);
@@ -701,7 +705,7 @@ function App() {
             setAppNotice(null);
 
             try {
-                const tg = await initTelegramMiniAppAsync({ timeoutMs: 6000 });
+                const tg = await initTelegramMiniAppAsync({ timeoutMs: 12000 });
                 currentTelegramUser = tg?.initDataUnsafe?.user ?? null;
                 const currentStartParam = tg?.initDataUnsafe?.start_param ?? '';
 
@@ -712,26 +716,43 @@ function App() {
                 setTelegramUser(currentTelegramUser);
                 setStartParam(currentStartParam);
 
-                if (!tg) {
+                if (tg?.platform === 'mock' && !ENABLE_TELEGRAM_MOCK) {
+                    showAppNotice('Запущен режим mock без Telegram. Откройте Mini App из бота.');
+                    return;
+                }
+
+                if (!tg || (!tg.initData && !currentTelegramUser?.id)) {
                     showAppNotice(
                         ENABLE_TELEGRAM_MOCK
                             ? 'Не удалось инициализировать Telegram mock.'
-                            : 'Telegram WebApp SDK не найден. Откройте Mini App внутри Telegram (не во внешнем браузере) или включите VITE_ENABLE_TELEGRAM_MOCK=true.',
+                            : 'Telegram WebApp SDK не найден. Откройте Mini App из Telegram (Desktop или телефон), не во внешнем браузере.',
                     );
                     return;
                 }
 
-                if (!currentTelegramUser?.id) {
+                if (!currentTelegramUser?.id && !tg.initData) {
                     const platform = tg.platform ?? 'unknown';
                     showAppNotice(
-                        platform === 'tdesktop'
-                            ? 'Не удалось прочитать пользователя Telegram Desktop. Закройте и снова откройте Mini App из бота или обновите Telegram Desktop.'
-                            : 'Не удалось прочитать данные пользователя Telegram. Откройте Mini App из бота.',
+                        platform === 'tdesktop' || platform === 'macos' || platform === 'web'
+                            ? 'Не удалось прочитать пользователя. Закройте Mini App и откройте снова из бота в Telegram Desktop.'
+                            : 'Не удалось прочитать данные пользователя. Откройте Mini App из бота.',
                     );
                     return;
                 }
 
                 await registerTelegramUser();
+
+                const tgFresh = getTelegramWebApp();
+
+                if (tgFresh) {
+                    hydrateTelegramUser(tgFresh);
+                    currentTelegramUser = tgFresh.initDataUnsafe?.user ?? currentTelegramUser;
+
+                    if (isMounted) {
+                        setTelegramUser(currentTelegramUser);
+                    }
+                }
+
                 const backendProfile = await getMyProfile();
 
                 if (!isMounted) {
@@ -801,101 +822,144 @@ function App() {
     }, [currentPage]);
 
     useEffect(() => {
+        pageDataLoadedRef.current = { wallet: false, referrals: false, history: false };
+        pageDataInFlightRef.current = { wallet: false, referrals: false, history: false };
+        setWalletData(null);
+        setReferralData(null);
+        setPromptHistoryData(null);
+    }, [telegramUser?.id]);
+
+    useEffect(() => {
         if (!telegramUser?.id) {
-            return;
+            return undefined;
         }
 
         let isCancelled = false;
+        let needWallet = false;
+        let needReferrals = false;
+        let needHistory = false;
 
         const loadPageData = async () => {
-            const needWallet = (currentPage === 'wallet' || currentPage === 'profile') && walletData === null;
-            const needReferrals = (currentPage === 'referrals' || currentPage === 'profile') && referralData === null;
-            const needHistory = promptHistoryData === null
-                && (currentPage === 'history' || currentPage === 'profile');
+            needWallet = (currentPage === 'wallet' || currentPage === 'profile')
+                && !pageDataLoadedRef.current.wallet
+                && !pageDataInFlightRef.current.wallet;
+            needReferrals = (currentPage === 'referrals' || currentPage === 'profile')
+                && !pageDataLoadedRef.current.referrals
+                && !pageDataInFlightRef.current.referrals;
+            needHistory = (currentPage === 'history' || currentPage === 'profile')
+                && !pageDataLoadedRef.current.history
+                && !pageDataInFlightRef.current.history;
+
+            if (!needWallet && !needReferrals && !needHistory) {
+                return;
+            }
 
             if (needWallet) {
+                pageDataInFlightRef.current.wallet = true;
                 setPageLoading((prev) => ({ ...prev, wallet: true }));
             }
             if (needReferrals) {
+                pageDataInFlightRef.current.referrals = true;
                 setPageLoading((prev) => ({ ...prev, referrals: true }));
             }
             if (needHistory) {
+                pageDataInFlightRef.current.history = true;
                 setPageLoading((prev) => ({ ...prev, history: true }));
             }
 
-            try {
-                const tasks = [];
+            const tasks = [];
 
-                if (needWallet) {
-                    tasks.push(
-                        getMyWallet()
-                            .then((data) => {
-                                if (!isCancelled) {
-                                    setWalletData(data ?? { wallet: null, transactions: [] });
-                                }
-                            })
-                            .catch((error) => {
-                                if (!isCancelled) {
-                                    setWalletData({ wallet: null, transactions: [] });
-                                    showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить кошелёк.');
-                                }
-                            }),
-                    );
-                }
-
-                if (needReferrals) {
-                    tasks.push(
-                        getMyReferrals()
-                            .then((data) => {
-                                if (!isCancelled) {
-                                    setReferralData(data ?? { items: [] });
-                                }
-                            })
-                            .catch((error) => {
-                                if (!isCancelled) {
-                                    setReferralData({ items: [] });
-                                    showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить рефералов.');
-                                }
-                            }),
-                    );
-                }
-
-                if (needHistory) {
-                    tasks.push(
-                        getMyPromptHistory()
-                            .then((data) => {
-                                if (!isCancelled) {
-                                    setPromptHistoryData(data ?? { items: [] });
-                                }
-                            })
-                            .catch((error) => {
-                                if (!isCancelled) {
-                                    setPromptHistoryData({ items: [] });
-                                    showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить историю.');
-                                }
-                            }),
-                    );
-                }
-
-                await Promise.allSettled(tasks);
-            } finally {
-                if (!isCancelled) {
-                    setPageLoading((prev) => ({
-                        ...prev,
-                        wallet: currentPage === 'wallet' || currentPage === 'profile' ? false : prev.wallet,
-                        referrals: currentPage === 'referrals' || currentPage === 'profile' ? false : prev.referrals,
-                        history: currentPage === 'history' || currentPage === 'profile' ? false : prev.history,
-                    }));
-                }
+            if (needWallet) {
+                tasks.push(
+                    getMyWallet()
+                        .then((data) => {
+                            if (!isCancelled) {
+                                setWalletData(data ?? { wallet: null, transactions: [] });
+                            }
+                        })
+                        .catch((error) => {
+                            if (!isCancelled) {
+                                setWalletData({ wallet: null, transactions: [] });
+                                showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить кошелёк.');
+                            }
+                        })
+                        .finally(() => {
+                            pageDataInFlightRef.current.wallet = false;
+                            pageDataLoadedRef.current.wallet = true;
+                            if (!isCancelled) {
+                                setPageLoading((prev) => ({ ...prev, wallet: false }));
+                            }
+                        }),
+                );
             }
+
+            if (needReferrals) {
+                tasks.push(
+                    getMyReferrals()
+                        .then((data) => {
+                            if (!isCancelled) {
+                                setReferralData(data ?? { items: [] });
+                            }
+                        })
+                        .catch((error) => {
+                            if (!isCancelled) {
+                                setReferralData({ items: [] });
+                                showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить рефералов.');
+                            }
+                        })
+                        .finally(() => {
+                            pageDataInFlightRef.current.referrals = false;
+                            pageDataLoadedRef.current.referrals = true;
+                            if (!isCancelled) {
+                                setPageLoading((prev) => ({ ...prev, referrals: false }));
+                            }
+                        }),
+                );
+            }
+
+            if (needHistory) {
+                tasks.push(
+                    getMyPromptHistory()
+                        .then((data) => {
+                            if (!isCancelled) {
+                                setPromptHistoryData(data ?? { items: [] });
+                            }
+                        })
+                        .catch((error) => {
+                            if (!isCancelled) {
+                                setPromptHistoryData({ items: [] });
+                                showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить историю.');
+                            }
+                        })
+                        .finally(() => {
+                            pageDataInFlightRef.current.history = false;
+                            pageDataLoadedRef.current.history = true;
+                            if (!isCancelled) {
+                                setPageLoading((prev) => ({ ...prev, history: false }));
+                            }
+                        }),
+                );
+            }
+
+            await Promise.allSettled(tasks);
         };
 
         loadPageData();
 
         return () => {
             isCancelled = true;
+
+            if (needWallet && !pageDataLoadedRef.current.wallet) {
+                pageDataInFlightRef.current.wallet = false;
+            }
+            if (needReferrals && !pageDataLoadedRef.current.referrals) {
+                pageDataInFlightRef.current.referrals = false;
+            }
+            if (needHistory && !pageDataLoadedRef.current.history) {
+                pageDataInFlightRef.current.history = false;
+            }
         };
-    }, [currentPage, telegramUser?.id, walletData, referralData, promptHistoryData]);
+    }, [currentPage, telegramUser?.id]);
 
     const text = translations[language] ?? translations.ru;
     const userData = useMemo(() => {
@@ -1352,7 +1416,7 @@ function App() {
                     id: assistantMessageId,
                     role: 'assistant',
                     content: resultText,
-                    isTyping: true,
+                    isTyping: false,
                 },
             ]);
         } catch (error) {
@@ -1383,14 +1447,6 @@ function App() {
 
     useEffect(() => () => {
         textGenerationAbortRef.current?.abort();
-    }, []);
-
-    const handleChatMessageTyped = useCallback((messageId) => {
-        setChatMessages((prev) => prev.map((message) => (
-            message.id === messageId
-                ? { ...message, isTyping: false }
-                : message
-        )));
     }, []);
 
     const handleSavePrompt = async () => {
@@ -1676,7 +1732,6 @@ function App() {
                         <ChatMessageBubble
                             key={message.id}
                             message={message}
-                            onTypingComplete={handleChatMessageTyped}
                         />
                     ))}
                     {isGeneratingText ? (
@@ -1884,8 +1939,8 @@ function App() {
                         <div className="profile-concept__stat-label">{text.profileStatRequests}</div>
                     </div>
                     <div className="profile-concept__stat">
-                        <div className="profile-concept__stat-val">{formatNumber(12)}</div>
-                        <div className="profile-concept__stat-label">{text.profileStatProjects}</div>
+                        <div className="profile-concept__stat-val">{formatNumber(referralsCount)}</div>
+                        <div className="profile-concept__stat-label">{text.profileStatReferrals}</div>
                     </div>
                     <div className="profile-concept__stat">
                         <div className="profile-concept__stat-val">{formatNumber(cyberCoins)}</div>
@@ -1982,11 +2037,6 @@ function App() {
                     </button>
                 </div>
 
-                <div className="profile-concept__plans">
-                    <h3 className="profile-concept__plans-title">{text.profilePlansTitle}</h3>
-                    <p className="profile-concept__plans-sub">{text.profilePlansSub}</p>
-                    {renderSubscriptionPlanCards(subscriptionPlanId)}
-                </div>
             </section>
         );
     };
