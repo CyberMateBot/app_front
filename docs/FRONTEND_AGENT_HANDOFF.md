@@ -21,7 +21,7 @@
 
 - `telegram_id` = `String(Telegram.WebApp.initDataUnsafe.user.id)`
 - Смена: `applyTheme` + `PATCH /v1/users/telegram/{id}/theme` с `{ "theme": "dark" }`; при ошибке API локальная тема **не** откатывается.
-- DOM: `data-theme` на `<html>`, CSS `:root[data-theme='light']` в `App.css`.
+- DOM: `data-theme` на `<html>`, CSS `:root[data-theme='light']` и токены `--cm-*` в `App.css` (light и dark должны отличаться).
 - Telegram: `setHeaderColor` / `setBackgroundColor`; `themeChanged` — только если нет значения в `cybermate-ui-theme`.
 - Регистрация обязательна: `POST /v1/register`, иначе PATCH theme → `404`.
 

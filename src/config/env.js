@@ -59,5 +59,9 @@ export const API_BASE_URL_MISSING_IN_PROD = Boolean(
 export const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'CyberMate';
 export const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? 'CyberMateBot';
 
+/** Support button → CyberMate | Community invite (not @CyberMateSupport / not bot DM). */
+export const SUPPORT_TELEGRAM_INVITE_URL =
+    import.meta.env.VITE_SUPPORT_TELEGRAM_INVITE_URL ?? 'https://t.me/+jXI2qDR9Y-xkZTI6';
+
 /** Локально (dev) по умолчанию true; в prod — только при VITE_ENABLE_TELEGRAM_MOCK=true. */
 export const ENABLE_TELEGRAM_MOCK = readEnvFlag('VITE_ENABLE_TELEGRAM_MOCK', import.meta.env.DEV);

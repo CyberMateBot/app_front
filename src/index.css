@@ -17,6 +17,15 @@
   --card-radius: 24px;
 }
 
+:root[data-theme='light'] {
+  --bg-color: #f3f4f8;
+  --card-bg: #ffffff;
+  --text-primary: #141824;
+  --text-secondary: #5a6078;
+  --card-shadow: 0 10px 30px rgba(20, 24, 36, 0.08);
+  --card-border: 1px solid rgba(28, 34, 53, 0.08);
+}
+
 * {
   margin: 0;
   padding: 0;

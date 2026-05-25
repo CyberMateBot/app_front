@@ -32,7 +32,6 @@ import {
     SlidersHorizontal,
     Send,
     Square,
-    Sparkles,
     Trash2,
     Download,
     SunMedium,
@@ -66,6 +65,7 @@ import {
     groupHistoryIntoTopics,
 } from './lib/chatContext.js';
 import { createChatSessionId } from './lib/chatSession.js';
+import { openSupport, resolveSupportUrl } from './lib/openSupport.js';
 import {
     applyTheme,
     bindTelegramThemeChanged,
@@ -171,7 +171,7 @@ const translations = {
         chipVideo: 'Видео',
         chipMusic: 'Музыка',
         chipVoice: 'Голос',
-        promoTitle: 'Sora — генерация видео',
+        promoTitle: 'Генерация видео',
         promoSub: 'Создай ролик из текста за 60 сек',
         promoButton: 'Попробовать',
         badgeNew: 'NEW',
@@ -368,7 +368,7 @@ const translations = {
             'Безлимит запросов',
             'Все модели + GPT-o1',
             '500 фото (4K)',
-            '100 видео (Sora, Runway)',
+            '100 видео (Runway, Kling)',
             'API доступ',
             '+2000 CyberCoins/мес',
             'Приоритетная очередь',
@@ -399,7 +399,7 @@ const translations = {
         chipVideo: 'Video',
         chipMusic: 'Music',
         chipVoice: 'Voice',
-        promoTitle: 'Sora — video generation',
+        promoTitle: 'Video generation',
         promoSub: 'Create a clip from text in 60 sec',
         promoButton: 'Try it',
         badgeNew: 'NEW',
@@ -596,7 +596,7 @@ const translations = {
             'Unlimited requests',
             'All models + GPT-o1',
             '500 images (4K)',
-            '100 videos (Sora, Runway)',
+            '100 videos (Runway, Kling)',
             'API access',
             '+2000 CyberCoins/mo',
             'Priority queue',
@@ -1064,10 +1064,22 @@ function App() {
 
     const catalogSearchQuery = catalogSearch.trim().toLowerCase();
 
+    const isSoraCatalogTool = (tool) => {
+        const id = String(tool?.id ?? '').toLowerCase();
+        const name = String(text[tool?.nameKey] ?? '').toLowerCase();
+        const sub = String(text[tool?.subKey] ?? '').toLowerCase();
+
+        return id.includes('sora') || name.includes('sora') || sub.includes('sora');
+    };
+
     const filteredCatalogSections = catalogSections
         .map((section) => ({
             ...section,
             tools: section.tools.filter((tool) => {
+                if (isSoraCatalogTool(tool)) {
+                    return false;
+                }
+
                 const matchesTab = toolMatchesCatalogTab(tool, catalogTab);
                 const matchesSearch = !catalogSearchQuery
                     || text[tool.nameKey].toLowerCase().includes(catalogSearchQuery)
@@ -1743,7 +1755,7 @@ function App() {
                 <div className="home-concept__logo-area">
                     <img
                         className="home-concept__logo-image"
-                        src="/cybermate-logo-transparent.png"
+                        src="/logo_white.png"
                         alt=""
                     />
                     <span className="home-concept__logo-name">{APP_NAME}</span>
@@ -1789,16 +1801,6 @@ function App() {
                     </button>
                 ))}
             </div>
-
-            <article className="home-concept__promo">
-                <span className="home-concept__promo-glow" aria-hidden="true" />
-                <Sparkles className="home-concept__promo-icon" size={28} aria-hidden="true" />
-                <div className="home-concept__promo-text">
-                    <h3>{text.promoTitle}</h3>
-                    <p>{text.promoSub}</p>
-                </div>
-                <button type="button" className="home-concept__promo-btn">{text.promoButton}</button>
-            </article>
 
             <p className="home-concept__section-label">{text.homeToolsLabel}</p>
             <div className="home-concept__grid">
@@ -1958,7 +1960,7 @@ function App() {
                                 type="button"
                                 role="tab"
                                 aria-selected={isActive}
-                                className={`ai-chat__model-chip ${isActive ? 'ai-chat__model-chip--active' : ''}`}
+                                className={`ai-chat__model-chip ai-chat__model-chip--${model.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
                                 onClick={() => handleTextModelChange(model.id)}
                                 disabled={isGeneratingText}
                             >
@@ -2092,7 +2094,7 @@ function App() {
                                 type="button"
                                 role="tab"
                                 aria-selected={isActive}
-                                className={`ai-chat__model-chip ${isActive ? 'ai-chat__model-chip--active' : ''}`}
+                                className={`ai-chat__model-chip ai-chat__model-chip--${model.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
                                 onClick={() => handleImageModelChange(model.id)}
                                 disabled={isGeneratingImage}
                             >
@@ -2578,10 +2580,9 @@ function App() {
     );
 
     const renderSettingsScreen = () => {
-        const handleSupportClick = () => {
-            if (typeof window !== 'undefined') {
-                window.open(`https://t.me/${BOT_USERNAME}`, '_blank', 'noopener,noreferrer');
-            }
+        const handleSupportClick = async () => {
+            const url = await resolveSupportUrl();
+            openSupport(url);
         };
 
         const languageOptions = [
