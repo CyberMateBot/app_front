@@ -274,6 +274,8 @@ export async function savePromptHistory({ prompt, category = 'general', model })
 export function normalizeProfileResponse(payload, telegramUser) {
     const profile = payload?.data ?? payload ?? {};
 
+    const subscriptionPlan = profile?.subscriptionPlan ?? profile?.role ?? 'free';
+
     return {
         ...profile,
         backendId: profile?.id ? String(profile.id) : '',
@@ -283,6 +285,8 @@ export function normalizeProfileResponse(payload, telegramUser) {
         username: telegramUser?.username ?? profile?.username ?? profile?.surname ?? '',
         avatarUrl: telegramUser?.photo_url ?? profile?.avatarUrl ?? '',
         language: telegramUser?.language_code ?? profile?.language ?? 'ru',
+        subscriptionPlan,
+        verified: Boolean(profile?.verified),
     };
 }
 

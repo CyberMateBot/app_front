@@ -4,6 +4,57 @@ function hasTelegramUser(tg) {
     return Boolean(tg?.initDataUnsafe?.user?.id);
 }
 
+function parseUserFromInitData(initData) {
+    if (!initData || typeof initData !== 'string') {
+        return null;
+    }
+
+    try {
+        const params = new URLSearchParams(initData);
+        const rawUser = params.get('user');
+
+        if (!rawUser) {
+            return null;
+        }
+
+        const user = JSON.parse(rawUser);
+
+        return user?.id ? user : null;
+    } catch {
+        return null;
+    }
+}
+
+/** Desktop/WebView sometimes exposes initData before initDataUnsafe.user. */
+export function hydrateTelegramUser(tg) {
+    if (!tg || hasTelegramUser(tg)) {
+        return tg;
+    }
+
+    const user = parseUserFromInitData(tg.initData);
+
+    if (!user) {
+        return tg;
+    }
+
+    if (!tg.initDataUnsafe) {
+        tg.initDataUnsafe = {};
+    }
+
+    tg.initDataUnsafe.user = user;
+
+    if (!tg.initDataUnsafe.start_param) {
+        const params = new URLSearchParams(tg.initData);
+        const startParam = params.get('start_param');
+
+        if (startParam) {
+            tg.initDataUnsafe.start_param = startParam;
+        }
+    }
+
+    return tg;
+}
+
 function buildMockInitData(user, startParam) {
     const params = new URLSearchParams();
 
@@ -28,6 +79,7 @@ function createBrowserMock() {
     const startParam = 'dev-preview';
 
     return {
+        platform: 'mock',
         ready: () => {},
         expand: () => {},
         disableVerticalSwipes: () => {},
@@ -45,6 +97,11 @@ export function getTelegramWebApp() {
     }
 
     const telegramWebApp = window.Telegram?.WebApp ?? null;
+
+    if (telegramWebApp) {
+        hydrateTelegramUser(telegramWebApp);
+    }
+
     const shouldUseMock = ENABLE_TELEGRAM_MOCK
         || (import.meta.env.DEV && telegramWebApp && !hasTelegramUser(telegramWebApp));
 
@@ -57,6 +114,37 @@ export function getTelegramWebApp() {
     }
 
     return telegramWebApp;
+}
+
+/**
+ * Waits for telegram-web-app.js (race on Telegram Desktop) then resolves WebApp/mock.
+ */
+export function waitForTelegramWebApp({ timeoutMs = 5000, intervalMs = 50 } = {}) {
+    if (typeof window === 'undefined') {
+        return Promise.resolve(null);
+    }
+
+    return new Promise((resolve) => {
+        const startedAt = Date.now();
+
+        const tick = () => {
+            const tg = getTelegramWebApp();
+
+            if (tg && (hasTelegramUser(tg) || tg.initData || ENABLE_TELEGRAM_MOCK)) {
+                resolve(hydrateTelegramUser(tg));
+                return;
+            }
+
+            if (Date.now() - startedAt >= timeoutMs) {
+                resolve(getTelegramWebApp());
+                return;
+            }
+
+            window.setTimeout(tick, intervalMs);
+        };
+
+        tick();
+    });
 }
 
 function applyTelegramLayoutVars(tg) {
@@ -91,4 +179,22 @@ export function initTelegramMiniApp() {
     tg?.onEvent?.('safeAreaChanged', () => applyTelegramLayoutVars(tg));
 
     return tg;
+}
+
+export async function initTelegramMiniAppAsync(options) {
+    const tg = await waitForTelegramWebApp(options);
+
+    if (!tg) {
+        return null;
+    }
+
+    tg.ready?.();
+    tg.expand?.();
+    tg.disableVerticalSwipes?.();
+    applyTelegramLayoutVars(tg);
+
+    tg.onEvent?.('viewportChanged', () => applyTelegramLayoutVars(tg));
+    tg.onEvent?.('safeAreaChanged', () => applyTelegramLayoutVars(tg));
+
+    return hydrateTelegramUser(tg);
 }

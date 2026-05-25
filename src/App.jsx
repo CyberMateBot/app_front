@@ -70,8 +70,10 @@ import {
     getTextModelDefinition,
 } from './config/aiModels.js';
 import './App.css';
+import { formatUserFacingError } from './api/apiError.js';
 import { APP_NAME, BOT_USERNAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
-import { initTelegramMiniApp } from './lib/telegramWebApp.js';
+import { deriveSubscriptionView } from './lib/subscriptionView.js';
+import { initTelegramMiniAppAsync } from './lib/telegramWebApp.js';
 
 const navigationItems = [
     { key: 'home', labelKey: 'navHome', icon: House },
@@ -299,6 +301,8 @@ const translations = {
         profileSettingsSection: 'Настройки',
         profileMenuSubscription: 'Моя подписка',
         profileMenuSubscriptionSub: '{plan} · до {date}',
+        profileSubscriptionNoExpiry: 'без срока',
+        profilePlanBadgeFree: 'Бесплатный план',
         profileMenuHistory: 'История запросов',
         profileMenuHistorySub: '{count} генераций',
         profileMenuReferrals: 'Рефералы',
@@ -517,6 +521,8 @@ const translations = {
         profileSettingsSection: 'Settings',
         profileMenuSubscription: 'My subscription',
         profileMenuSubscriptionSub: '{plan} · until {date}',
+        profileSubscriptionNoExpiry: 'no expiry',
+        profilePlanBadgeFree: 'Free plan',
         profileMenuHistory: 'Request history',
         profileMenuHistorySub: '{count} generations',
         profileMenuReferrals: 'Referrals',
@@ -585,14 +591,8 @@ function buildProfileView(profile, telegramUser) {
     const rawUsername = profile?.username || telegramUser?.username || '';
     const fallbackHandle = telegramUser?.id ? `@${telegramUser.id}` : '@2281448';
     const handle = rawUsername && rawUsername !== 'username_not_set' ? `@${rawUsername}` : fallbackHandle;
-    const balance = String(profile?.balance ?? profile?.coins ?? profile?.points ?? 10500);
+    const balance = String(profile?.balance ?? profile?.coins ?? profile?.points ?? 0);
     const tokens = String(profile?.tokens ?? profile?.tokenBalance ?? profile?.points ?? balance);
-    const subscriptionStatus = profile?.subscriptionStatus ?? profile?.subscription?.status ?? 'Premium';
-    const subscriptionSince = profile?.subscriptionSince ?? profile?.subscription?.since ?? '05.04.26';
-    const subscriptionLeftRaw = profile?.subscriptionLeft ?? profile?.subscription?.daysLeft ?? '30 days';
-    const subscriptionLeft = typeof subscriptionLeftRaw === 'number'
-        ? `${subscriptionLeftRaw} days`
-        : subscriptionLeftRaw;
 
     return {
         displayName,
@@ -604,9 +604,6 @@ function buildProfileView(profile, telegramUser) {
         avatarUrl: profile?.avatarUrl || telegramUser?.photo_url || '',
         balance,
         tokens,
-        subscriptionStatus,
-        subscriptionSince,
-        subscriptionLeft,
     };
 }
 
@@ -704,7 +701,7 @@ function App() {
             setAppNotice(null);
 
             try {
-                const tg = initTelegramMiniApp();
+                const tg = await initTelegramMiniAppAsync({ timeoutMs: 6000 });
                 currentTelegramUser = tg?.initDataUnsafe?.user ?? null;
                 const currentStartParam = tg?.initDataUnsafe?.start_param ?? '';
 
@@ -719,7 +716,17 @@ function App() {
                     showAppNotice(
                         ENABLE_TELEGRAM_MOCK
                             ? 'Не удалось инициализировать Telegram mock.'
-                            : 'Telegram WebApp SDK не найден. Откройте Mini App внутри Telegram или включите VITE_ENABLE_TELEGRAM_MOCK=true.',
+                            : 'Telegram WebApp SDK не найден. Откройте Mini App внутри Telegram (не во внешнем браузере) или включите VITE_ENABLE_TELEGRAM_MOCK=true.',
+                    );
+                    return;
+                }
+
+                if (!currentTelegramUser?.id) {
+                    const platform = tg.platform ?? 'unknown';
+                    showAppNotice(
+                        platform === 'tdesktop'
+                            ? 'Не удалось прочитать пользователя Telegram Desktop. Закройте и снова откройте Mini App из бота или обновите Telegram Desktop.'
+                            : 'Не удалось прочитать данные пользователя Telegram. Откройте Mini App из бота.',
                     );
                     return;
                 }
@@ -751,7 +758,8 @@ function App() {
         return () => {
             isMounted = false;
         };
-    }, [showAppNotice]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bootstrap once on mount
+    }, []);
 
     useEffect(() => {
         if (typeof document !== 'undefined') {
@@ -802,7 +810,8 @@ function App() {
         const loadPageData = async () => {
             const needWallet = (currentPage === 'wallet' || currentPage === 'profile') && walletData === null;
             const needReferrals = (currentPage === 'referrals' || currentPage === 'profile') && referralData === null;
-            const needHistory = currentPage === 'history' || (currentPage === 'profile' && promptHistoryData === null);
+            const needHistory = promptHistoryData === null
+                && (currentPage === 'history' || currentPage === 'profile');
 
             if (needWallet) {
                 setPageLoading((prev) => ({ ...prev, wallet: true }));
@@ -827,6 +836,7 @@ function App() {
                             })
                             .catch((error) => {
                                 if (!isCancelled) {
+                                    setWalletData({ wallet: null, transactions: [] });
                                     showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить кошелёк.');
                                 }
                             }),
@@ -843,6 +853,7 @@ function App() {
                             })
                             .catch((error) => {
                                 if (!isCancelled) {
+                                    setReferralData({ items: [] });
                                     showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить рефералов.');
                                 }
                             }),
@@ -859,6 +870,7 @@ function App() {
                             })
                             .catch((error) => {
                                 if (!isCancelled) {
+                                    setPromptHistoryData({ items: [] });
                                     showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить историю.');
                                 }
                             }),
@@ -883,14 +895,25 @@ function App() {
         return () => {
             isCancelled = true;
         };
-    }, [currentPage, telegramUser, walletData, referralData, promptHistoryData, showAppNotice]);
+    }, [currentPage, telegramUser?.id, walletData, referralData, promptHistoryData]);
 
-    const userData = useMemo(() => buildProfileView({
-        ...profile,
-        balance: walletData?.wallet?.balance ?? profile?.balance,
-        tokenBalance: walletData?.wallet?.balanceAvailable ?? profile?.tokenBalance,
-    }, telegramUser), [profile, telegramUser, walletData]);
     const text = translations[language] ?? translations.ru;
+    const userData = useMemo(() => {
+        const base = buildProfileView({
+            ...profile,
+            balance: walletData?.wallet?.balance ?? profile?.balance,
+            tokenBalance: walletData?.wallet?.balanceAvailable ?? profile?.tokenBalance,
+        }, telegramUser);
+        const subscription = deriveSubscriptionView(profile, text);
+
+        return {
+            ...base,
+            subscriptionPlanId: subscription.planId,
+            subscriptionPlanName: subscription.planName,
+            subscriptionUntil: subscription.untilLabel,
+            subscriptionIsPaid: subscription.isPaid,
+        };
+    }, [profile, telegramUser, walletData, language]);
     const referralLink = useMemo(() => buildReferralLink(telegramUser, startParam), [telegramUser, startParam]);
     const referralItems = useMemo(() => {
         const sourceItems = Array.isArray(referralData?.items) ? referralData.items : [];
@@ -1337,7 +1360,7 @@ function App() {
                 return;
             }
 
-            setChatError(error instanceof Error ? error.message : 'Не удалось получить ответ.');
+            setChatError(formatUserFacingError(error, language) || 'Не удалось получить ответ.');
         } finally {
             if (textGenerationAbortRef.current === abortController) {
                 textGenerationAbortRef.current = null;
@@ -1794,19 +1817,23 @@ function App() {
             ? `#CM-${String(userData.telegramId).slice(-4)}`
             : '#CM-0000';
         const cyberCoins = Number(walletData?.wallet?.balance ?? userData.balance ?? userData.tokens) || 0;
-        const usageLimit = Number(walletData?.wallet?.monthlyLimit ?? 1000) || 1000;
-        const usageUsed = Number(walletData?.wallet?.usedThisMonth ?? Math.min(620, cyberCoins)) || 0;
-        const usagePercent = Math.min(100, Math.round((usageUsed / usageLimit) * 100));
+        const usageLimitRaw = walletData?.wallet?.monthlyLimit;
+        const usageUsedRaw = walletData?.wallet?.usedThisMonth;
+        const hasUsageQuota = usageLimitRaw != null && Number(usageLimitRaw) > 0;
+        const usageLimit = hasUsageQuota ? Number(usageLimitRaw) : 0;
+        const usageUsed = hasUsageQuota ? Number(usageUsedRaw ?? 0) : 0;
+        const usagePercent = hasUsageQuota
+            ? Math.min(100, Math.round((usageUsed / usageLimit) * 100))
+            : 0;
         const requestsCount = historyItems.length;
         const referralsCount = referralItems.length;
         const referralBonus = referralItems.reduce((sum, item) => {
             const reward = Number(String(item.reward).replace('+', ''));
             return sum + (Number.isNaN(reward) ? 0 : reward);
         }, 0);
-        const subscriptionPlanName = userData.subscriptionStatus || 'Pro';
-        const subscriptionUntil = userData.subscriptionLeft?.includes('.')
-            ? userData.subscriptionLeft
-            : userData.subscriptionSince;
+        const subscriptionPlanName = userData.subscriptionPlanName;
+        const subscriptionPlanId = userData.subscriptionPlanId;
+        const subscriptionUntil = userData.subscriptionUntil;
 
         const toggleTheme = () => {
             setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));
@@ -1837,13 +1864,17 @@ function App() {
                         ) : (
                             <span>{profileInitials}</span>
                         )}
-                        <span className="profile-concept__avatar-crown" aria-hidden="true">👑</span>
+                        {userData.subscriptionIsPaid ? (
+                            <span className="profile-concept__avatar-crown" aria-hidden="true">👑</span>
+                        ) : null}
                     </div>
                     <h3 className="profile-concept__user-name">{userData.displayName}</h3>
                     <p className="profile-concept__user-id">{userData.handle} · {profileMemberId}</p>
-                    <div className="profile-concept__plan-badge">
+                    <div className={`profile-concept__plan-badge ${subscriptionPlanId === 'free' ? 'profile-concept__plan-badge--free' : ''}`}>
                         <Zap size={12} aria-hidden="true" />
-                        {formatTemplate(text.profilePlanBadge, { plan: subscriptionPlanName })}
+                        {subscriptionPlanId === 'free'
+                            ? text.profilePlanBadgeFree
+                            : formatTemplate(text.profilePlanBadge, { plan: subscriptionPlanName })}
                     </div>
                 </div>
 
@@ -1876,15 +1907,17 @@ function App() {
                             {text.profileTopUp}
                         </button>
                     </div>
-                    <div className="profile-concept__usage">
-                        <div className="profile-concept__usage-row">
-                            <span>{text.profileUsageLabel}</span>
-                            <span>{formatNumber(usageUsed)} / {formatNumber(usageLimit)}</span>
+                    {hasUsageQuota ? (
+                        <div className="profile-concept__usage">
+                            <div className="profile-concept__usage-row">
+                                <span>{text.profileUsageLabel}</span>
+                                <span>{formatNumber(usageUsed)} / {formatNumber(usageLimit)}</span>
+                            </div>
+                            <div className="profile-concept__bar-track">
+                                <div className="profile-concept__bar-fill" style={{ width: `${usagePercent}%` }} />
+                            </div>
                         </div>
-                        <div className="profile-concept__bar-track">
-                            <div className="profile-concept__bar-fill" style={{ width: `${usagePercent}%` }} />
-                        </div>
-                    </div>
+                    ) : null}
                 </article>
 
                 <p className="profile-concept__section-lbl">{text.profileAccountSection}</p>
@@ -1952,7 +1985,7 @@ function App() {
                 <div className="profile-concept__plans">
                     <h3 className="profile-concept__plans-title">{text.profilePlansTitle}</h3>
                     <p className="profile-concept__plans-sub">{text.profilePlansSub}</p>
-                    {renderSubscriptionPlanCards(subscriptionPlanName.toLowerCase())}
+                    {renderSubscriptionPlanCards(subscriptionPlanId)}
                 </div>
             </section>
         );
@@ -2041,7 +2074,7 @@ function App() {
         const cyberCoins = Number(walletData?.wallet?.balance ?? userData.balance ?? 0) || 0;
         const balanceAvailable = Number(walletData?.wallet?.balanceAvailable ?? cyberCoins) || 0;
         const totalEarned = Number(walletData?.wallet?.totalEarned ?? 0) || 0;
-        const currentPlanId = (userData.subscriptionStatus || 'pro').toLowerCase();
+        const currentPlanId = userData.subscriptionPlanId;
 
         return (
             <section className="wallet-screen wallet-screen--concept">
@@ -2050,7 +2083,7 @@ function App() {
                 <p className="profile-concept__section-lbl">{text.walletCurrentPlan}</p>
                 <div className="subscription-concept__current">
                     <Crown size={16} aria-hidden="true" />
-                    <span>{userData.subscriptionStatus || 'Pro'}</span>
+                    <span>{userData.subscriptionPlanName}</span>
                 </div>
 
                 <article className="profile-concept__balance-card subscription-concept__balance">
