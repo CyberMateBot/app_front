@@ -1,5 +1,10 @@
 import { BOT_USERNAME } from '../config/env.js';
-import { getTelegramWebApp, hydrateTelegramUser, readLaunchInitData } from '../lib/telegramWebApp.js';
+import {
+    getTelegramWebApp,
+    hydrateTelegramUser,
+    readLaunchInitData,
+    resolveTelegramUserId,
+} from '../lib/telegramWebApp.js';
 import { errorFromResponse } from './apiError.js';
 import { apiFetch } from './httpClient.js';
 
@@ -68,15 +73,12 @@ export async function registerTelegramUser() {
 
 function getCurrentTelegramId() {
     const tg = getTelegramWebApp();
-
-    if (tg) {
-        hydrateTelegramUser(tg);
-    }
-
-    const telegramId = tg?.initDataUnsafe?.user?.id;
+    const telegramId = resolveTelegramUserId(tg);
 
     if (!telegramId) {
-        throw new Error('Telegram user id not found.');
+        throw new Error(
+            'Telegram user id not found. Open the Mini App in Telegram or set VITE_ENABLE_TELEGRAM_MOCK=true for local dev.',
+        );
     }
 
     return telegramId;
@@ -124,6 +126,21 @@ export async function getMyPromptHistory() {
     return fetchTelegramResource(`/v1/prompts/history/telegram/${telegramId}`, 'Failed to load prompt history.');
 }
 
+export async function clearMyPromptHistory() {
+    const telegramId = getCurrentTelegramId();
+
+    const res = await apiFetch(`/v1/prompts/history/telegram/${telegramId}`, {
+        method: 'DELETE',
+        headers: { Accept: 'application/json' },
+    });
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to clear prompt history.');
+    }
+
+    return res.json().catch(() => ({}));
+}
+
 export const TEXT_MODEL_IDS = ['yandexgpt', 'deepseek', 'gemini-flash', 'openai'];
 export const IMAGE_MODEL_IDS = ['nano-banana', 'alice-ai-art'];
 
@@ -136,6 +153,9 @@ export async function generateText({
     model = 'yandexgpt',
     messages = [],
     category,
+    sessionId,
+    imageBase64,
+    imageMimeType,
     signal,
 }) {
     const telegramId = getCurrentTelegramId();
@@ -153,19 +173,32 @@ export async function generateText({
             ))
         : [];
 
-    if (!trimmedPrompt) {
-        throw new Error('Prompt is required.');
+    const trimmedImage = imageBase64?.trim() ?? '';
+    if (!trimmedPrompt && !trimmedImage) {
+        throw new Error('Prompt or image is required.');
     }
 
     const body = {
         telegramId: String(telegramId),
-        prompt: trimmedPrompt,
+        prompt: trimmedPrompt || '',
         category: category?.trim() || getTextCategoryLabel(),
         model: normalizedModel,
     };
 
+    const trimmedSessionId = sessionId?.trim();
+    if (trimmedSessionId) {
+        body.sessionId = trimmedSessionId;
+    }
+
     if (normalizedMessages.length > 0) {
         body.messages = normalizedMessages;
+    }
+
+    if (trimmedImage) {
+        body.imageBase64 = trimmedImage;
+        if (imageMimeType?.trim()) {
+            body.imageMimeType = imageMimeType.trim();
+        }
     }
 
     const res = await apiFetch('/v1/generate/text', {

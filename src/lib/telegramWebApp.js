@@ -4,6 +4,28 @@ function hasTelegramUser(tg) {
     return Boolean(tg?.initDataUnsafe?.user?.id);
 }
 
+/** True when WebApp has initData or user (real Telegram session). */
+function hasValidTelegramSession(tg) {
+    if (!tg) {
+        return false;
+    }
+    hydrateTelegramUser(tg);
+    return hasTelegramUser(tg) || Boolean(String(tg.initData ?? '').trim());
+}
+
+/** Returns numeric Telegram user id from WebApp or initData string. */
+export function resolveTelegramUserId(tg) {
+    if (!tg) {
+        return null;
+    }
+    hydrateTelegramUser(tg);
+    if (tg.initDataUnsafe?.user?.id) {
+        return tg.initDataUnsafe.user.id;
+    }
+    const user = parseUserFromInitData(tg.initData);
+    return user?.id ?? null;
+}
+
 function parseUserFromInitData(initData) {
     if (!initData || typeof initData !== 'string') {
         return null;
@@ -158,7 +180,7 @@ export function isTelegramClientPresent() {
 export function getTelegramWebApp() {
     const native = getNativeTelegramWebApp();
 
-    if (native) {
+    if (native && hasValidTelegramSession(native)) {
         return applyLaunchParamsToWebApp(native);
     }
 
@@ -176,6 +198,10 @@ export function getTelegramWebApp() {
             initData: launchInitData,
             initDataUnsafe: {},
         });
+    }
+
+    if (native) {
+        return applyLaunchParamsToWebApp(native);
     }
 
     return null;
@@ -199,17 +225,15 @@ export function waitForTelegramWebApp({ timeoutMs = 12000, intervalMs = 50 } = {
         const startedAt = Date.now();
 
         const tick = async () => {
-            if (getNativeTelegramWebApp() || readLaunchInitData()) {
-                const tg = getTelegramWebApp();
+            const tg = getTelegramWebApp();
 
-                if (tg && (hasTelegramUser(tg) || tg.initData)) {
-                    resolve(applyLaunchParamsToWebApp(tg));
-                    return;
-                }
+            if (tg && (hasTelegramUser(tg) || tg.initData)) {
+                resolve(applyLaunchParamsToWebApp(tg));
+                return;
             }
 
-            if (ENABLE_TELEGRAM_MOCK && Date.now() - startedAt > 400) {
-                resolve(getTelegramWebApp());
+            if (ENABLE_TELEGRAM_MOCK && Date.now() - startedAt > 150) {
+                resolve(createBrowserMock());
                 return;
             }
 

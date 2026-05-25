@@ -16,7 +16,8 @@ export default function TypingMessage({
     onCompleteRef.current = onComplete;
 
     useEffect(() => {
-        if (!text) {
+        const normalized = text ?? '';
+        if (!normalized) {
             setVisibleLength(0);
             setIsDone(true);
             onCompleteRef.current?.();
@@ -27,7 +28,7 @@ export default function TypingMessage({
             && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         if (prefersReducedMotion) {
-            setVisibleLength(text.length);
+            setVisibleLength(normalized.length);
             setIsDone(true);
             onCompleteRef.current?.();
             return undefined;
@@ -41,7 +42,7 @@ export default function TypingMessage({
             index += 1;
             setVisibleLength(index);
 
-            if (index >= text.length) {
+            if (index >= normalized.length) {
                 window.clearInterval(timerId);
                 setIsDone(true);
                 onCompleteRef.current?.();
@@ -53,10 +54,17 @@ export default function TypingMessage({
         };
     }, [text, charDelayMs]);
 
-    const visibleText = text.slice(0, visibleLength);
+    const visibleText = (text ?? '').slice(0, visibleLength);
 
-    if (renderMarkdown && isDone) {
-        return <MarkdownMessage content={text} />;
+    if (renderMarkdown) {
+        return (
+            <div className="typing-message">
+                <MarkdownMessage content={visibleText} />
+                {!isDone ? (
+                    <span className="ai-chat__typing-cursor" aria-hidden="true">|</span>
+                ) : null}
+            </div>
+        );
     }
 
     return (

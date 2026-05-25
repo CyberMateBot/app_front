@@ -79,10 +79,16 @@ export function getChatTopicTitle(firstMessage, maxLength = 120) {
     return `${normalized.slice(0, maxLength - 1)}…`;
 }
 
-const TOPIC_GAP_MS = 2 * 60 * 60 * 1000;
+function resolveSessionKey(item) {
+    const sessionId = String(item.sessionId || item.session_id || '').trim();
+    if (sessionId) {
+        return sessionId;
+    }
+    return `legacy-${item.id}`;
+}
 
 /**
- * Группирует записи истории в темы (сессии с одной моделью в пределах окна по времени).
+ * Группирует записи истории в темы по sessionId (один «Новый диалог» = одна карточка).
  */
 export function groupHistoryIntoTopics(items) {
     if (!Array.isArray(items) || items.length === 0) {
@@ -99,31 +105,73 @@ export function groupHistoryIntoTopics(items) {
 
     sorted.forEach((item) => {
         const model = item.model || item.category || 'text';
+        const sessionKey = resolveSessionKey(item);
         const createdAt = new Date(item.createdAt || 0).getTime();
         const last = topics[topics.length - 1];
 
-        if (
-            last
-            && last.model === model
-            && last.oldestAt - createdAt <= TOPIC_GAP_MS
-        ) {
+        if (last && last.sessionId === sessionKey) {
             last.messageCount += 1;
             last.oldestAt = createdAt;
-            last.topicTitle = item.prompt || last.topicTitle;
             last.latestAt = Math.max(last.latestAt, createdAt);
             last.lastItem = item;
+            last.items.push(item);
+            if (item.prompt) {
+                last.topicTitle = item.prompt;
+            }
         } else {
             topics.push({
-                id: `topic-${item.id}`,
+                id: `topic-${sessionKey}`,
+                sessionId: sessionKey,
                 model,
+                category: item.category || '',
                 topicTitle: item.prompt || '',
                 messageCount: 1,
                 oldestAt: createdAt,
                 latestAt: createdAt,
                 lastItem: item,
+                items: [item],
             });
         }
     });
 
     return topics;
+}
+
+/**
+ * Восстанавливает переписку из темы истории (промты пользователя и ответы модели).
+ */
+export function buildChatMessagesFromHistoryTopic(topic) {
+    const items = Array.isArray(topic?.items) ? topic.items : [];
+    if (items.length === 0 && topic?.lastItem) {
+        items.push(topic.lastItem);
+    }
+
+    const messages = [];
+
+    [...items]
+        .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())
+        .forEach((item) => {
+            const prompt = String(item.prompt || '').trim();
+            const response = String(item.response || '').trim();
+
+            if (prompt) {
+                messages.push({
+                    id: `history-user-${item.id}`,
+                    role: 'user',
+                    content: prompt,
+                    isTyping: false,
+                });
+            }
+
+            if (response) {
+                messages.push({
+                    id: `history-assistant-${item.id}`,
+                    role: 'assistant',
+                    content: response,
+                    isTyping: false,
+                });
+            }
+        });
+
+    return messages;
 }

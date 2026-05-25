@@ -59,5 +59,5 @@ export const API_BASE_URL_MISSING_IN_PROD = Boolean(
 export const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'CyberMate';
 export const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? 'CyberMateBot';
 
-/** Только при VITE_ENABLE_TELEGRAM_MOCK=true. В prod не подменяет Telegram Desktop. */
-export const ENABLE_TELEGRAM_MOCK = readEnvFlag('VITE_ENABLE_TELEGRAM_MOCK', false);
+/** Локально (dev) по умолчанию true; в prod — только при VITE_ENABLE_TELEGRAM_MOCK=true. */
+export const ENABLE_TELEGRAM_MOCK = readEnvFlag('VITE_ENABLE_TELEGRAM_MOCK', import.meta.env.DEV);

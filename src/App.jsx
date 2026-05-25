@@ -25,6 +25,7 @@ import {
     Moon,
     MoreHorizontal,
     Music2,
+    Paperclip,
     Plus,
     Search,
     Settings,
@@ -45,6 +46,7 @@ import {
     buildReferralLink,
     getMyProfile,
     getMyPromptHistory,
+    clearMyPromptHistory,
     getMyReferrals,
     getMyWallet,
     normalizeProfileResponse,
@@ -53,13 +55,16 @@ import {
     registerTelegramUser,
     savePromptHistory,
     TEXT_MODEL_IDS,
+    IMAGE_MODEL_IDS,
 } from './api/telegramApi.js';
 import {
     buildChatContextMessages,
+    buildChatMessagesFromHistoryTopic,
     buildImageContextMessages,
     getChatTopicTitle,
     groupHistoryIntoTopics,
 } from './lib/chatContext.js';
+import { createChatSessionId } from './lib/chatSession.js';
 import AppNotice from './Components/AppNotice.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
 import {
@@ -215,8 +220,15 @@ const translations = {
         chatPlaceholder: 'Сообщение...',
         chatSend: 'Отправить',
         chatStop: 'Остановить',
-        chatTyping: 'Модель печатает...',
+        chatAttachPhoto: 'Прикрепить фото',
+        chatRemovePhoto: 'Убрать фото',
+        chatImageNeedsGeminiKey: 'Для фото нужен GEMINI_API_KEY на сервере (описание изображения).',
         chatNewDialog: 'Новый диалог',
+        chatGenerating: 'Generating',
+        historyDeleteConfirm: 'Удалить всю историю промтов? Это действие нельзя отменить.',
+        historyDeleteConfirmAction: 'Удалить',
+        historyDeleteCancel: 'Отмена',
+        historyCleared: 'История очищена.',
         historyTitle: 'История',
         historyToday: 'Сегодня',
         historyYesterday: 'Вчера',
@@ -436,8 +448,15 @@ const translations = {
         chatPlaceholder: 'Message...',
         chatSend: 'Send',
         chatStop: 'Stop',
-        chatTyping: 'Model is typing...',
+        chatAttachPhoto: 'Attach photo',
+        chatRemovePhoto: 'Remove photo',
+        chatImageNeedsGeminiKey: 'Image uploads require GEMINI_API_KEY on the server.',
         chatNewDialog: 'New chat',
+        chatGenerating: 'Generating',
+        historyDeleteConfirm: 'Delete all prompt history? This cannot be undone.',
+        historyDeleteConfirmAction: 'Delete',
+        historyDeleteCancel: 'Cancel',
+        historyCleared: 'History cleared.',
         historyTitle: 'History',
         historyToday: 'Today',
         historyYesterday: 'Yesterday',
@@ -660,10 +679,15 @@ function App() {
     const [generatedImageUrl, setGeneratedImageUrl] = useState('');
     const [chatMessages, setChatMessages] = useState([]);
     const [chatTopicTitle, setChatTopicTitle] = useState('');
+    const [chatSessionId, setChatSessionId] = useState(() => createChatSessionId());
     const [chatReturnPage, setChatReturnPage] = useState('catalog');
     const [imageReturnPage, setImageReturnPage] = useState('catalog');
     const [isGeneratingText, setIsGeneratingText] = useState(false);
+    const [chatAttachment, setChatAttachment] = useState(null);
+    const [confirmDialog, setConfirmDialog] = useState(null);
     const textGenerationAbortRef = useRef(null);
+    const chatPhotoInputRef = useRef(null);
+    const pendingAssistantIdRef = useRef(null);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
     const [homeCategoryChip, setHomeCategoryChip] = useState('all');
     const [catalogTab, setCatalogTab] = useState('all');
@@ -1151,24 +1175,88 @@ function App() {
         return { accent: 'violet', icon: Bot, toolName: text.chatTitle, emoji: null };
     };
 
-    const openAiChat = (modelId, returnPage = currentPage) => {
+    const startNewChatSession = useCallback(() => {
+        setChatSessionId(createChatSessionId());
+    }, []);
+
+    const openAiChat = (modelId, returnPage = currentPage, options = {}) => {
+        handleStopChatGeneration();
         if (modelId) {
             setTextModel(modelId);
         }
-        setChatMessages([]);
-        setChatTopicTitle('');
+        if (options.sessionId) {
+            setChatSessionId(options.sessionId);
+        } else if (!options.messages?.length) {
+            startNewChatSession();
+        }
+        setChatMessages(options.messages ?? []);
+        setChatTopicTitle(options.topicTitle ?? '');
         setTextPrompt('');
+        setChatAttachment(null);
         setChatReturnPage(returnPage);
         setChatError('');
         setCurrentPage('ai-chat');
     };
 
+    const resolveHistoryTopicModel = (topic) => {
+        const model = String(topic?.model || '').toLowerCase();
+        if (TEXT_MODEL_IDS.includes(model)) {
+            return model;
+        }
+        if (IMAGE_MODEL_IDS.includes(model)) {
+            return model;
+        }
+        const category = String(topic?.category || model).toLowerCase();
+        if (category.includes('image') || category.includes('photo')) {
+            return IMAGE_MODEL_IDS[0];
+        }
+        return 'yandexgpt';
+    };
+
+    const openHistoryTopic = (topic) => {
+        const modelId = resolveHistoryTopicModel(topic);
+        const isImageTopic = IMAGE_MODEL_IDS.includes(modelId);
+
+        if (isImageTopic) {
+            handleStopChatGeneration();
+            setImageModel(modelId);
+            setImageSessionMessages(
+                buildChatMessagesFromHistoryTopic(topic).map((message) => ({
+                    ...message,
+                    content: message.content,
+                })),
+            );
+            setImagePrompt('');
+            setGeneratedImageUrl('');
+            setImageReturnPage('history');
+            setImageError('');
+            setCurrentPage('ai-image');
+            return;
+        }
+
+        const messages = buildChatMessagesFromHistoryTopic(topic);
+        const title = getChatTopicTitle(
+            messages[messages.length - 1]?.content || topic.topicTitle || '',
+        );
+
+        const sessionId = topic.sessionId
+            || topic.items?.[0]?.sessionId
+            || topic.items?.[0]?.session_id
+            || topic.lastItem?.sessionId
+            || topic.lastItem?.session_id
+            || null;
+
+        openAiChat(modelId, 'history', { messages, topicTitle: title, sessionId });
+    };
+
     const handleTextModelChange = (modelId) => {
         handleStopChatGeneration();
         setTextModel(modelId);
+        startNewChatSession();
         setChatMessages([]);
         setChatTopicTitle('');
         setTextPrompt('');
+        setChatAttachment(null);
         setChatError('');
     };
 
@@ -1272,9 +1360,11 @@ function App() {
 
     const handleNewChatDialog = () => {
         handleStopChatGeneration();
+        startNewChatSession();
         setChatMessages([]);
         setChatTopicTitle('');
         setTextPrompt('');
+        setChatAttachment(null);
         setChatError('');
     };
 
@@ -1360,7 +1450,70 @@ function App() {
         textGenerationAbortRef.current?.abort();
         textGenerationAbortRef.current = null;
         setIsGeneratingText(false);
+        const pendingId = pendingAssistantIdRef.current;
+        if (pendingId) {
+            setChatMessages((prev) => prev.filter((message) => message.id !== pendingId));
+            pendingAssistantIdRef.current = null;
+        }
     }, []);
+
+    const handleChatTypingComplete = useCallback((messageId) => {
+        setChatMessages((prev) => prev.map((message) => (
+            message.id === messageId
+                ? { ...message, isTyping: false }
+                : message
+        )));
+    }, []);
+
+    const handleChatPhotoSelect = (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) {
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            setChatError('Можно прикрепить только изображение.');
+            return;
+        }
+        if (file.size > 4 * 1024 * 1024) {
+            setChatError('Изображение слишком большое (макс. 4 МБ).');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+            if (!dataUrl) {
+                return;
+            }
+            const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+            setChatAttachment({
+                previewUrl: dataUrl,
+                base64,
+                mimeType: file.type,
+            });
+            setChatError('');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleClearHistoryRequest = () => {
+        setConfirmDialog({
+            message: text.historyDeleteConfirm,
+            confirmLabel: text.historyDeleteConfirmAction,
+            cancelLabel: text.historyDeleteCancel,
+            onConfirm: async () => {
+                try {
+                    await clearMyPromptHistory();
+                    setPromptHistoryData({ items: [] });
+                    pageDataLoadedRef.current.history = true;
+                    showAppNotice(text.historyCleared, 'success');
+                } catch (error) {
+                    showAppNotice(error instanceof Error ? error.message : 'Не удалось очистить историю.');
+                }
+            },
+        });
+    };
 
     const handleSendChatMessage = async () => {
         if (isGeneratingText) {
@@ -1368,8 +1521,9 @@ function App() {
         }
 
         const trimmedPrompt = textPrompt.trim();
+        const attachment = chatAttachment;
 
-        if (!trimmedPrompt) {
+        if (!trimmedPrompt && !attachment) {
             setChatError(text.textPromptEmpty);
             return;
         }
@@ -1377,17 +1531,32 @@ function App() {
         const contextMessages = buildChatContextMessages(chatMessages);
 
         if (!chatTopicTitle) {
-            setChatTopicTitle(getChatTopicTitle(trimmedPrompt));
+            setChatTopicTitle(getChatTopicTitle(trimmedPrompt || text.chatAttachPhoto));
         }
 
         const userMessage = {
             id: `user-${Date.now()}`,
             role: 'user',
             content: trimmedPrompt,
+            imagePreview: attachment?.previewUrl ?? null,
         };
 
-        setChatMessages((prev) => [...prev, userMessage]);
+        const assistantPendingId = `assistant-pending-${Date.now()}`;
+        pendingAssistantIdRef.current = assistantPendingId;
+
+        setChatMessages((prev) => [
+            ...prev,
+            userMessage,
+            {
+                id: assistantPendingId,
+                role: 'assistant',
+                content: '',
+                isTyping: true,
+                isPending: true,
+            },
+        ]);
         setTextPrompt('');
+        setChatAttachment(null);
 
         const abortController = new AbortController();
         textGenerationAbortRef.current = abortController;
@@ -1399,31 +1568,38 @@ function App() {
                 prompt: trimmedPrompt,
                 model: textModel,
                 messages: contextMessages,
+                sessionId: chatSessionId,
+                imageBase64: attachment?.base64,
+                imageMimeType: attachment?.mimeType,
                 signal: abortController.signal,
             });
             const resultText = response?.text?.trim() ?? '';
 
             if (!resultText) {
+                setChatMessages((prev) => prev.filter((message) => message.id !== assistantPendingId));
+                pendingAssistantIdRef.current = null;
                 setChatError(text.textGenerateEmpty);
                 return;
             }
 
-            const assistantMessageId = `assistant-${Date.now()}`;
-
-            setChatMessages((prev) => [
-                ...prev,
-                {
-                    id: assistantMessageId,
-                    role: 'assistant',
-                    content: resultText,
-                    isTyping: false,
-                },
-            ]);
+            setChatMessages((prev) => prev.map((message) => (
+                message.id === assistantPendingId
+                    ? {
+                        ...message,
+                        content: resultText,
+                        isPending: false,
+                        isTyping: true,
+                    }
+                    : message
+            )));
+            pendingAssistantIdRef.current = null;
         } catch (error) {
             if (error?.name === 'AbortError' || abortController.signal.aborted) {
                 return;
             }
 
+            setChatMessages((prev) => prev.filter((message) => message.id !== assistantPendingId));
+            pendingAssistantIdRef.current = null;
             setChatError(formatUserFacingError(error, language) || 'Не удалось получить ответ.');
         } finally {
             if (textGenerationAbortRef.current === abortController) {
@@ -1732,13 +1908,10 @@ function App() {
                         <ChatMessageBubble
                             key={message.id}
                             message={message}
+                            onTypingComplete={handleChatTypingComplete}
+                            generatingLabel={text.chatGenerating}
                         />
                     ))}
-                    {isGeneratingText ? (
-                        <div className="ai-chat__bubble ai-chat__bubble--assistant ai-chat__bubble--typing">
-                            <span>{text.chatTyping}</span>
-                        </div>
-                    ) : null}
                 </div>
 
                 {chatError ? (
@@ -1746,15 +1919,48 @@ function App() {
                 ) : null}
 
                 <footer className="ai-chat__composer">
-                    <textarea
-                        className="ai-chat__input"
-                        value={textPrompt}
-                        onChange={(event) => setTextPrompt(event.target.value)}
-                        onKeyDown={handleChatComposerKeyDown}
-                        placeholder={text.chatPlaceholder}
-                        rows={2}
-                        disabled={isGeneratingText}
+                    <input
+                        ref={chatPhotoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="ai-chat__file-input"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        onChange={handleChatPhotoSelect}
                     />
+                    <button
+                        type="button"
+                        className="ai-chat__attach"
+                        aria-label={text.chatAttachPhoto}
+                        disabled={isGeneratingText}
+                        onClick={() => chatPhotoInputRef.current?.click()}
+                    >
+                        <Paperclip size={18} aria-hidden="true" />
+                    </button>
+                    <div className="ai-chat__composer-field">
+                        {chatAttachment ? (
+                            <div className="ai-chat__attachment-preview">
+                                <img src={chatAttachment.previewUrl} alt="" />
+                                <button
+                                    type="button"
+                                    className="ai-chat__attachment-remove"
+                                    aria-label={text.chatRemovePhoto}
+                                    onClick={() => setChatAttachment(null)}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ) : null}
+                        <textarea
+                            className="ai-chat__input"
+                            value={textPrompt}
+                            onChange={(event) => setTextPrompt(event.target.value)}
+                            onKeyDown={handleChatComposerKeyDown}
+                            placeholder={text.chatPlaceholder}
+                            rows={2}
+                            disabled={isGeneratingText}
+                        />
+                    </div>
                     <button
                         type="button"
                         className={`ai-chat__send ${isGeneratingText ? 'ai-chat__send--stop' : ''}`}
@@ -2193,7 +2399,12 @@ function App() {
                     <button type="button" className="history-concept__action" aria-label="Download">
                         <Download size={17} aria-hidden="true" />
                     </button>
-                    <button type="button" className="history-concept__action" aria-label="Delete">
+                    <button
+                        type="button"
+                        className="history-concept__action"
+                        aria-label="Delete"
+                        onClick={handleClearHistoryRequest}
+                    >
                         <Trash2 size={17} aria-hidden="true" />
                     </button>
                 </div>
@@ -2237,7 +2448,19 @@ function App() {
                                 : visual.toolName;
 
                             return (
-                                <article key={topic.id} className="history-concept__item">
+                                <article
+                                    key={topic.id}
+                                    className="history-concept__item history-concept__item--clickable"
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => openHistoryTopic(topic)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault();
+                                            openHistoryTopic(topic);
+                                        }
+                                    }}
+                                >
                                     <div className={`history-concept__thumb history-concept__thumb--${visual.accent}`}>
                                         <ThumbIcon size={18} aria-hidden="true" />
                                     </div>
@@ -2257,13 +2480,21 @@ function App() {
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="history-concept__result" aria-hidden="true">
+                                    <button
+                                        type="button"
+                                        className="history-concept__result"
+                                        aria-label={text.chatTitle}
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            openHistoryTopic(topic);
+                                        }}
+                                    >
                                         {visual.emoji ? (
                                             <span>{visual.emoji}</span>
                                         ) : (
-                                            <MessageSquare size={14} />
+                                            <MessageSquare size={14} aria-hidden="true" />
                                         )}
-                                    </div>
+                                    </button>
                                 </article>
                             );
                         })}
@@ -2440,6 +2671,35 @@ function App() {
             ) : null}
 
             <AppNotice notice={appNotice} onDismiss={clearAppNotice} />
+
+            {confirmDialog ? (
+                <div className="app-confirm" role="dialog" aria-modal="true">
+                    <div className="app-confirm__backdrop" onClick={() => setConfirmDialog(null)} />
+                    <div className="app-confirm__panel">
+                        <p className="app-confirm__message">{confirmDialog.message}</p>
+                        <div className="app-confirm__actions">
+                            <button
+                                type="button"
+                                className="app-confirm__btn app-confirm__btn--ghost"
+                                onClick={() => setConfirmDialog(null)}
+                            >
+                                {confirmDialog.cancelLabel}
+                            </button>
+                            <button
+                                type="button"
+                                className="app-confirm__btn app-confirm__btn--danger"
+                                onClick={async () => {
+                                    const action = confirmDialog.onConfirm;
+                                    setConfirmDialog(null);
+                                    await action?.();
+                                }}
+                            >
+                                {confirmDialog.confirmLabel}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }
