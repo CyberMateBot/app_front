@@ -4,9 +4,34 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta name="theme-color" content="#050505" />
+    <meta name="theme-color" content="#0a0b10" />
     <title>CyberMate</title>
     <script src="https://telegram.org/js/telegram-web-app.js?57"></script>
+    <script>
+      (function () {
+        var key = 'cybermate-ui-theme';
+        var theme = localStorage.getItem(key);
+        if (theme !== 'light' && theme !== 'dark') {
+          var legacy = localStorage.getItem('cybermate-theme');
+          if (legacy === 'light' || legacy === 'dark') {
+            theme = legacy;
+            localStorage.setItem(key, legacy);
+            localStorage.removeItem('cybermate-theme');
+          }
+        }
+        if (theme !== 'light' && theme !== 'dark') {
+          var tg = window.Telegram && window.Telegram.WebApp;
+          if (tg && (tg.colorScheme === 'light' || tg.colorScheme === 'dark')) {
+            theme = tg.colorScheme;
+          }
+        }
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = 'light';
+        }
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

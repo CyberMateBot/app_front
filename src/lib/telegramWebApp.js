@@ -154,9 +154,12 @@ function createBrowserMock() {
 
     return {
         platform: 'mock',
+        colorScheme: 'dark',
         ready: () => {},
         expand: () => {},
         disableVerticalSwipes: () => {},
+        setHeaderColor: () => {},
+        setBackgroundColor: () => {},
         initData: buildMockInitData(user, startParam),
         initDataUnsafe: {
             user,

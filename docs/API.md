@@ -29,7 +29,16 @@
 - `409` — уже зарегистрирован (фронт считает это OK).
 
 ### `GET /v1/users/telegram/{telegramId}`
-Профиль пользователя.
+Профиль пользователя. В `data.theme`: `"light"` | `"dark"`.
+
+### `PATCH /v1/users/telegram/{telegramId}/theme`
+Сохранение темы UI (нужна предварительная регистрация `POST /v1/register`, иначе `404`).
+
+```json
+{ "theme": "dark" }
+```
+
+Фронт: `localStorage` ключ `cybermate-ui-theme`, при ошибке PATCH локальная тема не откатывается.
 
 ### `GET /v1/wallet/telegram/{telegramId}`
 Баланс и транзакции.

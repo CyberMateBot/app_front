@@ -52,6 +52,7 @@ import {
     normalizeProfileResponse,
     generateImage,
     generateText,
+    patchUserTheme,
     registerTelegramUser,
     savePromptHistory,
     TEXT_MODEL_IDS,
@@ -65,6 +66,14 @@ import {
     groupHistoryIntoTopics,
 } from './lib/chatContext.js';
 import { createChatSessionId } from './lib/chatSession.js';
+import {
+    applyTheme,
+    bindTelegramThemeChanged,
+    extractProfileTheme,
+    getStoredTheme,
+    normalizeTheme,
+    resolveBootstrapTheme,
+} from './lib/theme.js';
 import AppNotice from './Components/AppNotice.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
 import {
@@ -629,11 +638,15 @@ function buildProfileView(profile, telegramUser) {
 }
 
 function getInitialTheme() {
-    if (typeof window === 'undefined') {
-        return 'dark';
+    if (typeof document !== 'undefined') {
+        const fromDom = normalizeTheme(document.documentElement.dataset.theme);
+
+        if (fromDom) {
+            return fromDom;
+        }
     }
 
-    return window.localStorage.getItem('cybermate-theme') === 'light' ? 'light' : 'dark';
+    return getStoredTheme() ?? 'light';
 }
 
 function getInitialLanguage() {
@@ -785,6 +798,14 @@ function App() {
                 }
 
                 setProfile(normalizeProfileResponse(backendProfile, currentTelegramUser));
+
+                const { theme: bootstrapTheme, persist } = resolveBootstrapTheme({
+                    apiTheme: extractProfileTheme(backendProfile),
+                    tg: tgFresh ?? tg,
+                });
+                const appliedTheme = applyTheme(bootstrapTheme, tgFresh ?? tg, { persist });
+
+                setTheme(appliedTheme);
             } catch (error) {
                 if (!isMounted) {
                     return;
@@ -808,14 +829,28 @@ function App() {
     }, []);
 
     useEffect(() => {
-        if (typeof document !== 'undefined') {
-            document.documentElement.dataset.theme = theme;
-            document.documentElement.style.colorScheme = theme;
+        if (!telegramUser?.id) {
+            return undefined;
         }
 
-        if (typeof window !== 'undefined') {
-            window.localStorage.setItem('cybermate-theme', theme);
-        }
+        const tg = getTelegramWebApp();
+
+        return bindTelegramThemeChanged(tg, (nextTheme) => {
+            setTheme(applyTheme(nextTheme, tg, { persist: false }));
+        });
+    }, [telegramUser?.id]);
+
+    const toggleTheme = useCallback(() => {
+        const nextTheme = theme === 'dark' ? 'light' : 'dark';
+        const appliedTheme = applyTheme(nextTheme, getTelegramWebApp());
+
+        setTheme(appliedTheme);
+
+        patchUserTheme(appliedTheme).catch((error) => {
+            if (import.meta.env.DEV) {
+                console.warn('[CyberMate] Theme saved locally; API sync failed:', error);
+            }
+        });
     }, [theme]);
 
     useEffect(() => {
@@ -2138,10 +2173,6 @@ function App() {
         const subscriptionPlanId = userData.subscriptionPlanId;
         const subscriptionUntil = userData.subscriptionUntil;
 
-        const toggleTheme = () => {
-            setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));
-        };
-
         return (
             <section className="profile-screen profile-screen--concept" aria-label={text.profileTitle}>
                 <header className="profile-concept__header">
@@ -2551,10 +2582,6 @@ function App() {
             if (typeof window !== 'undefined') {
                 window.open(`https://t.me/${BOT_USERNAME}`, '_blank', 'noopener,noreferrer');
             }
-        };
-
-        const toggleTheme = () => {
-            setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));
         };
 
         const languageOptions = [

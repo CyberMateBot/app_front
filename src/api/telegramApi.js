@@ -108,6 +108,26 @@ export async function getMyProfile() {
     return fetchTelegramResource(`/v1/users/telegram/${telegramId}`, 'Failed to load Telegram profile.');
 }
 
+export async function patchUserTheme(theme) {
+    const telegramId = String(getCurrentTelegramId());
+    const normalizedTheme = theme === 'light' ? 'light' : 'dark';
+
+    const res = await apiFetch(`/v1/users/telegram/${telegramId}/theme`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+        },
+        body: JSON.stringify({ theme: normalizedTheme }),
+    });
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to update theme.');
+    }
+
+    return res.json().catch(() => ({}));
+}
+
 export async function getMyWallet() {
     const telegramId = getCurrentTelegramId();
 
@@ -332,6 +352,7 @@ export function normalizeProfileResponse(payload, telegramUser) {
         username: telegramUser?.username ?? profile?.username ?? profile?.surname ?? '',
         avatarUrl: telegramUser?.photo_url ?? profile?.avatarUrl ?? '',
         language: telegramUser?.language_code ?? profile?.language ?? 'ru',
+        theme: profile?.theme === 'light' ? 'light' : 'dark',
         subscriptionPlan,
         verified: Boolean(profile?.verified),
     };
