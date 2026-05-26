@@ -57,7 +57,7 @@ export const API_BASE_URL_MISSING_IN_PROD = Boolean(
 );
 
 export const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'CyberMate';
-export const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? 'CyberMateBot';
+export const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? 'CyberMate_bot';
 
 /** Support button → CyberMate | Community invite (not @CyberMateSupport / not bot DM). */
 export const SUPPORT_TELEGRAM_INVITE_URL =

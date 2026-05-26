@@ -180,6 +180,23 @@ export function isTelegramClientPresent() {
     return Boolean(getNativeTelegramWebApp()) || Boolean(readLaunchInitData());
 }
 
+/** Shows a native Telegram alert when available (Mini App). */
+export function showTelegramAlert(message) {
+    const tg = getTelegramWebApp();
+
+    if (typeof tg?.showAlert === 'function') {
+        tg.showAlert(String(message));
+        return true;
+    }
+
+    if (typeof tg?.showPopup === 'function') {
+        tg.showPopup({ message: String(message) });
+        return true;
+    }
+
+    return false;
+}
+
 export function getTelegramWebApp() {
     const native = getNativeTelegramWebApp();
 

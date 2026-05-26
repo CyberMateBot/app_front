@@ -7,12 +7,17 @@ export const API_ENDPOINTS = {
         method: 'POST',
         path: '/v1/register',
         when: 'Старт приложения (bootstrap)',
-        body: '{ initDataRaw: base64, startParam?: string }',
+        body: '{ initDataRaw: base64, start_param?: string }',
     },
     profile: {
         method: 'GET',
         path: '/v1/users/telegram/:telegramId',
         when: 'Старт приложения',
+    },
+    referralLink: {
+        method: 'GET',
+        path: '/v1/users/telegram/:telegramId/referral-link',
+        when: 'Страница реферальной программы',
     },
     wallet: {
         method: 'GET',

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ChevronLeft,
     Menu,
@@ -7,25 +7,51 @@ import {
     Users,
     Gift,
 } from 'lucide-react';
-import { buildReferralLink } from '../../api/telegramApi.js';
+import { getMyReferralLink } from '../../api/telegramApi.js';
+import { showTelegramAlert } from '../../lib/telegramWebApp.js';
 import './ReferalPage.css';
 
-const ReferralPage = ({ appName, telegramUser, startParam, isLoading }) => {
+const ReferralPage = ({ appName, isLoading }) => {
     const [isCopied, setIsCopied] = useState(false);
+    const [referralLink, setReferralLink] = useState('');
+    const [referralLinkLoading, setReferralLinkLoading] = useState(false);
 
-    const data = useMemo(() => ({
-        referralLink: buildReferralLink(telegramUser, startParam),
-        stats: {
-            totalReferrals: 0,
-            totalEarned: '0',
-        },
-        referralsList: [],
-    }), [startParam, telegramUser]);
+    useEffect(() => {
+        let isCancelled = false;
+        setReferralLinkLoading(true);
+
+        getMyReferralLink()
+            .then(({ referral_link: link }) => {
+                if (!isCancelled) {
+                    setReferralLink(link);
+                }
+            })
+            .catch((error) => {
+                if (!isCancelled) {
+                    console.error('Не удалось загрузить реферальную ссылку:', error);
+                    setReferralLink('');
+                }
+            })
+            .finally(() => {
+                if (!isCancelled) {
+                    setReferralLinkLoading(false);
+                }
+            });
+
+        return () => {
+            isCancelled = true;
+        };
+    }, []);
 
     const handleCopyLink = async () => {
+        if (!referralLink) {
+            return;
+        }
+
         try {
-            await navigator.clipboard.writeText(data.referralLink);
+            await navigator.clipboard.writeText(referralLink);
             setIsCopied(true);
+            showTelegramAlert('Ссылка скопирована');
             setTimeout(() => setIsCopied(false), 2000);
         } catch (error) {
             console.error('Не удалось скопировать ссылку:', error);
@@ -51,8 +77,7 @@ const ReferralPage = ({ appName, telegramUser, startParam, isLoading }) => {
             <div className="ref-hero">
                 <h2 className="ref-page-title">Партнерская программа</h2>
                 <p className="ref-page-subtitle">
-                    Ссылка уже строится из Telegram ID и `VITE_TELEGRAM_BOT_USERNAME`. Когда backend
-                    отдаст реферальную статистику, UI уже готов к подключению.
+                    Приглашайте друзей в CyberMate и получайте бонусы за активных пользователей.
                 </p>
             </div>
 
@@ -61,14 +86,14 @@ const ReferralPage = ({ appName, telegramUser, startParam, isLoading }) => {
                     <div className="glass-card stat-card">
                         <Users size={24} className="stat-icon" />
                         <div className="stat-info">
-                            <span className="stat-value">{data.stats.totalReferrals}</span>
+                            <span className="stat-value">0</span>
                             <span className="stat-label">Друзей</span>
                         </div>
                     </div>
                     <div className="glass-card stat-card">
                         <Gift size={24} className="stat-icon highlight" />
                         <div className="stat-info">
-                            <span className="stat-value">{data.stats.totalEarned}</span>
+                            <span className="stat-value">0</span>
                             <span className="stat-label">Токенов</span>
                         </div>
                     </div>
@@ -80,13 +105,14 @@ const ReferralPage = ({ appName, telegramUser, startParam, isLoading }) => {
                         <input
                             type="text"
                             className="ref-link-input"
-                            value={data.referralLink}
+                            value={referralLinkLoading ? 'Загрузка...' : referralLink}
                             readOnly
                         />
                         <button
                             className={`copy-btn ${isCopied ? 'copied' : ''}`}
                             onClick={handleCopyLink}
                             aria-label="Скопировать ссылку"
+                            disabled={referralLinkLoading || !referralLink}
                         >
                             {isCopied ? <CheckCheck size={20} /> : <Copy size={20} />}
                         </button>
@@ -96,8 +122,7 @@ const ReferralPage = ({ appName, telegramUser, startParam, isLoading }) => {
                 <div className="glass-card list-card">
                     <div className="card-header-title">СПИСОК РЕФЕРАЛОВ</div>
                     <div className="empty-state">
-                        Endpoint для списка рефералов ещё не подключён. Как только backend его добавит,
-                        можно будет заменить заглушку на реальный `fetch`.
+                        Пока нет активных рефералов.
                     </div>
                 </div>
             </div>

@@ -1475,6 +1475,11 @@
   cursor: pointer;
 }
 
+.referral-concept__copy-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .referral-concept__friend {
   display: flex;
   align-items: center;

@@ -1,4 +1,3 @@
-import { BOT_USERNAME } from '../config/env.js';
 import {
     getTelegramWebApp,
     hydrateTelegramUser,
@@ -56,7 +55,7 @@ export async function registerTelegramUser() {
         },
         body: JSON.stringify({
             initDataRaw: encodeBase64(initData),
-            startParam: tg?.initDataUnsafe?.start_param ?? '',
+            start_param: tg?.initDataUnsafe?.start_param ?? '',
         }),
     });
 
@@ -138,6 +137,22 @@ export async function getMyReferrals() {
     const telegramId = getCurrentTelegramId();
 
     return fetchTelegramResource(`/v1/referrals/telegram/${telegramId}`, 'Failed to load referrals.');
+}
+
+export async function getMyReferralLink() {
+    const telegramId = getCurrentTelegramId();
+    const payload = await fetchTelegramResource(
+        `/v1/users/telegram/${telegramId}/referral-link`,
+        'Failed to load referral link.',
+    );
+
+    const referralLink = payload?.referral_link ?? payload?.data?.referral_link ?? '';
+
+    if (!referralLink) {
+        throw new Error('Referral link is not available.');
+    }
+
+    return { referral_link: String(referralLink) };
 }
 
 export async function getMyPromptHistory() {
@@ -358,8 +373,3 @@ export function normalizeProfileResponse(payload, telegramUser) {
     };
 }
 
-export function buildReferralLink(telegramUser, startParam = '') {
-    const referralCode = telegramUser?.id ? `ref_${telegramUser.id}` : (startParam || 'ref_demo');
-
-    return `https://t.me/${BOT_USERNAME}?startapp=${referralCode}`;
-}

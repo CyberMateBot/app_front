@@ -42,10 +42,10 @@ import {
     Zap,
 } from 'lucide-react';
 import {
-    buildReferralLink,
     getMyProfile,
     getMyPromptHistory,
     clearMyPromptHistory,
+    getMyReferralLink,
     getMyReferrals,
     getMyWallet,
     normalizeProfileResponse,
@@ -85,9 +85,14 @@ import {
 } from './config/aiModels.js';
 import './App.css';
 import { formatUserFacingError } from './api/apiError.js';
-import { APP_NAME, BOT_USERNAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
+import { APP_NAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
 import { deriveSubscriptionView } from './lib/subscriptionView.js';
-import { getTelegramWebApp, hydrateTelegramUser, initTelegramMiniAppAsync } from './lib/telegramWebApp.js';
+import {
+    getTelegramWebApp,
+    hydrateTelegramUser,
+    initTelegramMiniAppAsync,
+    showTelegramAlert,
+} from './lib/telegramWebApp.js';
 
 const navigationItems = [
     { key: 'home', labelKey: 'navHome', icon: House },
@@ -686,6 +691,8 @@ function App() {
     const [isLoading, setIsLoading] = useState(true);
     const [walletData, setWalletData] = useState(null);
     const [referralData, setReferralData] = useState(null);
+    const [referralLink, setReferralLink] = useState('');
+    const [referralLinkLoading, setReferralLinkLoading] = useState(false);
     const [promptHistoryData, setPromptHistoryData] = useState(null);
     const [pageLoading, setPageLoading] = useState({ wallet: false, referrals: false, history: false });
     const pageDataLoadedRef = useRef({ wallet: false, referrals: false, history: false });
@@ -899,6 +906,7 @@ function App() {
         pageDataInFlightRef.current = { wallet: false, referrals: false, history: false };
         setWalletData(null);
         setReferralData(null);
+        setReferralLink('');
         setPromptHistoryData(null);
     }, [telegramUser?.id]);
 
@@ -1034,6 +1042,39 @@ function App() {
         };
     }, [currentPage, telegramUser?.id]);
 
+    useEffect(() => {
+        if (!telegramUser?.id || currentPage !== 'referrals') {
+            return undefined;
+        }
+
+        let isCancelled = false;
+        setReferralLinkLoading(true);
+
+        getMyReferralLink()
+            .then(({ referral_link: link }) => {
+                if (!isCancelled) {
+                    setReferralLink(link);
+                }
+            })
+            .catch((error) => {
+                if (!isCancelled) {
+                    setReferralLink('');
+                    showAppNotice(
+                        error instanceof Error ? error.message : 'Не удалось загрузить реферальную ссылку.',
+                    );
+                }
+            })
+            .finally(() => {
+                if (!isCancelled) {
+                    setReferralLinkLoading(false);
+                }
+            });
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [currentPage, telegramUser?.id]);
+
     const text = translations[language] ?? translations.ru;
     const userData = useMemo(() => {
         const base = buildProfileView({
@@ -1051,7 +1092,6 @@ function App() {
             subscriptionIsPaid: subscription.isPaid,
         };
     }, [profile, telegramUser, walletData, language]);
-    const referralLink = useMemo(() => buildReferralLink(telegramUser, startParam), [telegramUser, startParam]);
     const referralItems = useMemo(() => {
         const sourceItems = Array.isArray(referralData?.items) ? referralData.items : [];
 
@@ -1459,13 +1499,16 @@ function App() {
     };
 
     const handleReferralLinkCopy = async () => {
-        if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+        if (!referralLink || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
             return;
         }
 
         try {
             await navigator.clipboard.writeText(referralLink);
-            showAppNotice(text.referralCopied, 'success');
+
+            if (!showTelegramAlert(text.referralCopied)) {
+                showAppNotice(text.referralCopied, 'success');
+            }
         } catch {
             // noop
         }
@@ -2392,8 +2435,15 @@ function App() {
 
                 <p className="profile-concept__section-lbl">{text.referralLinkTitle}</p>
                 <div className="referral-concept__link-card">
-                    <p className="referral-concept__link-url">{referralLink}</p>
-                    <button type="button" className="referral-concept__copy-btn" onClick={handleReferralLinkCopy}>
+                    <p className="referral-concept__link-url">
+                        {referralLinkLoading ? text.loading : (referralLink || '—')}
+                    </p>
+                    <button
+                        type="button"
+                        className="referral-concept__copy-btn"
+                        onClick={handleReferralLinkCopy}
+                        disabled={referralLinkLoading || !referralLink}
+                    >
                         <Copy size={14} aria-hidden="true" />
                         {text.referralCopyButton}
                     </button>

@@ -22,8 +22,17 @@
 ```json
 {
   "initDataRaw": "<base64 initData>",
-  "startParam": ""
+  "start_param": "ref_777000"
 }
+```
+
+`start_param` — из `Telegram.WebApp.initDataUnsafe.start_param` (например `ref_777000`).
+
+### `GET /v1/users/telegram/{telegramId}/referral-link`
+Реферальная ссылка для Mini App.
+
+```json
+{ "referral_link": "https://t.me/CyberMate_bot?startapp=ref_123..." }
 ```
 
 - `409` — уже зарегистрирован (фронт считает это OK).
