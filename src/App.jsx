@@ -49,12 +49,13 @@ import {
     getMyReferrals,
     getMyWallet,
     normalizeProfileResponse,
+    fetchTextModels,
     generateImage,
     generateText,
     patchUserTheme,
     registerTelegramUser,
     savePromptHistory,
-    TEXT_MODEL_IDS,
+    LEGACY_TEXT_MODEL_IDS,
     IMAGE_MODEL_IDS,
 } from './api/telegramApi.js';
 import {
@@ -68,9 +69,11 @@ import { createChatSessionId } from './lib/chatSession.js';
 import { openSupport, resolveSupportUrl } from './lib/openSupport.js';
 import {
     applyTheme,
+    bindSystemThemeChanged,
     bindTelegramThemeChanged,
     extractProfileTheme,
     getStoredTheme,
+    getSystemTheme,
     normalizeTheme,
     resolveBootstrapTheme,
 } from './lib/theme.js';
@@ -78,11 +81,24 @@ import AppNotice from './Components/AppNotice.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
 import {
     IMAGE_MODEL_DEFINITIONS,
-    TEXT_MODEL_DEFINITIONS,
-    catalogSectionsFromModels,
     getImageModelDefinition,
-    getTextModelDefinition,
 } from './config/aiModels.js';
+import {
+    buildCatalogTextTools,
+    buildTextModelSelectorItems,
+    findTextModel,
+    getCatalogModelDescription,
+    getModelLabel,
+    getModelDisplayTier,
+    getSelectorItemForModelId,
+    getStoredTextModelId,
+    getTextModelVisual,
+    getTierLabelForModel,
+    isKnownTextModelId,
+    resolveTextModelId,
+    setStoredTextModelId,
+    shouldShowCatalogBadge,
+} from './lib/textModels.js';
 import './App.css';
 import { formatUserFacingError } from './api/apiError.js';
 import { APP_NAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
@@ -107,8 +123,6 @@ const catalogTabs = [
     { id: 'photo', labelKey: 'catalogTabPhoto' },
     { id: 'code', labelKey: 'catalogTabCode' },
 ];
-
-const catalogSections = catalogSectionsFromModels;
 
 const homeCategoryChips = [
     { id: 'all', labelKey: 'chipAll', icon: LayoutGrid },
@@ -184,7 +198,7 @@ const translations = {
         badgePro: 'PRO',
         badgeFree: 'FREE',
         toolChatTitle: 'AI Чат',
-        toolChatSub: 'YandexGPT, DeepSeek, Gemini, OpenAI',
+        toolChatSub: 'YandexGPT, DeepSeek, GPT OSS, Qwen',
         toolImagesTitle: 'Генерация фото',
         toolImagesSub: 'Nano Banana, Alice AI ART',
         toolVideoTitle: 'Видео',
@@ -381,6 +395,8 @@ const translations = {
         ],
         textGenerateTitle: 'Генерация текста',
         textModelLabel: 'Нейросеть',
+        tierLite: 'Lite',
+        tierPro: 'Pro',
         textPromptLabel: 'Промт',
         textPromptPlaceholder: 'Опишите, какой текст нужно сгенерировать...',
         textGenerateButton: 'Сгенерировать',
@@ -413,7 +429,7 @@ const translations = {
         badgePro: 'PRO',
         badgeFree: 'FREE',
         toolChatTitle: 'AI Chat',
-        toolChatSub: 'YandexGPT, DeepSeek, Gemini, OpenAI',
+        toolChatSub: 'YandexGPT, DeepSeek, GPT OSS, Qwen',
         toolImagesTitle: 'Image generation',
         toolImagesSub: 'Nano Banana, Alice AI ART',
         toolVideoTitle: 'Video',
@@ -610,6 +626,8 @@ const translations = {
         ],
         textGenerateTitle: 'Text generation',
         textModelLabel: 'Model',
+        tierLite: 'Lite',
+        tierPro: 'Pro',
         textPromptLabel: 'Prompt',
         textPromptPlaceholder: 'Describe the text you want to generate...',
         textGenerateButton: 'Generate',
@@ -663,7 +681,7 @@ function getInitialTheme() {
         }
     }
 
-    return getStoredTheme() ?? 'light';
+    return getStoredTheme() ?? getSystemTheme() ?? 'light';
 }
 
 function getInitialLanguage() {
@@ -678,6 +696,10 @@ function getInitialLanguage() {
     }
 
     return window.navigator.language?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+}
+
+function getInitialTextModelId() {
+    return getStoredTextModelId() ?? 'yandexgpt';
 }
 
 function App() {
@@ -704,7 +726,8 @@ function App() {
     const [language, setLanguage] = useState(getInitialLanguage);
     const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
     const [textPrompt, setTextPrompt] = useState('');
-    const [textModel, setTextModel] = useState('yandexgpt');
+    const [textModel, setTextModel] = useState(getInitialTextModelId);
+    const [textModels, setTextModels] = useState([]);
     const [imageModel, setImageModel] = useState('nano-banana');
     const [imagePrompt, setImagePrompt] = useState('');
     const [imageSessionMessages, setImageSessionMessages] = useState([]);
@@ -826,6 +849,19 @@ function App() {
                 const appliedTheme = applyTheme(bootstrapTheme, tgFresh ?? tg, { persist });
 
                 setTheme(appliedTheme);
+
+                try {
+                    const models = await fetchTextModels();
+
+                    if (isMounted && models.length) {
+                        setTextModels(models);
+                        setTextModel((current) => resolveTextModelId(current, models));
+                    }
+                } catch (modelError) {
+                    if (import.meta.env.DEV) {
+                        console.warn('[CyberMate] Failed to load text models:', modelError);
+                    }
+                }
             } catch (error) {
                 if (!isMounted) {
                     return;
@@ -846,6 +882,14 @@ function App() {
             isMounted = false;
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- bootstrap once on mount
+    }, []);
+
+    useEffect(() => {
+        const tg = getTelegramWebApp();
+
+        return bindSystemThemeChanged((nextTheme) => {
+            setTheme(applyTheme(nextTheme, tg, { persist: false }));
+        }, tg);
     }, []);
 
     useEffect(() => {
@@ -882,6 +926,35 @@ function App() {
             window.localStorage.setItem('cybermate-language', language);
         }
     }, [language]);
+
+    useEffect(() => {
+        if (currentPage !== 'ai-chat' || textModels.length) {
+            return undefined;
+        }
+
+        let isMounted = true;
+
+        const loadModels = async () => {
+            try {
+                const models = await fetchTextModels();
+
+                if (isMounted && models.length) {
+                    setTextModels(models);
+                    setTextModel((current) => resolveTextModelId(current, models));
+                }
+            } catch (error) {
+                if (import.meta.env.DEV) {
+                    console.warn('[CyberMate] Failed to load text models:', error);
+                }
+            }
+        };
+
+        loadModels();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [currentPage, textModels.length]);
 
     useEffect(() => {
         if (
@@ -1113,16 +1186,43 @@ function App() {
 
     const showBottomNav = !['ai-chat', 'ai-image', 'settings', 'wallet', 'referrals'].includes(currentPage);
 
+    const textModelSelectorItems = useMemo(
+        () => buildTextModelSelectorItems(textModels),
+        [textModels],
+    );
+
+    const catalogSections = useMemo(() => [
+        {
+            id: 'text-models',
+            labelKey: 'catalogSectionChat',
+            tools: buildCatalogTextTools(textModels),
+        },
+        {
+            id: 'image-models',
+            labelKey: 'catalogSectionPhoto',
+            tools: IMAGE_MODEL_DEFINITIONS,
+        },
+    ], [textModels]);
+
     const toolMatchesCatalogTab = (tool, tab) => tab === 'all' || tool.tab === tab || tool.categories?.includes(tab);
 
     const catalogSearchQuery = catalogSearch.trim().toLowerCase();
 
     const isSoraCatalogTool = (tool) => {
         const id = String(tool?.id ?? '').toLowerCase();
-        const name = String(text[tool?.nameKey] ?? '').toLowerCase();
-        const sub = String(text[tool?.subKey] ?? '').toLowerCase();
+        const name = String(tool?.label ?? text[tool?.nameKey] ?? '').toLowerCase();
+        const sub = String(tool?.sub ?? text[tool?.subKey] ?? '').toLowerCase();
 
         return id.includes('sora') || name.includes('sora') || sub.includes('sora');
+    };
+
+    const getCatalogToolLabel = (tool) => tool.label ?? text[tool.nameKey] ?? tool.id;
+    const getCatalogToolSub = (tool) => {
+        if (tool.page === 'ai-chat') {
+            return getCatalogModelDescription(tool, language);
+        }
+
+        return tool.sub ?? text[tool.subKey] ?? '';
     };
 
     const filteredCatalogSections = catalogSections
@@ -1134,18 +1234,21 @@ function App() {
                 }
 
                 const matchesTab = toolMatchesCatalogTab(tool, catalogTab);
+                const toolLabel = getCatalogToolLabel(tool).toLowerCase();
+                const toolSub = getCatalogToolSub(tool).toLowerCase();
                 const matchesSearch = !catalogSearchQuery
-                    || text[tool.nameKey].toLowerCase().includes(catalogSearchQuery)
-                    || text[tool.subKey].toLowerCase().includes(catalogSearchQuery);
+                    || toolLabel.includes(catalogSearchQuery)
+                    || toolSub.includes(catalogSearchQuery);
                 return matchesTab && matchesSearch;
             }),
         }))
         .filter((section) => section.tools.length > 0);
 
     const getCatalogBadgeLabel = (badge) => {
+        if (badge === 'lite') return text.tierLite;
+        if (badge === 'pro') return text.tierPro;
         if (badge === 'hot') return text.badgeHot;
         if (badge === 'new') return text.badgeNew;
-        if (badge === 'pro') return text.badgePro;
         if (badge === 'free') return text.badgeFree;
         return '';
     };
@@ -1160,7 +1263,8 @@ function App() {
 
             if (historyFilter === 'chat') {
                 const modelId = String(item.model || '').toLowerCase();
-                return TEXT_MODEL_IDS.includes(modelId)
+                return isKnownTextModelId(modelId, textModels)
+                    || LEGACY_TEXT_MODEL_IDS.includes(modelId)
                     || category.includes('chat')
                     || category.includes('text')
                     || category === 'текст'
@@ -1178,7 +1282,7 @@ function App() {
 
             return category.includes(historyFilter);
         });
-    }, [historyItems, historyFilter]);
+    }, [historyItems, historyFilter, textModels]);
 
     const historyTopics = useMemo(
         () => groupHistoryIntoTopics(filteredHistoryItems),
@@ -1247,30 +1351,45 @@ function App() {
         });
     };
 
-    const getHistoryVisual = (category) => {
-        const value = String(category || '').toLowerCase();
-        const allModels = [...TEXT_MODEL_DEFINITIONS, ...IMAGE_MODEL_DEFINITIONS];
-        const modelFromCategory = allModels.find((model) => (
+    const getHistoryVisual = (modelId) => {
+        const value = String(modelId || '').toLowerCase();
+        const apiModel = findTextModel(textModels, resolveTextModelId(value, textModels));
+
+        if (apiModel) {
+            const visual = getTextModelVisual(apiModel);
+
+            return {
+                ...visual,
+                toolName: apiModel.label,
+                emoji: null,
+            };
+        }
+
+        const imageModel = IMAGE_MODEL_DEFINITIONS.find((model) => (
             value === model.id || value.includes(model.id)
         ));
 
-        if (modelFromCategory) {
+        if (imageModel) {
             return {
-                accent: modelFromCategory.accent,
-                icon: modelFromCategory.icon,
-                toolName: text[modelFromCategory.nameKey],
+                accent: imageModel.accent,
+                icon: imageModel.icon,
+                toolName: text[imageModel.nameKey],
                 emoji: null,
             };
         }
 
         if (value.includes('text') || value.includes('chat')) {
-            const fallback = getTextModelDefinition('yandexgpt');
-            return {
-                accent: fallback.accent,
-                icon: fallback.icon,
-                toolName: text[fallback.nameKey],
-                emoji: null,
-            };
+            const fallback = findTextModel(textModels, 'yandexgpt') ?? textModels[0];
+
+            if (fallback) {
+                const visual = getTextModelVisual(fallback);
+
+                return {
+                    ...visual,
+                    toolName: fallback.label,
+                    emoji: null,
+                };
+            }
         }
 
         return { accent: 'violet', icon: Bot, toolName: text.chatTitle, emoji: null };
@@ -1283,7 +1402,10 @@ function App() {
     const openAiChat = (modelId, returnPage = currentPage, options = {}) => {
         handleStopChatGeneration();
         if (modelId) {
-            setTextModel(modelId);
+            const resolvedModelId = resolveTextModelId(modelId, textModels);
+
+            setTextModel(resolvedModelId);
+            setStoredTextModelId(resolvedModelId);
         }
         if (options.sessionId) {
             setChatSessionId(options.sessionId);
@@ -1301,17 +1423,22 @@ function App() {
 
     const resolveHistoryTopicModel = (topic) => {
         const model = String(topic?.model || '').toLowerCase();
-        if (TEXT_MODEL_IDS.includes(model)) {
-            return model;
+
+        if (isKnownTextModelId(model, textModels)) {
+            return resolveTextModelId(model, textModels);
         }
+
         if (IMAGE_MODEL_IDS.includes(model)) {
             return model;
         }
+
         const category = String(topic?.category || model).toLowerCase();
+
         if (category.includes('image') || category.includes('photo')) {
             return IMAGE_MODEL_IDS[0];
         }
-        return 'yandexgpt';
+
+        return resolveTextModelId(textModel, textModels);
     };
 
     const openHistoryTopic = (topic) => {
@@ -1360,13 +1487,29 @@ function App() {
 
     const handleTextModelChange = (modelId) => {
         handleStopChatGeneration();
-        setTextModel(modelId);
+        const resolvedModelId = resolveTextModelId(modelId, textModels);
+
+        setTextModel(resolvedModelId);
+        setStoredTextModelId(resolvedModelId);
         startNewChatSession();
         setChatMessages([]);
         setChatTopicTitle('');
         setTextPrompt('');
         setChatAttachment(null);
         setChatError('');
+    };
+
+    const handleTextModelGroupSelect = (item) => {
+        if (item.type === 'single') {
+            handleTextModelChange(item.model.id);
+            return;
+        }
+
+        const activeVariant = item.variants.find((variant) => variant.id === textModel);
+        const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
+            ?? item.variants[0];
+
+        handleTextModelChange(activeVariant?.id ?? defaultVariant.id);
     };
 
     const handleImageModelChange = (modelId) => {
@@ -1940,7 +2083,10 @@ function App() {
                     <div className="catalog-concept__grid">
                         {section.tools.map((tool) => {
                             const Icon = tool.icon;
-                            const badgeLabel = getCatalogBadgeLabel(tool.badge);
+                            const badgeTier = tool.displayTier ?? tool.badge;
+                            const badgeLabel = shouldShowCatalogBadge(tool)
+                                ? getCatalogBadgeLabel(badgeTier)
+                                : '';
 
                             return (
                                 <button
@@ -1953,15 +2099,15 @@ function App() {
                                     {tool.locked ? (
                                         <Lock className="catalog-concept__lock" size={12} aria-hidden="true" />
                                     ) : badgeLabel ? (
-                                        <span className={`catalog-concept__badge catalog-concept__badge--${tool.badge}`}>
+                                        <span className={`catalog-concept__badge catalog-concept__badge--${badgeTier}`}>
                                             {badgeLabel}
                                         </span>
                                     ) : null}
                                     <span className={`catalog-concept__icon catalog-concept__icon--${tool.accent}`}>
                                         <Icon size={17} aria-hidden="true" />
                                     </span>
-                                    <span className="catalog-concept__name">{text[tool.nameKey]}</span>
-                                    <span className="catalog-concept__sub">{text[tool.subKey]}</span>
+                                    <span className="catalog-concept__name">{getCatalogToolLabel(tool)}</span>
+                                    <span className="catalog-concept__sub">{getCatalogToolSub(tool)}</span>
                                 </button>
                             );
                         })}
@@ -1972,8 +2118,16 @@ function App() {
     );
 
     const renderAiChatScreen = () => {
-        const activeModel = getTextModelDefinition(textModel);
-        const ActiveIcon = activeModel.icon;
+        const activeModel = findTextModel(textModels, textModel);
+        const activeVisual = getTextModelVisual(activeModel);
+        const ActiveIcon = activeVisual.icon;
+        const activeSelectorItem = getSelectorItemForModelId(textModelSelectorItems, textModel);
+        const headerTitle = activeModel?.label
+            ?? getModelLabel(textModels, textModel, textModelSelectorItems);
+        const headerSubtitle = activeModel?.description
+            ?? (activeSelectorItem?.type === 'tiered' && activeModel
+                ? getTierLabelForModel(activeModel, text)
+                : text.chatTitle);
 
         return (
             <section className="ai-chat-screen ai-chat-screen--concept" aria-label={text.chatTitle}>
@@ -1987,12 +2141,12 @@ function App() {
                         <ArrowLeft size={20} aria-hidden="true" />
                     </button>
                     <div className="ai-chat__header-main">
-                        <span className={`ai-chat__model-icon ai-chat__model-icon--${activeModel.accent}`}>
+                        <span className={`ai-chat__model-icon ai-chat__model-icon--${activeVisual.accent}`}>
                             <ActiveIcon size={16} aria-hidden="true" />
                         </span>
                         <div>
-                            <h1 className="ai-chat__title">{text[activeModel.nameKey]}</h1>
-                            <p className="ai-chat__subtitle">{text[activeModel.subKey]}</p>
+                            <h1 className="ai-chat__title">{headerTitle}</h1>
+                            <p className="ai-chat__subtitle">{headerSubtitle}</p>
                         </div>
                     </div>
                     <button
@@ -2006,26 +2160,63 @@ function App() {
                 </header>
 
                 <div className="ai-chat__models" role="tablist" aria-label={text.textModelLabel}>
-                    {TEXT_MODEL_DEFINITIONS.map((model) => {
-                        const ModelIcon = model.icon;
-                        const isActive = textModel === model.id;
+                    {textModelSelectorItems.map((item) => {
+                        const isActive = item.type === 'single'
+                            ? textModel === item.model.id
+                            : item.variants.some((variant) => variant.id === textModel);
+                        const chipModel = item.type === 'single' ? item.model : item.variants[0];
+                        const chipVisual = getTextModelVisual(chipModel);
+                        const ModelIcon = chipVisual.icon;
+                        const chipLabel = item.type === 'single' ? item.model.label : item.label;
+                        const chipKey = item.type === 'single' ? item.model.id : item.id;
 
                         return (
                             <button
-                                key={model.id}
+                                key={chipKey}
                                 type="button"
                                 role="tab"
                                 aria-selected={isActive}
-                                className={`ai-chat__model-chip ai-chat__model-chip--${model.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
-                                onClick={() => handleTextModelChange(model.id)}
+                                className={`ai-chat__model-chip ai-chat__model-chip--${chipVisual.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
+                                onClick={() => handleTextModelGroupSelect(item)}
                                 disabled={isGeneratingText}
                             >
                                 <ModelIcon size={14} aria-hidden="true" />
-                                {text[model.nameKey]}
+                                <span>{chipLabel}</span>
+                                {item.type === 'single' && getTierLabelForModel(item.model, text) ? (
+                                    <span className={`ai-chat__model-tier ai-chat__model-tier--${getModelDisplayTier(item.model)}`}>
+                                        {getTierLabelForModel(item.model, text)}
+                                    </span>
+                                ) : null}
                             </button>
                         );
                     })}
                 </div>
+
+                {activeSelectorItem?.type === 'tiered' ? (
+                    <div className="ai-chat__tiers" role="tablist" aria-label={text.textModelLabel}>
+                        {activeSelectorItem.variants.map((variant) => {
+                            const isTierActive = textModel === variant.id;
+                            const tierVisual = getTextModelVisual(variant);
+
+                            return (
+                                <button
+                                    key={variant.id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={isTierActive}
+                                    className={`ai-chat__tier-chip ai-chat__tier-chip--${tierVisual.accent} ${isTierActive ? 'ai-chat__tier-chip--active' : ''}`}
+                                    onClick={() => handleTextModelChange(variant.id)}
+                                    disabled={isGeneratingText}
+                                >
+                                    <span className={`ai-chat__model-tier ai-chat__model-tier--${getModelDisplayTier(variant)}`}>
+                                        {getTierLabelForModel(variant, text)}
+                                    </span>
+                                    <span>{variant.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                ) : null}
 
                 <div className="ai-chat__messages" aria-live="polite">
                     {chatMessages.length === 0 && !isGeneratingText ? (
@@ -2595,12 +2786,11 @@ function App() {
                         {group.topics.map((topic) => {
                             const visual = getHistoryVisual(topic.model);
                             const ThumbIcon = visual.icon;
-                            const modelDef = getTextModelDefinition(
-                                TEXT_MODEL_IDS.includes(topic.model) ? topic.model : 'yandexgpt',
-                            );
-                            const toolName = TEXT_MODEL_IDS.includes(topic.model)
-                                ? text[modelDef.nameKey]
-                                : visual.toolName;
+                            const toolName = getModelLabel(
+                                textModels,
+                                resolveTextModelId(topic.model, textModels),
+                                textModelSelectorItems,
+                            ) || visual.toolName;
 
                             return (
                                 <article

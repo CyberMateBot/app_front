@@ -49,6 +49,14 @@ export function getStoredTheme() {
     return normalizeTheme(window.localStorage.getItem(THEME_STORAGE_KEY)) || readLegacyStoredTheme();
 }
 
+export function getSystemTheme() {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+        return null;
+    }
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 export function getTelegramFallbackTheme(tg) {
     const scheme = tg?.colorScheme;
 
@@ -56,7 +64,12 @@ export function getTelegramFallbackTheme(tg) {
         return scheme;
     }
 
-    return 'light';
+    return null;
+}
+
+/** Авто-тема: Telegram → системная → light */
+export function getPreferredAutoTheme(tg) {
+    return getTelegramFallbackTheme(tg) ?? getSystemTheme() ?? 'light';
 }
 
 export function extractProfileTheme(profilePayload) {
@@ -97,7 +110,7 @@ export function applyTheme(theme, tg = null, { persist = true } = {}) {
 }
 
 /**
- * Старт: localStorage → API → Telegram.WebApp.colorScheme → light
+ * Старт: localStorage → API (синхрон с другого устройства) → авто (Telegram / система)
  */
 export function resolveBootstrapTheme({ apiTheme, tg }) {
     const stored = getStoredTheme();
@@ -112,7 +125,7 @@ export function resolveBootstrapTheme({ apiTheme, tg }) {
         return { theme: fromApi, persist: true };
     }
 
-    return { theme: getTelegramFallbackTheme(tg), persist: false };
+    return { theme: getPreferredAutoTheme(tg), persist: false };
 }
 
 export function bindTelegramThemeChanged(tg, onTheme) {
@@ -125,7 +138,7 @@ export function bindTelegramThemeChanged(tg, onTheme) {
             return;
         }
 
-        const next = getTelegramFallbackTheme(tg);
+        const next = getPreferredAutoTheme(tg);
         applyTheme(next, tg, { persist: false });
         onTheme(next);
     };
@@ -134,5 +147,33 @@ export function bindTelegramThemeChanged(tg, onTheme) {
 
     return () => {
         tg.offEvent?.('themeChanged', handler);
+    };
+}
+
+export function bindSystemThemeChanged(onTheme, tg = null) {
+    if (typeof window === 'undefined' || !window.matchMedia || hasStoredThemeChoice()) {
+        return () => {};
+    }
+
+    if (getTelegramFallbackTheme(tg)) {
+        return () => {};
+    }
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handler = (event) => {
+        if (hasStoredThemeChoice()) {
+            return;
+        }
+
+        const next = event.matches ? 'dark' : 'light';
+        applyTheme(next, tg, { persist: false });
+        onTheme(next);
+    };
+
+    media.addEventListener('change', handler);
+
+    return () => {
+        media.removeEventListener('change', handler);
     };
 }

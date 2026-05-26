@@ -2560,6 +2560,19 @@
   border: 0.5px solid var(--cm-badge-pro-border);
 }
 
+.catalog-concept__badge--fast,
+.catalog-concept__badge--lite {
+  background: color-mix(in srgb, #22c55e 18%, var(--cm-surface));
+  color: #22c55e;
+  border: 0.5px solid color-mix(in srgb, #22c55e 35%, transparent);
+}
+
+.catalog-concept__badge--standard {
+  background: color-mix(in srgb, #3b82f6 18%, var(--cm-surface));
+  color: #3b82f6;
+  border: 0.5px solid color-mix(in srgb, #3b82f6 35%, transparent);
+}
+
 .catalog-concept__badge--free {
   background: var(--cm-badge-free-bg);
   color: var(--cm-badge-free-fg);
@@ -3166,6 +3179,81 @@
 }
 
 .ai-chat__model-chip:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.ai-chat__model-tier {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: var(--cm-menu-muted-bg);
+  color: var(--cm-menu-muted-fg);
+}
+
+.ai-chat__model-tier--fast,
+.ai-chat__model-tier--lite {
+  background: color-mix(in srgb, #22c55e 18%, var(--cm-surface));
+  color: #22c55e;
+}
+
+.ai-chat__model-tier--standard {
+  background: color-mix(in srgb, #3b82f6 18%, var(--cm-surface));
+  color: #3b82f6;
+}
+
+.ai-chat__model-tier--pro {
+  background: color-mix(in srgb, #a855f7 18%, var(--cm-surface));
+  color: #a855f7;
+}
+
+.ai-chat__model-chip--active .ai-chat__model-tier {
+  background: color-mix(in srgb, var(--cm-tab-active-fg) 14%, transparent);
+  color: var(--cm-tab-active-fg);
+}
+
+.ai-chat__tiers {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 0 0 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ai-chat__tiers::-webkit-scrollbar {
+  display: none;
+}
+
+.ai-chat__tier-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 16px;
+  border: 0.5px solid var(--cm-border);
+  background: var(--cm-surface);
+  color: var(--cm-chip-inactive-fg);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ai-chat__tier-chip--active {
+  background: var(--cm-tab-active-bg);
+  color: var(--cm-tab-active-fg);
+  border-color: var(--cm-tab-active-border);
+}
+
+.ai-chat__tier-chip:disabled {
   opacity: 0.65;
   cursor: not-allowed;
 }

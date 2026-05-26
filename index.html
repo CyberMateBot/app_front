@@ -25,6 +25,9 @@
             theme = tg.colorScheme;
           }
         }
+        if (theme !== 'light' && theme !== 'dark' && window.matchMedia) {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
         if (theme !== 'light' && theme !== 'dark') {
           theme = 'light';
         }

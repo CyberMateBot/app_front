@@ -176,8 +176,37 @@ export async function clearMyPromptHistory() {
     return res.json().catch(() => ({}));
 }
 
-export const TEXT_MODEL_IDS = ['yandexgpt', 'deepseek', 'gemini-flash', 'openai'];
+/** @deprecated use GET /v1/generate/models; kept for legacy history entries */
+export const LEGACY_TEXT_MODEL_IDS = ['gemini-flash', 'openai'];
 export const IMAGE_MODEL_IDS = ['nano-banana', 'alice-ai-art'];
+
+export async function fetchTextModels() {
+    const res = await apiFetch('/v1/generate/models', {
+        headers: { Accept: 'application/json' },
+    });
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to load text models.');
+    }
+
+    const payload = await res.json();
+    const models = payload?.text_models ?? payload?.data?.text_models ?? [];
+
+    if (!Array.isArray(models)) {
+        return [];
+    }
+
+    return models
+        .map((model) => ({
+            id: String(model.id || '').trim(),
+            label: String(model.label || model.id || '').trim(),
+            group: String(model.group || 'Other').trim(),
+            description: String(model.description || '').trim(),
+            tier: String(model.tier || 'standard').trim(),
+            provider: String(model.provider || '').trim(),
+        }))
+        .filter((model) => model.id);
+}
 
 export function getTextCategoryLabel() {
     return 'text';
@@ -195,7 +224,7 @@ export async function generateText({
 }) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim();
-    const normalizedModel = TEXT_MODEL_IDS.includes(model) ? model : 'yandexgpt';
+    const normalizedModel = String(model || 'yandexgpt').trim() || 'yandexgpt';
     const normalizedMessages = Array.isArray(messages)
         ? messages
             .map((message) => ({
