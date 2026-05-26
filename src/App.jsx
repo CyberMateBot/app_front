@@ -708,6 +708,7 @@ function App() {
     const [chatSessionId, setChatSessionId] = useState(() => createChatSessionId());
     const [chatReturnPage, setChatReturnPage] = useState('catalog');
     const [imageReturnPage, setImageReturnPage] = useState('catalog');
+    const [historyReturnPage, setHistoryReturnPage] = useState('home');
     const [isGeneratingText, setIsGeneratingText] = useState(false);
     const [chatAttachment, setChatAttachment] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState(null);
@@ -2282,7 +2283,14 @@ function App() {
                         </span>
                         <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
                     </button>
-                    <button type="button" className="profile-concept__menu-item" onClick={() => setCurrentPage('history')}>
+                    <button
+                        type="button"
+                        className="profile-concept__menu-item"
+                        onClick={() => {
+                            setHistoryReturnPage('profile');
+                            setCurrentPage('history');
+                        }}
+                    >
                         <span className="profile-concept__menu-ico profile-concept__menu-ico--pink"><History size={16} /></span>
                         <span className="profile-concept__menu-text">
                             <span className="profile-concept__menu-title">{text.profileMenuHistory}</span>
@@ -2482,8 +2490,16 @@ function App() {
 
     const renderHistoryScreen = () => (
         <section className="history-screen history-screen--concept">
-            <header className="history-concept__header">
-                <h1 className="history-concept__title">{text.historyTitle}</h1>
+            <header className="concept-page__header">
+                <button
+                    type="button"
+                    className="concept-page__back"
+                    onClick={() => setCurrentPage(historyReturnPage)}
+                >
+                    <ChevronLeft size={16} aria-hidden="true" />
+                    {text.back}
+                </button>
+                <h1 className="concept-page__title">{text.historyTitle}</h1>
                 <div className="history-concept__actions">
                     <button type="button" className="history-concept__action" aria-label="Download">
                         <Download size={17} aria-hidden="true" />
@@ -2741,6 +2757,9 @@ function App() {
                                     aria-label={label}
                                     aria-current={isActive ? 'page' : undefined}
                                     onClick={() => {
+                                        if (key === 'history') {
+                                            setHistoryReturnPage('home');
+                                        }
                                         setCurrentPage(key);
                                         setIsLanguageMenuOpen(false);
                                     }}
