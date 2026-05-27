@@ -3534,6 +3534,10 @@
   background: var(--cm-bg);
 }
 
+.ai-chat__composer--no-attach .ai-chat__composer-field {
+  margin-left: 0;
+}
+
 .ai-chat__input {
   flex: 1;
   min-height: 44px;

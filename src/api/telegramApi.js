@@ -204,6 +204,7 @@ export async function fetchTextModels() {
             description: String(model.description || '').trim(),
             tier: String(model.tier || 'standard').trim(),
             provider: String(model.provider || '').trim(),
+            supports_image: Boolean(model.supports_image),
         }))
         .filter((model) => model.id);
 }

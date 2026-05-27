@@ -54,13 +54,13 @@ const GROUP_ICONS = {
 
 const CATALOG_DESCRIPTIONS = {
     ru: {
-        yandexgpt: 'Русский язык: диалог, факты, пересказ и повседневные задачи',
+        yandexgpt: 'Повседневные вопросы, письма и тексты на русском',
         deepseek: 'Код, отладка, алгоритмы и пошаговые рассуждения',
         'Open-weight GPT': 'Тексты и идеи: черновики, правки и рассуждения',
         Qwen: 'Длинные документы, сводки и мультиязычный анализ',
     },
     en: {
-        yandexgpt: 'Russian: chat, facts, rewriting, and everyday tasks',
+        yandexgpt: 'Everyday questions, emails, and text in Russian',
         deepseek: 'Code, debugging, algorithms, and step-by-step reasoning',
         'Open-weight GPT': 'Writing and ideas: drafts, edits, and reasoning',
         Qwen: 'Long documents, summaries, and multilingual analysis',
@@ -105,6 +105,22 @@ export function shouldShowModelBadge(model) {
     }
 
     return Boolean(getModelDisplayTier(model));
+}
+
+export function textModelSupportsImage(model) {
+    if (!model) {
+        return false;
+    }
+
+    // Primary source: backend capability flag.
+    if (Boolean(model.supports_image)) {
+        return true;
+    }
+
+    // Fallback: allow-list for known multimodal models (in case backend is not updated yet).
+    // Keep this list small and explicit to avoid showing an upload UI that backend can't handle.
+    const id = String(model.id || '').trim().toLowerCase();
+    return id === 'qwen3.6-35b';
 }
 
 export function getTierLabelForModel(model, text) {

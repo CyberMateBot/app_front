@@ -98,6 +98,7 @@ import {
     resolveTextModelId,
     setStoredTextModelId,
     shouldShowCatalogBadge,
+    textModelSupportsImage,
 } from './lib/textModels.js';
 import './App.css';
 import { formatUserFacingError } from './api/apiError.js';
@@ -231,9 +232,9 @@ const translations = {
         modelDeepSeekName: 'DeepSeek',
         modelDeepSeekSub: 'Мощная модель для текста и кода',
         modelNanoBananaName: 'Nano Banana',
-        modelNanoBananaSub: 'Gemini 2.5 Flash Image',
+        modelNanoBananaSub: 'Быстрые иллюстрации и картинки по тексту',
         modelAliceAIArtName: 'Alice AI ART',
-        modelAliceAIArtSub: 'Yandex · генерация изображений',
+        modelAliceAIArtSub: 'Художественные изображения и иллюстрации от Yandex ART',
         imageGenerateTitle: 'Генерация фото',
         imagePromptLabel: 'Описание',
         imagePromptPlaceholder: 'Опишите изображение, которое нужно создать...',
@@ -462,9 +463,9 @@ const translations = {
         modelDeepSeekName: 'DeepSeek',
         modelDeepSeekSub: 'Strong model for text and code',
         modelNanoBananaName: 'Nano Banana',
-        modelNanoBananaSub: 'Gemini 2.5 Flash Image',
+        modelNanoBananaSub: 'Quick illustrations and images from a text prompt',
         modelAliceAIArtName: 'Alice AI ART',
-        modelAliceAIArtSub: 'Yandex · генерация изображений',
+        modelAliceAIArtSub: 'Artistic images and illustrations via Yandex ART',
         imageGenerateTitle: 'Image generation',
         imagePromptLabel: 'Description',
         imagePromptPlaceholder: 'Describe the image you want to create...',
@@ -955,6 +956,14 @@ function App() {
             isMounted = false;
         };
     }, [currentPage, textModels.length]);
+
+    useEffect(() => {
+        const model = findTextModel(textModels, textModel);
+
+        if (!textModelSupportsImage(model)) {
+            setChatAttachment(null);
+        }
+    }, [textModel, textModels]);
 
     useEffect(() => {
         if (
@@ -1488,6 +1497,7 @@ function App() {
     const handleTextModelChange = (modelId) => {
         handleStopChatGeneration();
         const resolvedModelId = resolveTextModelId(modelId, textModels);
+        const nextModel = findTextModel(textModels, resolvedModelId);
 
         setTextModel(resolvedModelId);
         setStoredTextModelId(resolvedModelId);
@@ -1495,7 +1505,9 @@ function App() {
         setChatMessages([]);
         setChatTopicTitle('');
         setTextPrompt('');
-        setChatAttachment(null);
+        if (!textModelSupportsImage(nextModel)) {
+            setChatAttachment(null);
+        }
         setChatError('');
     };
 
@@ -2128,6 +2140,7 @@ function App() {
             ?? (activeSelectorItem?.type === 'tiered' && activeModel
                 ? getTierLabelForModel(activeModel, text)
                 : text.chatTitle);
+        const supportsChatImage = textModelSupportsImage(activeModel);
 
         return (
             <section className="ai-chat-screen ai-chat-screen--concept" aria-label={text.chatTitle}>
@@ -2236,27 +2249,31 @@ function App() {
                     <p className="ai-chat__inline-error" role="alert">{chatError}</p>
                 ) : null}
 
-                <footer className="ai-chat__composer">
-                    <input
-                        ref={chatPhotoInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="ai-chat__file-input"
-                        aria-hidden="true"
-                        tabIndex={-1}
-                        onChange={handleChatPhotoSelect}
-                    />
-                    <button
-                        type="button"
-                        className="ai-chat__attach"
-                        aria-label={text.chatAttachPhoto}
-                        disabled={isGeneratingText}
-                        onClick={() => chatPhotoInputRef.current?.click()}
-                    >
-                        <Paperclip size={18} aria-hidden="true" />
-                    </button>
+                <footer className={`ai-chat__composer ${supportsChatImage ? '' : 'ai-chat__composer--no-attach'}`}>
+                    {supportsChatImage ? (
+                        <input
+                            ref={chatPhotoInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="ai-chat__file-input"
+                            aria-hidden="true"
+                            tabIndex={-1}
+                            onChange={handleChatPhotoSelect}
+                        />
+                    ) : null}
+                    {supportsChatImage ? (
+                        <button
+                            type="button"
+                            className="ai-chat__attach"
+                            aria-label={text.chatAttachPhoto}
+                            disabled={isGeneratingText}
+                            onClick={() => chatPhotoInputRef.current?.click()}
+                        >
+                            <Paperclip size={18} aria-hidden="true" />
+                        </button>
+                    ) : null}
                     <div className="ai-chat__composer-field">
-                        {chatAttachment ? (
+                        {supportsChatImage && chatAttachment ? (
                             <div className="ai-chat__attachment-preview">
                                 <img src={chatAttachment.previewUrl} alt="" />
                                 <button
