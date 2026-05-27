@@ -347,8 +347,18 @@ export async function generateImage({ prompt, model = 'nano-banana', messages = 
     const payload = await res.json();
     const data = payload?.data ?? payload;
 
+    const imageBase64 = data?.imageBase64 ?? data?.image_base64 ?? '';
+    let imageUrl = data?.imageUrl ?? data?.image_url ?? '';
+
+    if (!imageUrl && imageBase64) {
+        const trimmed = String(imageBase64).trim();
+        imageUrl = trimmed.startsWith('data:')
+            ? trimmed
+            : `data:image/png;base64,${trimmed}`;
+    }
+
     return {
-        imageUrl: data?.imageUrl ?? data?.image_url ?? '',
+        imageUrl,
         model: data?.model ?? normalizedModel,
         tokensUsed: data?.tokensUsed ?? data?.tokens ?? null,
     };
