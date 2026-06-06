@@ -16,7 +16,6 @@ import {
     House,
     Languages,
     Lock,
-    LogOut,
     Image as ImageIcon,
     LayoutGrid,
     Menu,
@@ -86,6 +85,8 @@ import {
 import {
     buildCatalogTextTools,
     buildTextModelSelectorItems,
+    DEFAULT_TEXT_MODELS,
+    resolveEffectiveTextModels,
     findTextModel,
     getCatalogModelDescription,
     getModelLabel,
@@ -353,7 +354,6 @@ const translations = {
         profileReferralBonusTag: '+бонус',
         profileMenuLanguage: 'Язык',
         profileMenuDarkTheme: 'Тёмная тема',
-        profileMenuLogout: 'Выйти',
         profilePlansTitle: 'Планы подписки',
         profilePlansSub: '3 уровня · внутренняя валюта CyberCoins',
         planFreeName: 'Free',
@@ -584,7 +584,6 @@ const translations = {
         profileReferralBonusTag: '+bonus',
         profileMenuLanguage: 'Language',
         profileMenuDarkTheme: 'Dark theme',
-        profileMenuLogout: 'Log out',
         profilePlansTitle: 'Subscription plans',
         profilePlansSub: '3 tiers · CyberCoins internal currency',
         planFreeName: 'Free',
@@ -728,7 +727,7 @@ function App() {
     const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
     const [textPrompt, setTextPrompt] = useState('');
     const [textModel, setTextModel] = useState(getInitialTextModelId);
-    const [textModels, setTextModels] = useState([]);
+    const [textModels, setTextModels] = useState(DEFAULT_TEXT_MODELS);
     const [imageModel, setImageModel] = useState('nano-banana');
     const [imagePrompt, setImagePrompt] = useState('');
     const [imageSessionMessages, setImageSessionMessages] = useState([]);
@@ -751,6 +750,11 @@ function App() {
     const [catalogTab, setCatalogTab] = useState('all');
     const [catalogSearch, setCatalogSearch] = useState('');
     const [historyFilter, setHistoryFilter] = useState('all');
+
+    const effectiveTextModels = useMemo(
+        () => resolveEffectiveTextModels(textModels),
+        [textModels],
+    );
 
     const clearAppNotice = useCallback(() => {
         setAppNotice(null);
@@ -958,12 +962,12 @@ function App() {
     }, [currentPage, textModels.length]);
 
     useEffect(() => {
-        const model = findTextModel(textModels, textModel);
+        const model = findTextModel(effectiveTextModels, textModel);
 
         if (!textModelSupportsImage(model)) {
             setChatAttachment(null);
         }
-    }, [textModel, textModels]);
+    }, [textModel, effectiveTextModels]);
 
     useEffect(() => {
         if (
@@ -1196,22 +1200,22 @@ function App() {
     const showBottomNav = !['ai-chat', 'ai-image', 'settings', 'wallet', 'referrals'].includes(currentPage);
 
     const textModelSelectorItems = useMemo(
-        () => buildTextModelSelectorItems(textModels),
-        [textModels],
+        () => buildTextModelSelectorItems(effectiveTextModels),
+        [effectiveTextModels],
     );
 
     const catalogSections = useMemo(() => [
         {
             id: 'text-models',
             labelKey: 'catalogSectionChat',
-            tools: buildCatalogTextTools(textModels),
+            tools: buildCatalogTextTools(effectiveTextModels),
         },
         {
             id: 'image-models',
             labelKey: 'catalogSectionPhoto',
             tools: IMAGE_MODEL_DEFINITIONS,
         },
-    ], [textModels]);
+    ], [effectiveTextModels]);
 
     const toolMatchesCatalogTab = (tool, tab) => tab === 'all' || tool.tab === tab || tool.categories?.includes(tab);
 
@@ -1272,7 +1276,7 @@ function App() {
 
             if (historyFilter === 'chat') {
                 const modelId = String(item.model || '').toLowerCase();
-                return isKnownTextModelId(modelId, textModels)
+                return isKnownTextModelId(modelId, effectiveTextModels)
                     || LEGACY_TEXT_MODEL_IDS.includes(modelId)
                     || category.includes('chat')
                     || category.includes('text')
@@ -1291,7 +1295,7 @@ function App() {
 
             return category.includes(historyFilter);
         });
-    }, [historyItems, historyFilter, textModels]);
+    }, [historyItems, historyFilter, effectiveTextModels]);
 
     const historyTopics = useMemo(
         () => groupHistoryIntoTopics(filteredHistoryItems),
@@ -1362,7 +1366,7 @@ function App() {
 
     const getHistoryVisual = (modelId) => {
         const value = String(modelId || '').toLowerCase();
-        const apiModel = findTextModel(textModels, resolveTextModelId(value, textModels));
+        const apiModel = findTextModel(effectiveTextModels, resolveTextModelId(value, effectiveTextModels));
 
         if (apiModel) {
             const visual = getTextModelVisual(apiModel);
@@ -1388,7 +1392,7 @@ function App() {
         }
 
         if (value.includes('text') || value.includes('chat')) {
-            const fallback = findTextModel(textModels, 'yandexgpt') ?? textModels[0];
+            const fallback = findTextModel(effectiveTextModels, 'yandexgpt') ?? effectiveTextModels[0];
 
             if (fallback) {
                 const visual = getTextModelVisual(fallback);
@@ -1411,7 +1415,7 @@ function App() {
     const openAiChat = (modelId, returnPage = currentPage, options = {}) => {
         handleStopChatGeneration();
         if (modelId) {
-            const resolvedModelId = resolveTextModelId(modelId, textModels);
+            const resolvedModelId = resolveTextModelId(modelId, effectiveTextModels);
 
             setTextModel(resolvedModelId);
             setStoredTextModelId(resolvedModelId);
@@ -1433,8 +1437,8 @@ function App() {
     const resolveHistoryTopicModel = (topic) => {
         const model = String(topic?.model || '').toLowerCase();
 
-        if (isKnownTextModelId(model, textModels)) {
-            return resolveTextModelId(model, textModels);
+        if (isKnownTextModelId(model, effectiveTextModels)) {
+            return resolveTextModelId(model, effectiveTextModels);
         }
 
         if (IMAGE_MODEL_IDS.includes(model)) {
@@ -1447,7 +1451,7 @@ function App() {
             return IMAGE_MODEL_IDS[0];
         }
 
-        return resolveTextModelId(textModel, textModels);
+        return resolveTextModelId(textModel, effectiveTextModels);
     };
 
     const openHistoryTopic = (topic) => {
@@ -1496,8 +1500,8 @@ function App() {
 
     const handleTextModelChange = (modelId) => {
         handleStopChatGeneration();
-        const resolvedModelId = resolveTextModelId(modelId, textModels);
-        const nextModel = findTextModel(textModels, resolvedModelId);
+        const resolvedModelId = resolveTextModelId(modelId, effectiveTextModels);
+        const nextModel = findTextModel(effectiveTextModels, resolvedModelId);
 
         setTextModel(resolvedModelId);
         setStoredTextModelId(resolvedModelId);
@@ -1898,6 +1902,17 @@ function App() {
         }
     };
 
+    const handleImageComposerKeyDown = (event) => {
+        if (isGeneratingImage) {
+            return;
+        }
+
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            handleGenerateImage();
+        }
+    };
+
     const handleChatComposerKeyDown = (event) => {
         if (isGeneratingText) {
             return;
@@ -2130,12 +2145,12 @@ function App() {
     );
 
     const renderAiChatScreen = () => {
-        const activeModel = findTextModel(textModels, textModel);
+        const activeModel = findTextModel(effectiveTextModels, textModel);
         const activeVisual = getTextModelVisual(activeModel);
         const ActiveIcon = activeVisual.icon;
         const activeSelectorItem = getSelectorItemForModelId(textModelSelectorItems, textModel);
         const headerTitle = activeModel?.label
-            ?? getModelLabel(textModels, textModel, textModelSelectorItems);
+            ?? getModelLabel(effectiveTextModels, textModel, textModelSelectorItems);
         const headerSubtitle = activeModel?.description
             ?? (activeSelectorItem?.type === 'tiered' && activeModel
                 ? getTierLabelForModel(activeModel, text)
@@ -2369,32 +2384,10 @@ function App() {
                     })}
                 </div>
 
-                <div className="ai-image__body">
-                    <label className="ai-image__label" htmlFor="ai-image-prompt">{text.imagePromptLabel}</label>
-                    <textarea
-                        id="ai-image-prompt"
-                        className="ai-image__prompt"
-                        value={imagePrompt}
-                        onChange={(event) => setImagePrompt(event.target.value)}
-                        placeholder={text.imagePromptPlaceholder}
-                        rows={4}
-                        disabled={isGeneratingImage}
-                    />
-
-                    {imageError ? (
-                        <p className="ai-image__inline-error" role="alert">{imageError}</p>
-                    ) : null}
-
-                    <button
-                        type="button"
-                        className="ai-image__submit"
-                        onClick={handleGenerateImage}
-                        disabled={isGeneratingImage}
-                    >
-                        {isGeneratingImage ? text.imageGenerating : text.imageGenerateButton}
-                    </button>
-
-                    {generatedImageUrl ? (
+                <div className="ai-image__content">
+                    {isGeneratingImage ? (
+                        <p className="ai-chat__empty">{text.imageGenerating}</p>
+                    ) : generatedImageUrl ? (
                         <section className="ai-image__result" aria-label={text.imageResultTitle}>
                             <p className="ai-image__result-label">{text.imageResultTitle}</p>
                             <img
@@ -2403,8 +2396,38 @@ function App() {
                                 alt={imagePrompt || text.imageGenerateTitle}
                             />
                         </section>
-                    ) : null}
+                    ) : (
+                        <p className="ai-chat__empty">{text.imagePromptPlaceholder}</p>
+                    )}
                 </div>
+
+                {imageError ? (
+                    <p className="ai-chat__inline-error" role="alert">{imageError}</p>
+                ) : null}
+
+                <footer className="ai-chat__composer ai-chat__composer--no-attach">
+                    <div className="ai-chat__composer-field">
+                        <textarea
+                            id="ai-image-prompt"
+                            className="ai-chat__input"
+                            value={imagePrompt}
+                            onChange={(event) => setImagePrompt(event.target.value)}
+                            onKeyDown={handleImageComposerKeyDown}
+                            placeholder={text.imagePromptPlaceholder}
+                            rows={2}
+                            disabled={isGeneratingImage}
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        className="ai-chat__send"
+                        aria-label={text.chatSend}
+                        onClick={handleGenerateImage}
+                        disabled={isGeneratingImage}
+                    >
+                        <Send size={18} aria-hidden="true" />
+                    </button>
+                </footer>
             </section>
         );
     };
@@ -2581,12 +2604,6 @@ function App() {
                         </span>
                         <span className={`profile-concept__toggle ${theme === 'dark' ? 'profile-concept__toggle--on' : ''}`} aria-hidden="true">
                             <span className="profile-concept__toggle-knob" />
-                        </span>
-                    </button>
-                    <button type="button" className="profile-concept__menu-item profile-concept__menu-item--logout">
-                        <span className="profile-concept__menu-ico profile-concept__menu-ico--danger"><LogOut size={16} /></span>
-                        <span className="profile-concept__menu-text">
-                            <span className="profile-concept__menu-title profile-concept__menu-title--danger">{text.profileMenuLogout}</span>
                         </span>
                     </button>
                 </div>
@@ -2804,8 +2821,8 @@ function App() {
                             const visual = getHistoryVisual(topic.model);
                             const ThumbIcon = visual.icon;
                             const toolName = getModelLabel(
-                                textModels,
-                                resolveTextModelId(topic.model, textModels),
+                                effectiveTextModels,
+                                resolveTextModelId(topic.model, effectiveTextModels),
                                 textModelSelectorItems,
                             ) || visual.toolName;
 

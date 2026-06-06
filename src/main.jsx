@@ -8,6 +8,9 @@ import {
     ENABLE_TELEGRAM_MOCK,
 } from './config/env.js';
 import './index.css';
+import { initUiScale } from './lib/uiScale.js';
+
+initUiScale();
 
 if (import.meta.env.DEV) {
     console.info('[CyberMate] API_BASE_URL:', API_BASE_URL || '(proxy → localhost:8090)');

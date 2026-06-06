@@ -1,4 +1,5 @@
 import { ENABLE_TELEGRAM_MOCK } from '../config/env.js';
+import { applyUiScale } from './uiScale.js';
 
 function hasTelegramUser(tg) {
     return Boolean(tg?.initDataUnsafe?.user?.id);
@@ -270,18 +271,18 @@ export function waitForTelegramWebApp({ timeoutMs = 12000, intervalMs = 50 } = {
 }
 
 function applyTelegramLayoutVars(tg) {
-    if (typeof document === 'undefined' || !tg) {
+    if (typeof document === 'undefined') {
         return;
     }
 
     const root = document.documentElement;
-    const height = tg.viewportStableHeight || tg.viewportHeight;
+    const height = tg?.viewportStableHeight || tg?.viewportHeight;
 
     if (height) {
         root.style.setProperty('--app-height', `${height}px`);
     }
 
-    const inset = tg.safeAreaInset ?? tg.contentSafeAreaInset;
+    const inset = tg?.safeAreaInset ?? tg?.contentSafeAreaInset;
 
     if (inset) {
         root.style.setProperty('--page-pad-top', `${inset.top ?? 0}px`);
@@ -296,8 +297,12 @@ export function initTelegramMiniApp() {
     tg?.expand?.();
     tg?.disableVerticalSwipes?.();
     applyTelegramLayoutVars(tg);
+    applyUiScale(tg);
 
-    tg?.onEvent?.('viewportChanged', () => applyTelegramLayoutVars(tg));
+    tg?.onEvent?.('viewportChanged', () => {
+        applyTelegramLayoutVars(tg);
+        applyUiScale(tg);
+    });
     tg?.onEvent?.('safeAreaChanged', () => applyTelegramLayoutVars(tg));
 
     return applyLaunchParamsToWebApp(tg);
@@ -336,8 +341,12 @@ export async function initTelegramMiniAppAsync(options = {}) {
     }
 
     applyTelegramLayoutVars(tg);
+    applyUiScale(tg);
 
-    tg.onEvent?.('viewportChanged', () => applyTelegramLayoutVars(tg));
+    tg.onEvent?.('viewportChanged', () => {
+        applyTelegramLayoutVars(tg);
+        applyUiScale(tg);
+    });
     tg.onEvent?.('safeAreaChanged', () => applyTelegramLayoutVars(tg));
 
     return applyLaunchParamsToWebApp(tg);

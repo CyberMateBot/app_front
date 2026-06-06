@@ -74,6 +74,57 @@ const LEGACY_MODEL_ALIASES = {
     default: 'yandexgpt',
 };
 
+/** Fallback when API models are not loaded yet or request failed */
+export const DEFAULT_TEXT_MODELS = [
+    {
+        id: 'yandexgpt',
+        label: 'YandexGPT',
+        group: 'Yandex',
+        description: CATALOG_DESCRIPTIONS.ru.yandexgpt,
+        tier: 'standard',
+    },
+    {
+        id: 'deepseek',
+        label: 'DeepSeek',
+        group: 'DeepSeek',
+        description: CATALOG_DESCRIPTIONS.ru.deepseek,
+        tier: 'standard',
+    },
+    {
+        id: 'gpt-oss-20b',
+        label: 'GPT OSS 20B',
+        group: 'Open-weight GPT',
+        description: CATALOG_DESCRIPTIONS.ru['Open-weight GPT'],
+        tier: 'lite',
+    },
+    {
+        id: 'gpt-oss-120b',
+        label: 'GPT OSS 120B',
+        group: 'Open-weight GPT',
+        description: CATALOG_DESCRIPTIONS.ru['Open-weight GPT'],
+        tier: 'pro',
+    },
+    {
+        id: 'qwen3.6-35b',
+        label: 'Qwen 3.6 35B',
+        group: 'Qwen',
+        description: CATALOG_DESCRIPTIONS.ru.Qwen,
+        tier: 'pro',
+        supports_image: true,
+    },
+    {
+        id: 'qwen3-235b',
+        label: 'Qwen 235B',
+        group: 'Qwen',
+        description: CATALOG_DESCRIPTIONS.ru.Qwen,
+        tier: 'lite',
+    },
+];
+
+export function resolveEffectiveTextModels(models) {
+    return Array.isArray(models) && models.length > 0 ? models : DEFAULT_TEXT_MODELS;
+}
+
 export function getStoredTextModelId() {
     if (typeof window === 'undefined') {
         return null;
