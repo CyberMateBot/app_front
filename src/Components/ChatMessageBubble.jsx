@@ -8,7 +8,7 @@ export default function ChatMessageBubble({ message, onTypingComplete, generatin
 
     if (message.role === 'assistant' && message.isPending) {
         return (
-            <div className={`ai-chat__bubble ai-chat__bubble--${message.role} ai-chat__bubble--generating`}>
+            <div className={`ai-chat__bubble ai-chat__bubble--${message.role} ai-chat__bubble--pending`}>
                 <GeneratingBubble label={generatingLabel} />
             </div>
         );
