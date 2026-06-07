@@ -193,7 +193,7 @@ export function textModelSupportsImage(model) {
     }
 
     // Primary source: backend capability flag.
-    if (Boolean(model.supports_image)) {
+    if (model.supports_image) {
         return true;
     }
 

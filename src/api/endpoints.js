@@ -50,13 +50,13 @@ export const API_ENDPOINTS = {
         method: 'POST',
         path: '/v1/generate/image',
         when: 'Генерация изображения (Nano Banana)',
-        body: '{ telegramId, prompt, category: "image", model: "nano-banana"|"flux-dev"|"alice-ai-art", messages?: [{ role, content }] }',
+        body: '{ telegramId, prompt, category: "image", model: "nano-banana"|"nano-banana-pro"|"nano-banana-2"|"gpt-image-2"|"gpt-image-1.5"|"flux-dev"|"alice-ai-art", sourceImageUrl?: string, aspect_ratio?: string, resolution?: string, quality?: string, output_format?: string, messages?: [{ role, content }] }',
     },
     generateVideo: {
         method: 'POST',
         path: '/v1/generate/video',
         when: 'Генерация видео (WaveSpeed / Kling)',
-        body: '{ telegramId, prompt, category: "video", model: "kling-v3-std"|"kling-v3-pro", aspect_ratio?: "16:9", duration?: 5 }',
+        body: '{ telegramId, prompt, category: "video", model: "kling-v3-std"|"kling-v3-pro", aspect_ratio?: "16:9"|"9:16"|"1:1", duration?: 5|10, messages?: [{ role, content }] }',
     },
 };
 

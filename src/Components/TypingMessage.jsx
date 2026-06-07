@@ -13,44 +13,66 @@ export default function TypingMessage({
     const [isDone, setIsDone] = useState(false);
     const onCompleteRef = useRef(onComplete);
 
-    onCompleteRef.current = onComplete;
+    useEffect(() => {
+        onCompleteRef.current = onComplete;
+    }, [onComplete]);
 
     useEffect(() => {
         const normalized = text ?? '';
-        if (!normalized) {
-            setVisibleLength(0);
-            setIsDone(true);
-            onCompleteRef.current?.();
-            return undefined;
-        }
+        let cancelled = false;
+        let timerId;
 
-        const prefersReducedMotion = typeof window !== 'undefined'
-            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        if (prefersReducedMotion) {
-            setVisibleLength(normalized.length);
-            setIsDone(true);
-            onCompleteRef.current?.();
-            return undefined;
-        }
-
-        setVisibleLength(0);
-        setIsDone(false);
-        let index = 0;
-
-        const timerId = window.setInterval(() => {
-            index += 1;
-            setVisibleLength(index);
-
-            if (index >= normalized.length) {
-                window.clearInterval(timerId);
-                setIsDone(true);
-                onCompleteRef.current?.();
+        const completeAt = (length) => {
+            if (cancelled) {
+                return;
             }
-        }, charDelayMs);
+            setVisibleLength(length);
+            setIsDone(true);
+            onCompleteRef.current?.();
+        };
+
+        const startTyping = () => {
+            if (cancelled) {
+                return;
+            }
+
+            if (!normalized) {
+                completeAt(0);
+                return;
+            }
+
+            const prefersReducedMotion = typeof window !== 'undefined'
+                && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (prefersReducedMotion) {
+                completeAt(normalized.length);
+                return;
+            }
+
+            setVisibleLength(0);
+            setIsDone(false);
+            let index = 0;
+
+            timerId = window.setInterval(() => {
+                index += 1;
+                setVisibleLength(index);
+
+                if (index >= normalized.length) {
+                    window.clearInterval(timerId);
+                    setIsDone(true);
+                    onCompleteRef.current?.();
+                }
+            }, charDelayMs);
+        };
+
+        const frameId = window.requestAnimationFrame(startTyping);
 
         return () => {
-            window.clearInterval(timerId);
+            cancelled = true;
+            window.cancelAnimationFrame(frameId);
+            if (timerId) {
+                window.clearInterval(timerId);
+            }
         };
     }, [text, charDelayMs]);
 

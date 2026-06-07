@@ -18,14 +18,23 @@ function truncateContextContent(content, role) {
  * Собирает messages для API из локального чата (только завершённые пары user/assistant).
  * Текущий ввод передаётся отдельно в prompt.
  */
-const IMAGE_ASSISTANT_PLACEHOLDER = 'Изображение создано.';
+const IMAGE_ASSISTANT_FALLBACK = 'Изображение создано.';
+
+const IMAGE_ASSISTANT_PLACEHOLDERS = [
+    'изображение создано.',
+    'изображение отредактировано.',
+    'видео создано.',
+    'image created.',
+    'image created',
+    'image edited.',
+    'image edited',
+    'video created.',
+    'video created',
+];
 
 function isImageAssistantPlaceholder(text) {
     const normalized = String(text ?? '').trim().toLowerCase();
-    return normalized === IMAGE_ASSISTANT_PLACEHOLDER.toLowerCase()
-        || normalized === 'image created.'
-        || normalized === 'image created'
-        || normalized === 'изображение создано';
+    return IMAGE_ASSISTANT_PLACEHOLDERS.includes(normalized);
 }
 
 /**
@@ -41,7 +50,7 @@ export function buildImageContextMessages(imageMessages) {
             const scene = String(message.scenePrompt ?? message.content ?? '').trim();
             const content = scene && !isImageAssistantPlaceholder(scene)
                 ? scene
-                : IMAGE_ASSISTANT_PLACEHOLDER;
+                : IMAGE_ASSISTANT_FALLBACK;
 
             return { ...message, content, isTyping: false };
         }),

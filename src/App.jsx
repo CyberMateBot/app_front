@@ -65,6 +65,10 @@ import {
     getChatTopicTitle,
     groupHistoryIntoTopics,
 } from './lib/chatContext.js';
+import {
+    getLastSessionImageUrl,
+    imageModelSupportsEdit,
+} from './lib/imageModels.js';
 import { createChatSessionId } from './lib/chatSession.js';
 import { openSupport, resolveSupportUrl } from './lib/openSupport.js';
 import {
@@ -79,10 +83,17 @@ import {
 } from './lib/theme.js';
 import AppNotice from './Components/AppNotice.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
+import MediaModelOptionsBar from './Components/MediaModelOptionsBar.jsx';
 import {
     IMAGE_MODEL_DEFINITIONS,
     getImageModelDefinition,
 } from './config/aiModels.js';
+import {
+    getImageModelCapabilities,
+    getImageModelDefaults,
+    getVideoModelCapabilities,
+    getVideoModelDefaults,
+} from './config/mediaModelOptions.js';
 import {
     VIDEO_MODEL_DEFINITIONS,
     getVideoModelDefinition,
@@ -207,7 +218,7 @@ const translations = {
         toolChatTitle: 'AI Чат',
         toolChatSub: 'YandexGPT, DeepSeek, GPT OSS, Qwen',
         toolImagesTitle: 'Генерация фото',
-        toolImagesSub: 'Nano Banana, Alice AI ART',
+        toolImagesSub: 'Nano Banana, GPT Image, Alice AI ART',
         toolVideoTitle: 'Видео',
         toolVideoSub: 'Runway, Kling AI',
         toolMusicTitle: 'Музыка',
@@ -238,7 +249,15 @@ const translations = {
         modelDeepSeekName: 'DeepSeek',
         modelDeepSeekSub: 'Мощная модель для текста и кода',
         modelNanoBananaName: 'Nano Banana',
-        modelNanoBananaSub: 'Быстрые иллюстрации и картинки по тексту',
+        modelNanoBananaSub: 'Генерация и редактирование изображений',
+        modelNanoBananaProName: 'Nano Banana Pro',
+        modelNanoBananaProSub: '4K, multi-image и редактирование',
+        modelNanoBanana2Name: 'Nano Banana 2',
+        modelNanoBanana2Sub: 'Новейшая модель с 4K и edit',
+        modelGptImage2Name: 'GPT Image 2.0',
+        modelGptImage2Sub: 'OpenAI: генерация и редактирование',
+        modelGptImage15Name: 'GPT Image 1.5',
+        modelGptImage15Sub: 'OpenAI: быстрая генерация и edit',
         modelFluxDevName: 'FLUX Dev',
         modelFluxDevSub: 'Качественные изображения через WaveSpeed',
         modelAliceAIArtName: 'Alice AI ART',
@@ -250,12 +269,24 @@ const translations = {
         imageGenerateTitle: 'Генерация фото',
         imagePromptLabel: 'Описание',
         imagePromptPlaceholder: 'Опишите изображение, которое нужно создать...',
+        imageEditPlaceholder: 'Опишите, что изменить на последнем изображении...',
+        imageEditHint: 'Следующий промт отредактирует последнее изображение',
+        imageEditedNote: 'Изображение отредактировано.',
         imageGenerateButton: 'Сгенерировать',
         imageGenerating: 'Генерация...',
         imageResultTitle: 'Результат',
         imageGenerateEmpty: 'Изображение не получено. Попробуйте другой промт.',
         imageGeneratedNote: 'Изображение создано.',
         imageContentPolicy: 'Модель отклонила запрос. Попробуйте другую формулировку без запрещённых тем.',
+        mediaOptionsGroup: 'Параметры генерации',
+        mediaOptionAspectRatio: 'Формат',
+        mediaOptionResolution: 'Разрешение',
+        mediaOptionQuality: 'Качество',
+        mediaOptionDuration: 'Длительность',
+        mediaOptionOutputFormat: 'Формат файла',
+        mediaQualityLow: 'Низкое',
+        mediaQualityMedium: 'Среднее',
+        mediaQualityHigh: 'Высокое',
         videoGenerateTitle: 'Генерация видео',
         videoPromptLabel: 'Описание',
         videoPromptPlaceholder: 'Опишите сцену, которую нужно создать...',
@@ -452,7 +483,7 @@ const translations = {
         toolChatTitle: 'AI Chat',
         toolChatSub: 'YandexGPT, DeepSeek, GPT OSS, Qwen',
         toolImagesTitle: 'Image generation',
-        toolImagesSub: 'Nano Banana, Alice AI ART',
+        toolImagesSub: 'Nano Banana, GPT Image, Alice AI ART',
         toolVideoTitle: 'Video',
         toolVideoSub: 'Runway, Kling AI',
         toolMusicTitle: 'Music',
@@ -483,7 +514,15 @@ const translations = {
         modelDeepSeekName: 'DeepSeek',
         modelDeepSeekSub: 'Strong model for text and code',
         modelNanoBananaName: 'Nano Banana',
-        modelNanoBananaSub: 'Quick illustrations and images from a text prompt',
+        modelNanoBananaSub: 'Image generation and editing',
+        modelNanoBananaProName: 'Nano Banana Pro',
+        modelNanoBananaProSub: '4K, multi-image, and editing',
+        modelNanoBanana2Name: 'Nano Banana 2',
+        modelNanoBanana2Sub: 'Latest model with 4K and edit',
+        modelGptImage2Name: 'GPT Image 2.0',
+        modelGptImage2Sub: 'OpenAI image generation and editing',
+        modelGptImage15Name: 'GPT Image 1.5',
+        modelGptImage15Sub: 'OpenAI fast generation and edit',
         modelFluxDevName: 'FLUX Dev',
         modelFluxDevSub: 'High-quality images via WaveSpeed',
         modelAliceAIArtName: 'Alice AI ART',
@@ -495,12 +534,24 @@ const translations = {
         imageGenerateTitle: 'Image generation',
         imagePromptLabel: 'Description',
         imagePromptPlaceholder: 'Describe the image you want to create...',
+        imageEditPlaceholder: 'Describe what to change in the last image...',
+        imageEditHint: 'The next prompt will edit the last image',
+        imageEditedNote: 'Image edited.',
         imageGenerateButton: 'Generate',
         imageGenerating: 'Generating...',
         imageResultTitle: 'Result',
         imageGenerateEmpty: 'No image returned. Try a different prompt.',
         imageGeneratedNote: 'Image created.',
         imageContentPolicy: 'The model rejected this prompt. Try a different wording.',
+        mediaOptionsGroup: 'Generation settings',
+        mediaOptionAspectRatio: 'Aspect ratio',
+        mediaOptionResolution: 'Resolution',
+        mediaOptionQuality: 'Quality',
+        mediaOptionDuration: 'Duration',
+        mediaOptionOutputFormat: 'Output format',
+        mediaQualityLow: 'Low',
+        mediaQualityMedium: 'Medium',
+        mediaQualityHigh: 'High',
         videoGenerateTitle: 'Video generation',
         videoPromptLabel: 'Description',
         videoPromptPlaceholder: 'Describe the scene you want to create...',
@@ -755,22 +806,29 @@ function App() {
     const [pageLoading, setPageLoading] = useState({ wallet: false, referrals: false, history: false });
     const pageDataLoadedRef = useRef({ wallet: false, referrals: false, history: false });
     const pageDataInFlightRef = useRef({ wallet: false, referrals: false, history: false });
-    const [promptDraft, setPromptDraft] = useState('');
-    const [promptCategory, setPromptCategory] = useState('general');
-    const [isSavingPrompt, setIsSavingPrompt] = useState(false);
     const [theme, setTheme] = useState(getInitialTheme);
     const [language, setLanguage] = useState(getInitialLanguage);
-    const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
+    const [, setIsLanguageMenuOpen] = useState(false);
     const [textPrompt, setTextPrompt] = useState('');
     const [textModel, setTextModel] = useState(getInitialTextModelId);
     const [textModels, setTextModels] = useState(DEFAULT_TEXT_MODELS);
+    const initialImageDefaults = getImageModelDefaults('nano-banana');
+    const initialVideoDefaults = getVideoModelDefaults('kling-v3-std');
     const [imageModel, setImageModel] = useState('nano-banana');
     const [imagePrompt, setImagePrompt] = useState('');
     const [imageSessionMessages, setImageSessionMessages] = useState([]);
     const [imageSessionId, setImageSessionId] = useState(() => createChatSessionId());
+    const [imageAspectRatio, setImageAspectRatio] = useState(initialImageDefaults.aspectRatio ?? '1:1');
+    const [imageResolution, setImageResolution] = useState(initialImageDefaults.resolution ?? '');
+    const [imageQuality, setImageQuality] = useState(initialImageDefaults.quality ?? '');
+    const [imageOutputFormat, setImageOutputFormat] = useState(initialImageDefaults.outputFormat ?? '');
     const [generatedImageUrl, setGeneratedImageUrl] = useState('');
+    const [generatedImageUrls, setGeneratedImageUrls] = useState([]);
     const [videoModel, setVideoModel] = useState('kling-v3-std');
     const [videoPrompt, setVideoPrompt] = useState('');
+    const [videoSessionMessages, setVideoSessionMessages] = useState([]);
+    const [videoAspectRatio, setVideoAspectRatio] = useState(initialVideoDefaults.aspectRatio ?? '16:9');
+    const [videoDuration, setVideoDuration] = useState(initialVideoDefaults.duration ?? 5);
     const [generatedVideoUrl, setGeneratedVideoUrl] = useState('');
     const [videoSessionId, setVideoSessionId] = useState(() => createChatSessionId());
     const [chatMessages, setChatMessages] = useState([]);
@@ -1168,7 +1226,7 @@ function App() {
                 pageDataInFlightRef.current.history = false;
             }
         };
-    }, [currentPage, telegramUser?.id]);
+    }, [currentPage, telegramUser?.id, showAppNotice]);
 
     useEffect(() => {
         if (!telegramUser?.id || currentPage !== 'referrals') {
@@ -1201,7 +1259,7 @@ function App() {
         return () => {
             isCancelled = true;
         };
-    }, [currentPage, telegramUser?.id]);
+    }, [currentPage, telegramUser?.id, showAppNotice]);
 
     const text = translations[language] ?? translations.ru;
     const userData = useMemo(() => {
@@ -1219,7 +1277,7 @@ function App() {
             subscriptionUntil: subscription.untilLabel,
             subscriptionIsPaid: subscription.isPaid,
         };
-    }, [profile, telegramUser, walletData, language]);
+    }, [profile, telegramUser, walletData, text]);
     const referralItems = useMemo(() => {
         const sourceItems = Array.isArray(referralData?.items) ? referralData.items : [];
 
@@ -1229,7 +1287,10 @@ function App() {
             reward: `+${item.earnings ?? item.reward ?? 0}`,
         }));
     }, [referralData, language]);
-    const historyItems = Array.isArray(promptHistoryData?.items) ? promptHistoryData.items : [];
+    const historyItems = useMemo(
+        () => (Array.isArray(promptHistoryData?.items) ? promptHistoryData.items : []),
+        [promptHistoryData],
+    );
     const walletTransactions = Array.isArray(walletData?.transactions) ? walletData.transactions : [];
     const activeNavKey = currentPage === 'settings' || currentPage === 'wallet' || currentPage === 'referrals'
         ? 'profile'
@@ -1577,10 +1638,12 @@ function App() {
 
     const handleImageModelChange = (modelId) => {
         setImageModel(modelId);
+        applyImageModelOptions(modelId);
         startNewImageSession();
         setImageSessionMessages([]);
         setImagePrompt('');
         setGeneratedImageUrl('');
+        setGeneratedImageUrls([]);
         setImageError('');
     };
 
@@ -1589,6 +1652,7 @@ function App() {
         setImageSessionMessages([]);
         setImagePrompt('');
         setGeneratedImageUrl('');
+        setGeneratedImageUrls([]);
         setImageError('');
     };
 
@@ -1596,9 +1660,56 @@ function App() {
         setImageSessionId(createChatSessionId());
     }, []);
 
+    const applyImageModelOptions = useCallback((modelId) => {
+        const defaults = getImageModelDefaults(modelId);
+        setImageAspectRatio(defaults.aspectRatio ?? '');
+        setImageResolution(defaults.resolution ?? '');
+        setImageQuality(defaults.quality ?? '');
+        setImageOutputFormat(defaults.outputFormat ?? '');
+    }, []);
+
+    const applyVideoModelOptions = useCallback((modelId) => {
+        const defaults = getVideoModelDefaults(modelId);
+        setVideoAspectRatio(defaults.aspectRatio ?? '16:9');
+        setVideoDuration(defaults.duration ?? 5);
+    }, []);
+
+    const handleImageOptionChange = (key, value) => {
+        switch (key) {
+            case 'aspectRatio':
+                setImageAspectRatio(value);
+                break;
+            case 'resolution':
+                setImageResolution(value);
+                break;
+            case 'quality':
+                setImageQuality(value);
+                break;
+            case 'outputFormat':
+                setImageOutputFormat(value);
+                break;
+            default:
+                break;
+        }
+    };
+
+    const handleVideoOptionChange = (key, value) => {
+        switch (key) {
+            case 'aspectRatio':
+                setVideoAspectRatio(value);
+                break;
+            case 'duration':
+                setVideoDuration(value);
+                break;
+            default:
+                break;
+        }
+    };
+
     const openAiImage = (modelId, returnPage = currentPage, options = {}) => {
         if (modelId) {
             setImageModel(modelId);
+            applyImageModelOptions(modelId);
         }
         if (options.sessionId) {
             setImageSessionId(options.sessionId);
@@ -1619,7 +1730,9 @@ function App() {
 
     const handleVideoModelChange = (modelId) => {
         setVideoModel(modelId);
+        applyVideoModelOptions(modelId);
         startNewVideoSession();
+        setVideoSessionMessages([]);
         setVideoPrompt('');
         setGeneratedVideoUrl('');
         setVideoError('');
@@ -1627,6 +1740,7 @@ function App() {
 
     const handleNewVideoDialog = () => {
         startNewVideoSession();
+        setVideoSessionMessages([]);
         setVideoPrompt('');
         setGeneratedVideoUrl('');
         setVideoError('');
@@ -1635,8 +1749,10 @@ function App() {
     const openAiVideo = (modelId, returnPage = currentPage) => {
         if (modelId) {
             setVideoModel(modelId);
+            applyVideoModelOptions(modelId);
         }
         startNewVideoSession();
+        setVideoSessionMessages([]);
         setVideoPrompt('');
         setGeneratedVideoUrl('');
         setVideoReturnPage(returnPage);
@@ -1673,18 +1789,31 @@ function App() {
         }
 
         const contextMessages = buildImageContextMessages(imageSessionMessages);
+        const sourceImageUrl = imageModelSupportsEdit(imageModel)
+            ? (getLastSessionImageUrl(imageSessionMessages) ?? generatedImageUrl?.trim() ?? '')
+            : '';
+        const isEdit = Boolean(sourceImageUrl);
 
         try {
             setIsGeneratingImage(true);
             setImageError('');
             setGeneratedImageUrl('');
+            setGeneratedImageUrls([]);
             const response = await generateImage({
                 prompt: trimmedPrompt,
                 model: imageModel,
                 messages: contextMessages,
                 sessionId: imageSessionId,
+                sourceImageUrl: isEdit ? sourceImageUrl : undefined,
+                aspectRatio: imageAspectRatio || undefined,
+                resolution: imageResolution || undefined,
+                quality: imageQuality || undefined,
+                outputFormat: imageOutputFormat || undefined,
             });
             const imageUrl = response?.imageUrl?.trim() ?? '';
+            const imageUrls = Array.isArray(response?.imageUrls) && response.imageUrls.length
+                ? response.imageUrls
+                : (imageUrl ? [imageUrl] : []);
 
             if (!imageUrl) {
                 setImageError(text.imageGenerateEmpty);
@@ -1697,12 +1826,14 @@ function App() {
                 {
                     id: `img-assistant-${Date.now()}`,
                     role: 'assistant',
-                    content: text.imageGeneratedNote,
+                    content: isEdit ? text.imageEditedNote : text.imageGeneratedNote,
                     scenePrompt: trimmedPrompt,
+                    imageUrl,
                 },
             ]);
             setImagePrompt('');
             setGeneratedImageUrl(imageUrl);
+            setGeneratedImageUrls(imageUrls);
 
             try {
                 const historyResponse = await savePromptHistory({
@@ -1738,6 +1869,8 @@ function App() {
             return;
         }
 
+        const contextMessages = buildImageContextMessages(videoSessionMessages);
+
         try {
             setIsGeneratingVideo(true);
             setVideoError('');
@@ -1745,7 +1878,10 @@ function App() {
             const response = await generateVideo({
                 prompt: trimmedPrompt,
                 model: videoModel,
+                messages: contextMessages,
                 sessionId: videoSessionId,
+                aspectRatio: videoAspectRatio || undefined,
+                duration: videoDuration,
             });
             const videoUrl = response?.videoUrl?.trim() ?? '';
 
@@ -1754,6 +1890,16 @@ function App() {
                 return;
             }
 
+            setVideoSessionMessages((prev) => [
+                ...prev,
+                { id: `vid-user-${Date.now()}`, role: 'user', content: trimmedPrompt },
+                {
+                    id: `vid-assistant-${Date.now()}`,
+                    role: 'assistant',
+                    content: text.videoGeneratedNote,
+                    scenePrompt: trimmedPrompt,
+                },
+            ]);
             setVideoPrompt('');
             setGeneratedVideoUrl(videoUrl);
 
@@ -2062,35 +2208,6 @@ function App() {
         textGenerationAbortRef.current?.abort();
     }, []);
 
-    const handleSavePrompt = async () => {
-        const trimmedPrompt = promptDraft.trim();
-        const trimmedCategory = promptCategory.trim() || 'general';
-
-        if (!trimmedPrompt) {
-            showAppNotice(text.promptEmpty);
-            return;
-        }
-
-        try {
-            setIsSavingPrompt(true);
-            const response = await savePromptHistory({ prompt: trimmedPrompt, category: trimmedCategory });
-            const savedItem = response?.item;
-
-            if (savedItem) {
-                setPromptHistoryData((prev) => ({
-                    items: [savedItem, ...(Array.isArray(prev?.items) ? prev.items : [])],
-                }));
-            }
-
-            setPromptDraft('');
-            showAppNotice(text.promptSaved, 'success');
-        } catch (error) {
-            showAppNotice(error instanceof Error ? error.message : 'Не удалось сохранить промт.');
-        } finally {
-            setIsSavingPrompt(false);
-        }
-    };
-
     const homeGreetingName = userData.displayName.split(' ')[0] || userData.displayName;
     const homeGreetingText = text.homeGreeting.replace('{name}', homeGreetingName);
 
@@ -2152,19 +2269,23 @@ function App() {
 
             <p className="home-concept__section-label">{text.homeCategoriesLabel}</p>
             <div className="home-concept__chips" role="tablist" aria-label={text.homeCategoriesLabel}>
-                {homeCategoryChips.map(({ id, labelKey, icon: Icon }) => (
-                    <button
-                        key={id}
-                        type="button"
-                        role="tab"
-                        aria-selected={homeCategoryChip === id}
-                        className={`home-concept__chip ${homeCategoryChip === id ? 'home-concept__chip--active' : ''}`}
-                        onClick={() => setHomeCategoryChip(id)}
-                    >
-                        <Icon size={14} aria-hidden="true" />
-                        {text[labelKey]}
-                    </button>
-                ))}
+                {homeCategoryChips.map((chip) => {
+                    const { id, labelKey, icon: CategoryIcon } = chip;
+
+                    return (
+                        <button
+                            key={id}
+                            type="button"
+                            role="tab"
+                            aria-selected={homeCategoryChip === id}
+                            className={`home-concept__chip ${homeCategoryChip === id ? 'home-concept__chip--active' : ''}`}
+                            onClick={() => setHomeCategoryChip(id)}
+                        >
+                            <CategoryIcon size={14} aria-hidden="true" />
+                            {text[labelKey]}
+                        </button>
+                    );
+                })}
             </div>
 
             <p className="home-concept__section-label">{text.homeToolsLabel}</p>
@@ -2470,6 +2591,13 @@ function App() {
     const renderAiImageScreen = () => {
         const activeModel = getImageModelDefinition(imageModel);
         const ActiveIcon = activeModel.icon;
+        const canEdit = imageModelSupportsEdit(imageModel);
+        const sourceImageUrl = canEdit
+            ? (getLastSessionImageUrl(imageSessionMessages) ?? generatedImageUrl?.trim() ?? '')
+            : '';
+        const promptPlaceholder = sourceImageUrl
+            ? text.imageEditPlaceholder
+            : text.imagePromptPlaceholder;
 
         return (
             <section className="ai-image-screen ai-image-screen--concept" aria-label={text.imageGenerateTitle}>
@@ -2523,22 +2651,64 @@ function App() {
                     })}
                 </div>
 
+                <MediaModelOptionsBar
+                    capabilities={getImageModelCapabilities(imageModel)}
+                    values={{
+                        aspectRatio: imageAspectRatio,
+                        resolution: imageResolution,
+                        quality: imageQuality,
+                        outputFormat: imageOutputFormat,
+                    }}
+                    onChange={handleImageOptionChange}
+                    labels={{
+                        group: text.mediaOptionsGroup,
+                        aspectRatio: text.mediaOptionAspectRatio,
+                        resolution: text.mediaOptionResolution,
+                        quality: text.mediaOptionQuality,
+                        outputFormat: text.mediaOptionOutputFormat,
+                        qualityValues: {
+                            low: text.mediaQualityLow,
+                            medium: text.mediaQualityMedium,
+                            high: text.mediaQualityHigh,
+                        },
+                    }}
+                    disabled={isGeneratingImage}
+                    idPrefix="image"
+                />
+
                 <div className="ai-image__content">
                     {isGeneratingImage ? (
                         <p className="ai-chat__empty">{text.imageGenerating}</p>
                     ) : generatedImageUrl ? (
                         <section className="ai-image__result" aria-label={text.imageResultTitle}>
                             <p className="ai-image__result-label">{text.imageResultTitle}</p>
-                            <img
-                                className="ai-image__preview"
-                                src={generatedImageUrl}
-                                alt={imagePrompt || text.imageGenerateTitle}
-                            />
+                            {generatedImageUrls.length > 1 ? (
+                                <div className="ai-image__gallery">
+                                    {generatedImageUrls.map((url, index) => (
+                                        <img
+                                            key={`${url}-${index}`}
+                                            className="ai-image__preview"
+                                            src={url}
+                                            alt={`${text.imageGenerateTitle} ${index + 1}`}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <img
+                                    className="ai-image__preview"
+                                    src={generatedImageUrl}
+                                    alt={imagePrompt || text.imageGenerateTitle}
+                                />
+                            )}
                         </section>
                     ) : (
                         <p className="ai-chat__empty">{text.imagePromptPlaceholder}</p>
                     )}
                 </div>
+
+                {sourceImageUrl && canEdit ? (
+                    <p className="ai-image__edit-hint">{text.imageEditHint}</p>
+                ) : null}
 
                 {imageError ? (
                     <p className="ai-chat__inline-error" role="alert">{imageError}</p>
@@ -2552,7 +2722,7 @@ function App() {
                             value={imagePrompt}
                             onChange={(event) => setImagePrompt(event.target.value)}
                             onKeyDown={handleImageComposerKeyDown}
-                            placeholder={text.imagePromptPlaceholder}
+                            placeholder={promptPlaceholder}
                             rows={2}
                             disabled={isGeneratingImage}
                         />
@@ -2626,6 +2796,23 @@ function App() {
                         );
                     })}
                 </div>
+
+                <MediaModelOptionsBar
+                    capabilities={getVideoModelCapabilities(videoModel)}
+                    values={{
+                        aspectRatio: videoAspectRatio,
+                        duration: videoDuration,
+                    }}
+                    onChange={handleVideoOptionChange}
+                    labels={{
+                        group: text.mediaOptionsGroup,
+                        aspectRatio: text.mediaOptionAspectRatio,
+                        duration: text.mediaOptionDuration,
+                        durationValue: (seconds) => `${seconds} ${language === 'en' ? 'sec' : 'сек'}`,
+                    }}
+                    disabled={isGeneratingVideo}
+                    idPrefix="video"
+                />
 
                 <div className="ai-image__body">
                     <label className="ai-image__label" htmlFor="ai-video-prompt">{text.videoPromptLabel}</label>
@@ -3257,7 +3444,8 @@ function App() {
             {showBottomNav ? (
                 <nav className="bottom-nav bottom-nav--concept" aria-label={language === 'ru' ? 'Основная навигация' : 'Main navigation'}>
                     <div className="bottom-nav__inner">
-                        {navigationItems.map(({ key, labelKey, icon: Icon }) => {
+                        {navigationItems.map((item) => {
+                            const { key, labelKey, icon: NavIcon } = item;
                             const isActive = activeNavKey === key;
                             const label = text[labelKey];
 
@@ -3276,7 +3464,7 @@ function App() {
                                         setIsLanguageMenuOpen(false);
                                     }}
                                 >
-                                    <Icon size={19} aria-hidden="true" />
+                                    <NavIcon size={19} aria-hidden="true" />
                                     <span className="nav-button__label">{label}</span>
                                 </button>
                             );

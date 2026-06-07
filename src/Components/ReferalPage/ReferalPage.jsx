@@ -14,11 +14,10 @@ import './ReferalPage.css';
 const ReferralPage = ({ appName, isLoading }) => {
     const [isCopied, setIsCopied] = useState(false);
     const [referralLink, setReferralLink] = useState('');
-    const [referralLinkLoading, setReferralLinkLoading] = useState(false);
+    const [referralLinkLoading, setReferralLinkLoading] = useState(true);
 
     useEffect(() => {
         let isCancelled = false;
-        setReferralLinkLoading(true);
 
         getMyReferralLink()
             .then(({ referral_link: link }) => {

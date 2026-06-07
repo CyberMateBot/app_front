@@ -1,6 +1,5 @@
 import {
     getTelegramWebApp,
-    hydrateTelegramUser,
     readLaunchInitData,
     resolveTelegramUserId,
 } from '../lib/telegramWebApp.js';
@@ -178,7 +177,15 @@ export async function clearMyPromptHistory() {
 
 /** @deprecated use GET /v1/generate/models; kept for legacy history entries */
 export const LEGACY_TEXT_MODEL_IDS = ['gemini-flash', 'openai', 'gemini'];
-export const IMAGE_MODEL_IDS = ['nano-banana', 'flux-dev', 'alice-ai-art'];
+export const IMAGE_MODEL_IDS = [
+    'nano-banana',
+    'nano-banana-pro',
+    'nano-banana-2',
+    'gpt-image-2',
+    'gpt-image-1.5',
+    'flux-dev',
+    'alice-ai-art',
+];
 export const VIDEO_MODEL_IDS = ['kling-v3-std', 'kling-v3-pro'];
 
 export async function fetchTextModels() {
@@ -296,7 +303,19 @@ export async function generateText({
     };
 }
 
-export async function generateImage({ prompt, model = 'nano-banana', messages = [], sessionId }) {
+export async function generateImage({
+    prompt,
+    model = 'nano-banana',
+    messages = [],
+    sessionId,
+    sourceImageUrl,
+    mode,
+    numImages,
+    aspectRatio,
+    resolution,
+    quality,
+    outputFormat,
+}) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim();
     const normalizedModel = IMAGE_MODEL_IDS.includes(model) ? model : 'nano-banana';
@@ -325,6 +344,35 @@ export async function generateImage({ prompt, model = 'nano-banana', messages = 
 
     if (normalizedMessages.length > 0) {
         body.messages = normalizedMessages;
+    }
+
+    const trimmedSource = sourceImageUrl?.trim();
+    if (trimmedSource) {
+        body.sourceImageUrl = trimmedSource;
+    }
+
+    if (mode?.trim()) {
+        body.mode = mode.trim();
+    }
+
+    if (Number.isFinite(numImages) && numImages > 0) {
+        body.num_images = numImages;
+    }
+
+    if (aspectRatio?.trim()) {
+        body.aspect_ratio = aspectRatio.trim();
+    }
+
+    if (resolution?.trim()) {
+        body.resolution = resolution.trim();
+    }
+
+    if (quality?.trim()) {
+        body.quality = quality.trim();
+    }
+
+    if (outputFormat?.trim()) {
+        body.output_format = outputFormat.trim();
     }
 
     const trimmedSessionId = sessionId?.trim();
@@ -358,14 +406,26 @@ export async function generateImage({ prompt, model = 'nano-banana', messages = 
             : `data:image/png;base64,${trimmed}`;
     }
 
+    const imageUrls = Array.isArray(data?.imageUrls ?? data?.image_urls)
+        ? (data.imageUrls ?? data.image_urls).filter(Boolean)
+        : [];
+
     return {
         imageUrl,
+        imageUrls: imageUrls.length ? imageUrls : (imageUrl ? [imageUrl] : []),
         model: data?.model ?? normalizedModel,
         tokensUsed: data?.tokensUsed ?? data?.tokens ?? null,
     };
 }
 
-export async function generateVideo({ prompt, model = 'kling-v3-std', aspectRatio, duration, sessionId }) {
+export async function generateVideo({
+    prompt,
+    model = 'kling-v3-std',
+    messages = [],
+    aspectRatio,
+    duration,
+    sessionId,
+}) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim();
     const normalizedModel = VIDEO_MODEL_IDS.includes(model) ? model : 'kling-v3-std';
@@ -374,12 +434,28 @@ export async function generateVideo({ prompt, model = 'kling-v3-std', aspectRati
         throw new Error('Prompt is required.');
     }
 
+    const normalizedMessages = Array.isArray(messages)
+        ? messages
+            .map((message) => ({
+                role: String(message.role || '').trim(),
+                content: String(message.content || '').trim(),
+            }))
+            .filter((message) => (
+                (message.role === 'user' || message.role === 'assistant')
+                && message.content
+            ))
+        : [];
+
     const body = {
         telegramId: String(telegramId),
         prompt: trimmedPrompt,
         category: 'video',
         model: normalizedModel,
     };
+
+    if (normalizedMessages.length > 0) {
+        body.messages = normalizedMessages;
+    }
 
     if (aspectRatio?.trim()) {
         body.aspect_ratio = aspectRatio.trim();

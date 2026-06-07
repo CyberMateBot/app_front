@@ -3591,6 +3591,49 @@
   letter-spacing: 0.6px;
 }
 
+.media-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  padding: 0 1rem 0.75rem;
+}
+
+.media-options__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 7.5rem;
+  flex: 1 1 auto;
+}
+
+.media-options__label {
+  font-size: 0.7rem;
+  color: var(--cm-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.media-options__select {
+  appearance: none;
+  border: 0.5px solid var(--cm-border);
+  border-radius: 10px;
+  background: var(--cm-surface);
+  color: var(--cm-text);
+  font-size: 0.85rem;
+  padding: 0.45rem 0.6rem;
+}
+
+.ai-image__gallery {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ai-image__edit-hint {
+  margin: 0 1rem 0.5rem;
+  font-size: 0.8rem;
+  color: var(--cm-text-muted);
+}
+
 .ai-image__preview {
   width: 100%;
   border-radius: 14px;
