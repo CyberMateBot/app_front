@@ -1024,6 +1024,7 @@ function App() {
     const imagePhotoInputRef = useRef(null);
     const audioFileInputRef = useRef(null);
     const pendingAssistantIdRef = useRef(null);
+    const backgroundVideoRef = useRef(null);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
     const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
     const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
@@ -1061,6 +1062,50 @@ function App() {
 
         return () => window.clearTimeout(timer);
     }, [appNotice]);
+
+    useEffect(() => {
+        const video = backgroundVideoRef.current;
+
+        if (!video) {
+            return undefined;
+        }
+
+        const BACKGROUND_VIDEO_PLAYBACK_RATE = 0.38;
+
+        video.muted = true;
+        video.defaultMuted = true;
+        video.playbackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
+
+        const applyPlaybackRate = () => {
+            video.playbackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
+        };
+
+        const playVideo = () => {
+            applyPlaybackRate();
+            const promise = video.play();
+
+            if (promise && typeof promise.catch === 'function') {
+                promise.catch(() => {});
+            }
+        };
+
+        applyPlaybackRate();
+        playVideo();
+        video.addEventListener('loadedmetadata', applyPlaybackRate);
+
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                playVideo();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            video.removeEventListener('loadedmetadata', applyPlaybackRate);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -4525,6 +4570,22 @@ function App() {
 
     return (
         <div className="app-shell" data-page={currentPage}>
+            <div className="app-shell__backdrop" aria-hidden="true">
+                <div className="app-shell__video-wrap">
+                    <video
+                        ref={backgroundVideoRef}
+                        className="app-shell__video"
+                        src="/background/app-bg.mp4"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        tabIndex={-1}
+                    />
+                </div>
+                <div className="app-shell__video-overlay" />
+            </div>
             <div className="app-shell__orbs" aria-hidden="true">
                 <span className="app-shell__orb app-shell__orb--1" />
                 <span className="app-shell__orb app-shell__orb--2" />
