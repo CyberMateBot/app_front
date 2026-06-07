@@ -39,6 +39,7 @@ setReferralData(stats);
       "telegram_id": "987654321",
       "username": "friend",
       "first_name": "Alex",
+      "photo_url": "https://...",
       "bonus": 300
     }
   ],
@@ -48,6 +49,7 @@ setReferralData(stats);
 
 - `404` на `/referrals` — профиль ещё не создан через `POST /v1/register`; показывать пустой список.
 - Блок **«Мои рефералы»** строится из `referrals`, не из локального мока.
+- Аватар: `photo_url` (или `avatar_url` / `avatarUrl`); при отсутствии URL — первая буква имени.
 
 ## Регистрация с рефералом
 

@@ -145,7 +145,7 @@ export async function getMyReferralLink() {
     return fetchReferralLink(telegramId);
 }
 
-export { fetchReferralLink, fetchReferrals } from './referrals.js';
+export { fetchReferralLink, fetchReferrals, resolveReferralAvatarUrl } from './referrals.js';
 
 export async function getMyPromptHistory() {
     const telegramId = getCurrentTelegramId();

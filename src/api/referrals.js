@@ -15,7 +15,36 @@ import { buildMockReferralLink, buildMockReferralsResponse } from './referrals.m
  * @property {number} [earnings]
  * @property {number} [reward]
  * @property {string} [registered_at]
+ * @property {string} [photo_url]
+ * @property {string} [avatar_url]
+ * @property {string} [avatarUrl]
  */
+
+/**
+ * @param {ReferralItem | null | undefined} item
+ * @returns {string}
+ */
+export function resolveReferralAvatarUrl(item) {
+    const url = item?.photo_url ?? item?.avatar_url ?? item?.avatarUrl ?? item?.avatar ?? '';
+    return String(url).trim();
+}
+
+/**
+ * @param {ReferralItem} item
+ * @returns {ReferralItem}
+ */
+function normalizeReferralItem(item) {
+    if (!item || typeof item !== 'object') {
+        return item;
+    }
+
+    const avatarUrl = resolveReferralAvatarUrl(item);
+
+    return {
+        ...item,
+        ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+    };
+}
 
 /**
  * @typedef {Object} ReferralsResponse
@@ -34,7 +63,7 @@ function normalizeReferralsPayload(payload) {
     const totalCount = Number(data.total_count);
 
     return {
-        referrals,
+        referrals: referrals.map(normalizeReferralItem),
         total_count: Number.isFinite(totalCount) ? totalCount : referrals.length,
     };
 }

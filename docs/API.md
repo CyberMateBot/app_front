@@ -63,6 +63,7 @@
       "telegram_id": "987654321",
       "username": "friend",
       "first_name": "Alex",
+      "photo_url": "https://...",
       "bonus": 300
     }
   ],

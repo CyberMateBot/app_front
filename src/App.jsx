@@ -59,6 +59,8 @@ import {
     LEGACY_TEXT_MODEL_IDS,
     IMAGE_MODEL_IDS,
 } from './api/telegramApi.js';
+import { resolveReferralAvatarUrl } from './api/referrals.js';
+import ReferralFriendAvatar from './Components/ReferralFriendAvatar.jsx';
 import {
     buildChatContextMessages,
     buildChatMessagesFromHistoryTopic,
@@ -1309,6 +1311,7 @@ function App() {
                     || item.fullName
                     || `${language === 'ru' ? 'Друг' : 'Friend'} ${index + 1}`,
                 reward: `+${item.bonus ?? item.earnings ?? item.reward ?? 0}`,
+                avatarUrl: resolveReferralAvatarUrl(item),
             };
         });
     }, [referralData, language]);
@@ -3134,17 +3137,13 @@ function App() {
                     {!pageLoading.referrals && referralItems.length === 0 ? (
                         <p className="referral-concept__empty">{text.referralEmpty}</p>
                     ) : null}
-                    {referralItems.map((item) => {
-                        const initial = item.name?.trim()?.[0]?.toUpperCase() || '?';
-
-                        return (
-                            <div key={item.id} className="referral-concept__friend">
-                                <span className="referral-concept__friend-avatar">{initial}</span>
-                                <span className="referral-concept__friend-name">{item.name}</span>
-                                <span className="referral-concept__friend-reward">{item.reward}</span>
-                            </div>
-                        );
-                    })}
+                    {referralItems.map((item) => (
+                        <div key={item.id} className="referral-concept__friend">
+                            <ReferralFriendAvatar name={item.name} avatarUrl={item.avatarUrl} />
+                            <span className="referral-concept__friend-name">{item.name}</span>
+                            <span className="referral-concept__friend-reward">{item.reward}</span>
+                        </div>
+                    ))}
                 </div>
             </section>
     );
