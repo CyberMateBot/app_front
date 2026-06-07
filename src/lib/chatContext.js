@@ -24,12 +24,18 @@ const IMAGE_ASSISTANT_PLACEHOLDERS = [
     'изображение создано.',
     'изображение отредактировано.',
     'видео создано.',
+    'видео отредактировано.',
+    'видео продлено.',
     'image created.',
     'image created',
     'image edited.',
     'image edited',
     'video created.',
     'video created',
+    'video edited.',
+    'video edited',
+    'video extended.',
+    'video extended',
 ];
 
 function isImageAssistantPlaceholder(text) {
@@ -164,6 +170,127 @@ export function groupHistoryIntoTopics(items) {
 /**
  * Восстанавливает переписку из темы истории (промты пользователя и ответы модели).
  */
+export function isLikelyMediaUrl(text) {
+    const value = String(text ?? '').trim().toLowerCase();
+    return value.startsWith('http://') || value.startsWith('https://');
+}
+
+function historyTopicItems(topic) {
+    const items = Array.isArray(topic?.items) ? topic.items : [];
+    if (items.length === 0 && topic?.lastItem) {
+        items.push(topic.lastItem);
+    }
+    return [...items].sort(
+        (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime(),
+    );
+}
+
+/**
+ * Восстанавливает диалог image-сессии: URL ответа → imageUrl на assistant-сообщении.
+ */
+export function buildImageMessagesFromHistoryTopic(topic) {
+    const messages = [];
+
+    historyTopicItems(topic).forEach((item) => {
+        const prompt = String(item.prompt || '').trim();
+        const response = String(item.response || '').trim();
+
+        if (prompt) {
+            messages.push({
+                id: `history-user-${item.id}`,
+                role: 'user',
+                content: prompt,
+                isTyping: false,
+            });
+        }
+
+        if (isLikelyMediaUrl(response)) {
+            messages.push({
+                id: `history-assistant-${item.id}`,
+                role: 'assistant',
+                content: IMAGE_ASSISTANT_FALLBACK,
+                scenePrompt: prompt,
+                imageUrl: response,
+                isTyping: false,
+            });
+        } else if (response) {
+            messages.push({
+                id: `history-assistant-${item.id}`,
+                role: 'assistant',
+                content: response,
+                scenePrompt: prompt,
+                isTyping: false,
+            });
+        }
+    });
+
+    return messages;
+}
+
+/**
+ * Восстанавливает диалог video-сессии: URL ответа → videoUrl на assistant-сообщении.
+ */
+export function buildVideoMessagesFromHistoryTopic(topic) {
+    const messages = [];
+
+    historyTopicItems(topic).forEach((item) => {
+        const prompt = String(item.prompt || '').trim();
+        const response = String(item.response || '').trim();
+
+        if (prompt) {
+            messages.push({
+                id: `history-user-${item.id}`,
+                role: 'user',
+                content: prompt,
+                isTyping: false,
+            });
+        }
+
+        if (isLikelyMediaUrl(response)) {
+            messages.push({
+                id: `history-assistant-${item.id}`,
+                role: 'assistant',
+                content: IMAGE_ASSISTANT_FALLBACK,
+                scenePrompt: prompt,
+                videoUrl: response,
+                isTyping: false,
+            });
+        } else if (response) {
+            messages.push({
+                id: `history-assistant-${item.id}`,
+                role: 'assistant',
+                content: response,
+                scenePrompt: prompt,
+                isTyping: false,
+            });
+        }
+    });
+
+    return messages;
+}
+
+export function getHistoryTopicMediaPreview(topic, { imageModelIds = [], videoModelIds = [] } = {}) {
+    const items = historyTopicItems(topic);
+
+    for (let i = items.length - 1; i >= 0; i -= 1) {
+        const item = items[i];
+        const response = String(item.response || '').trim();
+        if (!isLikelyMediaUrl(response)) {
+            continue;
+        }
+
+        const modelId = String(item.model || item.category || topic?.model || '').toLowerCase();
+        if (imageModelIds.includes(modelId)) {
+            return { kind: 'image', url: response };
+        }
+        if (videoModelIds.includes(modelId)) {
+            return { kind: 'video', url: response };
+        }
+    }
+
+    return null;
+}
+
 export function buildChatMessagesFromHistoryTopic(topic) {
     const items = Array.isArray(topic?.items) ? topic.items : [];
     if (items.length === 0 && topic?.lastItem) {

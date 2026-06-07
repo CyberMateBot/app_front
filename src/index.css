@@ -1,6 +1,7 @@
 :root {
   --app-height: 100dvh;
-  --page-pad-x: clamp(12px, 4.2vw, 22px);
+  --page-pad-x: clamp(10px, 3.2vw, 16px);
+  --nav-bar-height: 52px;
   --page-pad-top: max(0px, env(safe-area-inset-top, 0px));
   --page-pad-bottom: max(0px, env(safe-area-inset-bottom, 0px));
   --layout-ref-width: 390;
@@ -12,8 +13,8 @@
   --nav-ui-scale: 1;
 
   /* Основная цветовая палитра из макета */
-  --bg-color: #0d0f13;       /* Глубокий темный фон */
-  --card-bg: #13161b;        /* Чуть более светлый фон карточек */
+  --bg-color: #07080f;
+  --card-bg: rgba(255, 255, 255, 0.03);
   --text-primary: #ffffff;   /* Белый текст */
   --text-secondary: #6a6e7c; /* Серый текст для подписей */
   --accent-blue: #0088cc;    /* Синий акцент для статуса */
@@ -27,12 +28,12 @@
 @media (min-width: 768px) {
   :root {
     --layout-max-width: min(100%, 1600px);
-    --ui-scale: clamp(1, calc(100vw / var(--layout-ref-width)), 2);
-    --home-ui-scale: clamp(1, calc(1 + (var(--ui-scale) - 1) * 0.65), 1.55);
-    --chat-ui-scale: clamp(1, calc(1 + (var(--ui-scale) - 1) * 0.4), 1.28);
-    --header-ui-scale: clamp(1.08, calc(1 + (var(--ui-scale) - 1) * 0.75), 1.65);
-    --nav-ui-scale: var(--ui-scale);
-    --page-pad-x: clamp(24px, 3vw, 56px);
+    --ui-scale: clamp(1, calc(100vw / var(--layout-ref-width)), 1.12);
+    --home-ui-scale: clamp(1, calc(1 + (var(--ui-scale) - 1) * 0.3), 1.1);
+    --chat-ui-scale: clamp(1, calc(1 + (var(--ui-scale) - 1) * 0.2), 1.08);
+    --header-ui-scale: clamp(1, calc(1 + (var(--ui-scale) - 1) * 0.35), 1.12);
+    --nav-ui-scale: clamp(1, var(--ui-scale), 1.1);
+    --page-pad-x: clamp(16px, 2.5vw, 32px);
   }
 }
 

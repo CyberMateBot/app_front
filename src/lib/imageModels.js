@@ -1,6 +1,6 @@
 import { imageModelSupportsEdit as supportsEdit } from '../config/mediaModelOptions.js';
 
-export { imageModelSupportsEdit } from '../config/mediaModelOptions.js';
+export { imageModelSupportsEdit, imageModelSupportsSourceUpload } from '../config/mediaModelOptions.js';
 
 /** @returns {string|null} */
 export function getLastSessionImageUrl(messages) {

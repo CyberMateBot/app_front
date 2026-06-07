@@ -179,7 +179,17 @@ export const IMAGE_MODEL_IDS = [
     'flux-dev',
     'alice-ai-art',
 ];
-export const VIDEO_MODEL_IDS = ['kling-v3-std', 'kling-v3-pro'];
+export const VIDEO_MODEL_IDS = [
+    'kling-v3-std',
+    'kling-v3-pro',
+    'seedance-v1-pro-i2v',
+    'seedance-v1.5-i2v-fast',
+    'seedance-v1.5-t2v-fast',
+    'seedance-v1.5-i2v-spicy',
+    'seedance-v2-video-edit',
+    'seedance-v2-video-extend',
+];
+export const AUDIO_MODEL_IDS = ['qwen3-tts'];
 
 export async function fetchTextModels() {
     const res = await apiFetch('/v1/generate/models', {
@@ -308,6 +318,8 @@ export async function generateImage({
     resolution,
     quality,
     outputFormat,
+    imageBase64,
+    imageMimeType,
 }) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim();
@@ -368,6 +380,14 @@ export async function generateImage({
         body.output_format = outputFormat.trim();
     }
 
+    const trimmedImage = imageBase64?.trim();
+    if (trimmedImage) {
+        body.imageBase64 = trimmedImage;
+        if (imageMimeType?.trim()) {
+            body.imageMimeType = imageMimeType.trim();
+        }
+    }
+
     const trimmedSessionId = sessionId?.trim();
     if (trimmedSessionId) {
         body.sessionId = trimmedSessionId;
@@ -389,11 +409,11 @@ export async function generateImage({
     const payload = await res.json();
     const data = payload?.data ?? payload;
 
-    const imageBase64 = data?.imageBase64 ?? data?.image_base64 ?? '';
+    const responseImageBase64 = data?.imageBase64 ?? data?.image_base64 ?? '';
     let imageUrl = data?.imageUrl ?? data?.image_url ?? '';
 
-    if (!imageUrl && imageBase64) {
-        const trimmed = String(imageBase64).trim();
+    if (!imageUrl && responseImageBase64) {
+        const trimmed = String(responseImageBase64).trim();
         imageUrl = trimmed.startsWith('data:')
             ? trimmed
             : `data:image/png;base64,${trimmed}`;
@@ -417,6 +437,13 @@ export async function generateVideo({
     messages = [],
     aspectRatio,
     duration,
+    resolution,
+    sourceImageUrl,
+    sourceVideoUrl,
+    generateAudio,
+    cameraFixed,
+    turboMode,
+    referenceImages,
     sessionId,
 }) {
     const telegramId = getCurrentTelegramId();
@@ -458,6 +485,38 @@ export async function generateVideo({
         body.duration = duration;
     }
 
+    if (resolution?.trim()) {
+        body.resolution = resolution.trim();
+    }
+
+    const trimmedSourceImage = sourceImageUrl?.trim();
+    if (trimmedSourceImage) {
+        body.sourceImageUrl = trimmedSourceImage;
+    }
+
+    const trimmedSourceVideo = sourceVideoUrl?.trim();
+    if (trimmedSourceVideo) {
+        body.sourceVideoUrl = trimmedSourceVideo;
+    }
+
+    if (typeof generateAudio === 'boolean') {
+        body.generate_audio = generateAudio;
+    }
+
+    if (typeof cameraFixed === 'boolean') {
+        body.camera_fixed = cameraFixed;
+    }
+
+    if (typeof turboMode === 'boolean') {
+        body.turbo_mode = turboMode;
+    }
+
+    if (Array.isArray(referenceImages) && referenceImages.length > 0) {
+        body.reference_images = referenceImages
+            .map((item) => String(item || '').trim())
+            .filter(Boolean);
+    }
+
     const trimmedSessionId = sessionId?.trim();
     if (trimmedSessionId) {
         body.sessionId = trimmedSessionId;
@@ -485,7 +544,93 @@ export async function generateVideo({
     };
 }
 
-export async function savePromptHistory({ prompt, category = 'general', model }) {
+export async function generateAudio({
+    prompt,
+    model = 'qwen3-tts',
+    sessionId,
+    language,
+    voice,
+    styleInstruction,
+    referenceText,
+    audioBase64,
+    audioMimeType,
+    sourceAudioUrl,
+}) {
+    const telegramId = getCurrentTelegramId();
+    const trimmedPrompt = prompt?.trim();
+    const normalizedModel = AUDIO_MODEL_IDS.includes(model) ? model : 'qwen3-tts';
+
+    if (!trimmedPrompt) {
+        throw new Error('Prompt is required.');
+    }
+
+    const body = {
+        telegramId: String(telegramId),
+        prompt: trimmedPrompt,
+        category: 'audio',
+        model: normalizedModel,
+    };
+
+    if (language?.trim()) {
+        body.language = language.trim();
+    }
+    if (voice?.trim()) {
+        body.voice = voice.trim();
+    }
+    if (styleInstruction?.trim()) {
+        body.style_instruction = styleInstruction.trim();
+    }
+    if (referenceText?.trim()) {
+        body.reference_text = referenceText.trim();
+    }
+
+    const trimmedSource = sourceAudioUrl?.trim();
+    if (trimmedSource) {
+        body.sourceAudioUrl = trimmedSource;
+    }
+
+    const trimmedAudio = audioBase64?.trim();
+    if (trimmedAudio) {
+        body.audioBase64 = trimmedAudio;
+        if (audioMimeType?.trim()) {
+            body.audioMimeType = audioMimeType.trim();
+        }
+    }
+
+    const trimmedSessionId = sessionId?.trim();
+    if (trimmedSessionId) {
+        body.sessionId = trimmedSessionId;
+    }
+
+    const res = await apiFetch('/v1/generate/audio', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to generate audio.');
+    }
+
+    const payload = await res.json();
+    const data = payload?.data ?? payload;
+
+    return {
+        audioUrl: data?.audioUrl ?? data?.audio_url ?? '',
+        model: data?.model ?? normalizedModel,
+    };
+}
+
+export async function savePromptHistory({
+    prompt,
+    category = 'general',
+    model,
+    response,
+    sessionId,
+}) {
     const telegramId = getCurrentTelegramId();
 
     const body = {
@@ -496,6 +641,12 @@ export async function savePromptHistory({ prompt, category = 'general', model })
 
     if (model) {
         body.model = model;
+    }
+    if (response) {
+        body.response = response;
+    }
+    if (sessionId) {
+        body.sessionId = sessionId;
     }
 
     const res = await apiFetch('/v1/prompts/history', {

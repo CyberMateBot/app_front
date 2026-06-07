@@ -10,11 +10,11 @@ export default defineConfig({
         allowedHosts: true,
         proxy: {
             '/v1': {
-                target: 'http://localhost:8090',
+                target: 'http://127.0.0.1:8090',
                 changeOrigin: true,
-                // Match backend SERVER_*_TIMEOUT and AI provider calls (~90s)
-                timeout: 120_000,
-                proxyTimeout: 120_000,
+                // Image/video generation + WaveSpeed polling can take several minutes
+                timeout: 360_000,
+                proxyTimeout: 360_000,
             },
         },
     },

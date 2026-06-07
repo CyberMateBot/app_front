@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
     ArrowLeft,
     Bell,
@@ -53,11 +53,14 @@ import {
     generateImage,
     generateText,
     generateVideo,
+    generateAudio,
     patchUserTheme,
     registerTelegramUser,
     savePromptHistory,
     LEGACY_TEXT_MODEL_IDS,
     IMAGE_MODEL_IDS,
+    VIDEO_MODEL_IDS,
+    AUDIO_MODEL_IDS,
 } from './api/telegramApi.js';
 import { resolveReferralAvatarUrl } from './api/referrals.js';
 import ReferralFriendAvatar from './Components/ReferralFriendAvatar.jsx';
@@ -65,13 +68,24 @@ import {
     buildChatContextMessages,
     buildChatMessagesFromHistoryTopic,
     buildImageContextMessages,
+    buildImageMessagesFromHistoryTopic,
+    buildVideoMessagesFromHistoryTopic,
     getChatTopicTitle,
+    getHistoryTopicMediaPreview,
     groupHistoryIntoTopics,
 } from './lib/chatContext.js';
 import {
     getLastSessionImageUrl,
     imageModelSupportsEdit,
+    imageModelSupportsSourceUpload,
 } from './lib/imageModels.js';
+import {
+    getLastSessionSourceImageUrl,
+    getLastSessionVideoUrl,
+    videoModelRequiresImage,
+    videoModelRequiresVideo,
+} from './lib/videoModels.js';
+import { compressImageFile } from './lib/compressImage.js';
 import { createChatSessionId } from './lib/chatSession.js';
 import { openSupport, resolveSupportUrl } from './lib/openSupport.js';
 import {
@@ -96,11 +110,18 @@ import {
     getImageModelDefaults,
     getVideoModelCapabilities,
     getVideoModelDefaults,
+    getAudioModelCapabilities,
+    getAudioModelDefaults,
+    audioModelSupportsClone,
 } from './config/mediaModelOptions.js';
 import {
     VIDEO_MODEL_DEFINITIONS,
     getVideoModelDefinition,
 } from './config/videoModels.js';
+import {
+    AUDIO_MODEL_DEFINITIONS,
+    getAudioModelDefinition,
+} from './config/audioModels.js';
 import {
     buildCatalogTextTools,
     buildTextModelSelectorItems,
@@ -120,7 +141,24 @@ import {
     shouldShowCatalogBadge,
     textModelSupportsImage,
 } from './lib/textModels.js';
+import {
+    buildCatalogAudioTools,
+    buildCatalogImageTools,
+    buildCatalogVideoTools,
+    buildAudioModelSelectorItems,
+    buildImageModelSelectorItems,
+    buildVideoModelSelectorItems,
+    getAudioSelectorChipLabel,
+    getAudioSelectorChipVisual,
+    getImageSelectorChipLabel,
+    getImageSelectorChipVisual,
+    getMediaSelectorItemForModelId,
+    getVideoSelectorChipLabel,
+    getVideoSelectorChipVisual,
+} from './lib/mediaModels.js';
 import './App.css';
+import './experimental-design.css';
+import './compact-ui.css';
 import { formatUserFacingError } from './api/apiError.js';
 import { APP_NAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
 import { deriveSubscriptionView } from './lib/subscriptionView.js';
@@ -159,7 +197,7 @@ const homeToolCards = [
     { id: 'images', categories: ['images'], titleKey: 'toolImagesTitle', subKey: 'toolImagesSub', icon: ImageIcon, accent: 'c2', badge: 'hot' },
     { id: 'video', categories: ['video'], titleKey: 'toolVideoTitle', subKey: 'toolVideoSub', icon: Video, accent: 'c3' },
     { id: 'music', categories: ['music'], titleKey: 'toolMusicTitle', subKey: 'toolMusicSub', icon: Music2, accent: 'c4' },
-    { id: 'voice', categories: ['voice'], titleKey: 'toolVoiceTitle', subKey: 'toolVoiceSub', icon: Mic, accent: 'c5' },
+    { id: 'voice', categories: ['voice'], titleKey: 'toolVoiceTitle', subKey: 'toolVoiceSub', icon: Mic, accent: 'c5', page: 'ai-voice' },
     { id: 'text', categories: ['chats'], titleKey: 'toolTextTitle', subKey: 'toolTextSub', icon: FileText, accent: 'c6', page: 'ai-chat' },
 ];
 
@@ -223,11 +261,31 @@ const translations = {
         toolImagesTitle: 'Генерация фото',
         toolImagesSub: 'Nano Banana, GPT Image, Alice AI ART',
         toolVideoTitle: 'Видео',
-        toolVideoSub: 'Runway, Kling AI',
+        toolVideoSub: 'Kling, Seedance',
         toolMusicTitle: 'Музыка',
         toolMusicSub: 'Suno, Udio',
         toolVoiceTitle: 'Озвучка',
-        toolVoiceSub: 'ElevenLabs, TTS',
+        toolVoiceSub: 'Qwen3 TTS',
+        modelQwen3TtsName: 'Qwen3 TTS',
+        modelQwen3TtsSub: 'Озвучка и клонирование голоса',
+        voiceGenerateTitle: 'Озвучка текста',
+        voicePromptLabel: 'Текст для озвучки',
+        voicePromptPlaceholder: 'Введите текст, который нужно озвучить...',
+        voiceClonePlaceholder: 'Текст для клонированного голоса...',
+        voiceCloneHint: 'Прикрепите образец голоса (3–15 сек) — включится клонирование',
+        voiceAttachAudio: 'Прикрепить голос',
+        voiceRemoveAudio: 'Убрать образец',
+        voiceGenerateButton: 'Озвучить',
+        voiceGenerating: 'Генерация аудио...',
+        voiceResultTitle: 'Результат',
+        voiceGenerateEmpty: 'Аудио не получено. Попробуйте другой текст.',
+        mediaOptionLanguage: 'Язык',
+        mediaOptionVoice: 'Голос',
+        mediaOptionStyleInstruction: 'Стиль речи',
+        mediaOptionReferenceText: 'Текст из образца',
+        mediaStyleInstructionPlaceholder: 'Например: спокойно и профессионально',
+        mediaReferenceTextPlaceholder: 'Что говорится в прикреплённом аудио',
+        catalogSectionVoice: 'Озвучка',
         toolTextTitle: 'Текст & Код',
         toolTextSub: 'Рерайт, суммари',
         navHome: 'Главная',
@@ -261,19 +319,40 @@ const translations = {
         modelGptImage2Sub: 'OpenAI: генерация и редактирование',
         modelGptImage15Name: 'GPT Image 1.5',
         modelGptImage15Sub: 'OpenAI: быстрая генерация и edit',
+        modelGptImageGroupName: 'GPT Image',
+        modelGptImageGroupSub: 'OpenAI: генерация и редактирование',
         modelFluxDevName: 'FLUX Dev',
         modelFluxDevSub: 'Качественные изображения через WaveSpeed',
         modelAliceAIArtName: 'Alice AI ART',
         modelAliceAIArtSub: 'Художественные изображения и иллюстрации от Yandex ART',
+        modelKlingGroupName: 'Kling',
+        modelKlingGroupSub: 'Генерация видео по тексту',
         modelKlingStdName: 'Kling 3.0 Standard',
         modelKlingStdSub: 'Быстрая генерация видео по тексту',
         modelKlingProName: 'Kling 3.0 Pro',
         modelKlingProSub: 'Высокое качество видео через WaveSpeed',
+        modelSeedanceGroupName: 'Seedance',
+        modelSeedanceGroupSub: 'ByteDance: I2V, T2V, edit и extend',
+        modelSeedanceV1ProI2vName: 'Seedance 1.0 I2V',
+        modelSeedanceV1ProI2vSub: 'Image-to-video 720p',
+        modelSeedanceV15I2vFastName: 'Seedance 1.5 I2V Fast',
+        modelSeedanceV15I2vFastSub: 'Быстрый I2V с аудио',
+        modelSeedanceV15T2vFastName: 'Seedance 1.5 T2V Fast',
+        modelSeedanceV15T2vFastSub: 'Быстрый text-to-video с аудио',
+        modelSeedanceV15I2vSpicyName: 'Seedance 1.5 I2V Spicy',
+        modelSeedanceV15I2vSpicySub: 'Выразительный I2V с динамикой',
+        modelSeedanceV2EditName: 'Seedance 2.0 Edit',
+        modelSeedanceV2EditSub: '480p — стандарт, 720p/1080p — Turbo автоматически',
+        modelSeedanceV2ExtendName: 'Seedance 2.0 Extend',
+        modelSeedanceV2ExtendSub: 'Продление видео новым сегментом',
         imageGenerateTitle: 'Генерация фото',
         imagePromptLabel: 'Описание',
         imagePromptPlaceholder: 'Опишите изображение, которое нужно создать...',
         imageEditPlaceholder: 'Опишите, что изменить на последнем изображении...',
         imageEditHint: 'Следующий промт отредактирует последнее изображение',
+        imageAttachmentHint: 'Прикреплённое фото будет использовано для редактирования',
+        imageAttachPhoto: 'Прикрепить фото',
+        imageRemovePhoto: 'Убрать фото',
         imageEditedNote: 'Изображение отредактировано.',
         imageGenerateButton: 'Сгенерировать',
         imageGenerating: 'Генерация...',
@@ -287,12 +366,30 @@ const translations = {
         mediaOptionQuality: 'Качество',
         mediaOptionDuration: 'Длительность',
         mediaOptionOutputFormat: 'Формат файла',
+        mediaToggleOn: 'Вкл',
+        mediaToggleOff: 'Выкл',
         mediaQualityLow: 'Низкое',
         mediaQualityMedium: 'Среднее',
         mediaQualityHigh: 'Высокое',
+        mediaOptionGenerateAudio: 'Генерировать аудио',
+        mediaOptionCameraFixed: 'Фиксировать камеру',
+        mediaOptionTurboMode: 'Быстрое редактирование (Turbo)',
+        videoEditTurboHint: '720p и 1080p автоматически используют Turbo. 480p — только стандартная модель.',
         videoGenerateTitle: 'Генерация видео',
         videoPromptLabel: 'Описание',
         videoPromptPlaceholder: 'Опишите сцену, которую нужно создать...',
+        videoEditPlaceholder: 'Опишите, что изменить в последнем видео...',
+        videoExtendPlaceholder: 'Опишите, как продолжить последнее видео...',
+        videoEditHint: 'Следующий промт отредактирует последнее видео',
+        videoExtendHint: 'Следующий промт продлит последнее видео',
+        videoSourceImageLabel: 'URL исходного изображения',
+        videoSourceImagePlaceholder: 'https://example.com/photo.jpg',
+        videoSourceVideoLabel: 'URL исходного видео',
+        videoSourceVideoPlaceholder: 'https://example.com/video.mp4',
+        videoSourceImageRequired: 'Укажите URL исходного изображения для этой модели.',
+        videoSourceVideoRequired: 'Укажите URL исходного видео или сгенерируйте первое видео в сессии.',
+        videoEditedNote: 'Видео отредактировано.',
+        videoExtendedNote: 'Видео продлено.',
         videoGenerateButton: 'Сгенерировать',
         videoGenerating: 'Генерация видео...',
         videoResultTitle: 'Результат',
@@ -488,11 +585,31 @@ const translations = {
         toolImagesTitle: 'Image generation',
         toolImagesSub: 'Nano Banana, GPT Image, Alice AI ART',
         toolVideoTitle: 'Video',
-        toolVideoSub: 'Runway, Kling AI',
+        toolVideoSub: 'Kling, Seedance',
         toolMusicTitle: 'Music',
         toolMusicSub: 'Suno, Udio',
         toolVoiceTitle: 'Voiceover',
-        toolVoiceSub: 'ElevenLabs, TTS',
+        toolVoiceSub: 'Qwen3 TTS',
+        modelQwen3TtsName: 'Qwen3 TTS',
+        modelQwen3TtsSub: 'Text-to-speech and voice cloning',
+        voiceGenerateTitle: 'Text-to-speech',
+        voicePromptLabel: 'Text to speak',
+        voicePromptPlaceholder: 'Enter the text you want to hear...',
+        voiceClonePlaceholder: 'Text for the cloned voice...',
+        voiceCloneHint: 'Attach a voice sample (3–15 sec) to enable cloning',
+        voiceAttachAudio: 'Attach voice sample',
+        voiceRemoveAudio: 'Remove sample',
+        voiceGenerateButton: 'Generate speech',
+        voiceGenerating: 'Generating audio...',
+        voiceResultTitle: 'Result',
+        voiceGenerateEmpty: 'No audio returned. Try different text.',
+        mediaOptionLanguage: 'Language',
+        mediaOptionVoice: 'Voice',
+        mediaOptionStyleInstruction: 'Speaking style',
+        mediaOptionReferenceText: 'Sample transcript',
+        mediaStyleInstructionPlaceholder: 'e.g. calm and professional',
+        mediaReferenceTextPlaceholder: 'What is said in the attached audio',
+        catalogSectionVoice: 'Voiceover',
         toolTextTitle: 'Text & Code',
         toolTextSub: 'Rewrite, summary',
         navHome: 'Home',
@@ -526,19 +643,40 @@ const translations = {
         modelGptImage2Sub: 'OpenAI image generation and editing',
         modelGptImage15Name: 'GPT Image 1.5',
         modelGptImage15Sub: 'OpenAI fast generation and edit',
+        modelGptImageGroupName: 'GPT Image',
+        modelGptImageGroupSub: 'OpenAI image generation and editing',
         modelFluxDevName: 'FLUX Dev',
         modelFluxDevSub: 'High-quality images via WaveSpeed',
         modelAliceAIArtName: 'Alice AI ART',
         modelAliceAIArtSub: 'Artistic images and illustrations via Yandex ART',
+        modelKlingGroupName: 'Kling',
+        modelKlingGroupSub: 'Text-to-video generation',
         modelKlingStdName: 'Kling 3.0 Standard',
         modelKlingStdSub: 'Fast text-to-video generation',
         modelKlingProName: 'Kling 3.0 Pro',
         modelKlingProSub: 'High-quality video via WaveSpeed',
+        modelSeedanceGroupName: 'Seedance',
+        modelSeedanceGroupSub: 'ByteDance: I2V, T2V, edit, and extend',
+        modelSeedanceV1ProI2vName: 'Seedance 1.0 I2V',
+        modelSeedanceV1ProI2vSub: 'Image-to-video 720p',
+        modelSeedanceV15I2vFastName: 'Seedance 1.5 I2V Fast',
+        modelSeedanceV15I2vFastSub: 'Fast I2V with audio',
+        modelSeedanceV15T2vFastName: 'Seedance 1.5 T2V Fast',
+        modelSeedanceV15T2vFastSub: 'Fast text-to-video with audio',
+        modelSeedanceV15I2vSpicyName: 'Seedance 1.5 I2V Spicy',
+        modelSeedanceV15I2vSpicySub: 'Expressive I2V with motion',
+        modelSeedanceV2EditName: 'Seedance 2.0 Edit',
+        modelSeedanceV2EditSub: '480p standard, 720p/1080p Turbo auto',
+        modelSeedanceV2ExtendName: 'Seedance 2.0 Extend',
+        modelSeedanceV2ExtendSub: 'Extend video with a new segment',
         imageGenerateTitle: 'Image generation',
         imagePromptLabel: 'Description',
         imagePromptPlaceholder: 'Describe the image you want to create...',
         imageEditPlaceholder: 'Describe what to change in the last image...',
         imageEditHint: 'The next prompt will edit the last image',
+        imageAttachmentHint: 'The attached photo will be used for editing',
+        imageAttachPhoto: 'Attach photo',
+        imageRemovePhoto: 'Remove photo',
         imageEditedNote: 'Image edited.',
         imageGenerateButton: 'Generate',
         imageGenerating: 'Generating...',
@@ -552,12 +690,30 @@ const translations = {
         mediaOptionQuality: 'Quality',
         mediaOptionDuration: 'Duration',
         mediaOptionOutputFormat: 'Output format',
+        mediaToggleOn: 'On',
+        mediaToggleOff: 'Off',
         mediaQualityLow: 'Low',
         mediaQualityMedium: 'Medium',
         mediaQualityHigh: 'High',
+        mediaOptionGenerateAudio: 'Generate audio',
+        mediaOptionCameraFixed: 'Fixed camera',
+        mediaOptionTurboMode: 'Fast editing (Turbo)',
+        videoEditTurboHint: '720p and 1080p use Turbo automatically. 480p uses the standard model only.',
         videoGenerateTitle: 'Video generation',
         videoPromptLabel: 'Description',
         videoPromptPlaceholder: 'Describe the scene you want to create...',
+        videoEditPlaceholder: 'Describe what to change in the last video...',
+        videoExtendPlaceholder: 'Describe how to continue the last video...',
+        videoEditHint: 'The next prompt will edit the last video',
+        videoExtendHint: 'The next prompt will extend the last video',
+        videoSourceImageLabel: 'Source image URL',
+        videoSourceImagePlaceholder: 'https://example.com/photo.jpg',
+        videoSourceVideoLabel: 'Source video URL',
+        videoSourceVideoPlaceholder: 'https://example.com/video.mp4',
+        videoSourceImageRequired: 'A source image URL is required for this model.',
+        videoSourceVideoRequired: 'Provide a source video URL or generate the first video in this session.',
+        videoEditedNote: 'Video edited.',
+        videoExtendedNote: 'Video extended.',
         videoGenerateButton: 'Generate',
         videoGenerating: 'Generating video...',
         videoResultTitle: 'Result',
@@ -800,6 +956,7 @@ function App() {
     const [chatError, setChatError] = useState('');
     const [imageError, setImageError] = useState('');
     const [videoError, setVideoError] = useState('');
+    const [audioError, setAudioError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [walletData, setWalletData] = useState(null);
     const [referralData, setReferralData] = useState(null);
@@ -817,8 +974,10 @@ function App() {
     const [textModels, setTextModels] = useState(DEFAULT_TEXT_MODELS);
     const initialImageDefaults = getImageModelDefaults('nano-banana');
     const initialVideoDefaults = getVideoModelDefaults('kling-v3-std');
+    const initialAudioDefaults = getAudioModelDefaults('qwen3-tts');
     const [imageModel, setImageModel] = useState('nano-banana');
     const [imagePrompt, setImagePrompt] = useState('');
+    const [imageAttachment, setImageAttachment] = useState(null);
     const [imageSessionMessages, setImageSessionMessages] = useState([]);
     const [imageSessionId, setImageSessionId] = useState(() => createChatSessionId());
     const [imageAspectRatio, setImageAspectRatio] = useState(initialImageDefaults.aspectRatio ?? '1:1');
@@ -832,23 +991,42 @@ function App() {
     const [videoSessionMessages, setVideoSessionMessages] = useState([]);
     const [videoAspectRatio, setVideoAspectRatio] = useState(initialVideoDefaults.aspectRatio ?? '16:9');
     const [videoDuration, setVideoDuration] = useState(initialVideoDefaults.duration ?? 5);
+    const [videoResolution, setVideoResolution] = useState(initialVideoDefaults.resolution ?? '');
+    const [videoGenerateAudio, setVideoGenerateAudio] = useState(initialVideoDefaults.generateAudio ?? false);
+    const [videoCameraFixed, setVideoCameraFixed] = useState(initialVideoDefaults.cameraFixed ?? false);
+    const [videoTurboMode, setVideoTurboMode] = useState(Boolean(initialVideoDefaults.turboMode));
+    const [videoSourceImageUrl, setVideoSourceImageUrl] = useState('');
+    const [videoSourceVideoUrl, setVideoSourceVideoUrl] = useState('');
     const [generatedVideoUrl, setGeneratedVideoUrl] = useState('');
     const [videoSessionId, setVideoSessionId] = useState(() => createChatSessionId());
+    const [audioModel, setAudioModel] = useState('qwen3-tts');
+    const [audioPrompt, setAudioPrompt] = useState('');
+    const [audioLanguage, setAudioLanguage] = useState(initialAudioDefaults.language ?? 'auto');
+    const [audioVoice, setAudioVoice] = useState(initialAudioDefaults.voice ?? 'Dylan');
+    const [audioStyleInstruction, setAudioStyleInstruction] = useState(initialAudioDefaults.styleInstruction ?? '');
+    const [audioReferenceText, setAudioReferenceText] = useState(initialAudioDefaults.referenceText ?? '');
+    const [audioAttachment, setAudioAttachment] = useState(null);
+    const [generatedAudioUrl, setGeneratedAudioUrl] = useState('');
+    const [audioSessionId, setAudioSessionId] = useState(() => createChatSessionId());
     const [chatMessages, setChatMessages] = useState([]);
     const [chatTopicTitle, setChatTopicTitle] = useState('');
     const [chatSessionId, setChatSessionId] = useState(() => createChatSessionId());
     const [chatReturnPage, setChatReturnPage] = useState('catalog');
     const [imageReturnPage, setImageReturnPage] = useState('catalog');
     const [videoReturnPage, setVideoReturnPage] = useState('catalog');
+    const [audioReturnPage, setAudioReturnPage] = useState('catalog');
     const [historyReturnPage, setHistoryReturnPage] = useState('home');
     const [isGeneratingText, setIsGeneratingText] = useState(false);
     const [chatAttachment, setChatAttachment] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState(null);
     const textGenerationAbortRef = useRef(null);
     const chatPhotoInputRef = useRef(null);
+    const imagePhotoInputRef = useRef(null);
+    const audioFileInputRef = useRef(null);
     const pendingAssistantIdRef = useRef(null);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
     const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+    const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
     const [homeCategoryChip, setHomeCategoryChip] = useState('all');
     const [catalogTab, setCatalogTab] = useState('all');
     const [catalogSearch, setCatalogSearch] = useState('');
@@ -1343,11 +1521,75 @@ function App() {
                 ? currentPage
                 : 'home';
 
-    const showBottomNav = !['ai-chat', 'ai-image', 'ai-video', 'settings', 'wallet', 'referrals'].includes(currentPage);
+    const showBottomNav = !['ai-chat', 'ai-image', 'ai-video', 'ai-voice', 'settings', 'wallet', 'referrals'].includes(currentPage);
+
+    const navInnerRef = useRef(null);
+    const navButtonRefs = useRef([]);
+    const [navIndicatorStyle, setNavIndicatorStyle] = useState({
+        width: 0,
+        transform: 'translateX(0px)',
+        opacity: 0,
+    });
+
+    const activeNavIndex = navigationItems.findIndex((item) => item.key === activeNavKey);
+
+    useLayoutEffect(() => {
+        if (!showBottomNav) {
+            return undefined;
+        }
+
+        const updateNavIndicator = () => {
+            const inner = navInnerRef.current;
+            const button = navButtonRefs.current[activeNavIndex];
+
+            if (!inner || !button || activeNavIndex < 0) {
+                return;
+            }
+
+            const innerRect = inner.getBoundingClientRect();
+            const buttonRect = button.getBoundingClientRect();
+
+            setNavIndicatorStyle({
+                width: buttonRect.width,
+                transform: `translateX(${buttonRect.left - innerRect.left}px)`,
+                opacity: buttonRect.width > 0 ? 1 : 0,
+            });
+        };
+
+        updateNavIndicator();
+
+        const inner = navInnerRef.current;
+        const resizeObserver = typeof ResizeObserver !== 'undefined' && inner
+            ? new ResizeObserver(updateNavIndicator)
+            : null;
+
+        resizeObserver?.observe(inner);
+        window.addEventListener('resize', updateNavIndicator);
+
+        return () => {
+            resizeObserver?.disconnect();
+            window.removeEventListener('resize', updateNavIndicator);
+        };
+    }, [activeNavIndex, showBottomNav]);
 
     const textModelSelectorItems = useMemo(
         () => buildTextModelSelectorItems(effectiveTextModels),
         [effectiveTextModels],
+    );
+
+    const imageModelSelectorItems = useMemo(
+        () => buildImageModelSelectorItems(IMAGE_MODEL_DEFINITIONS),
+        [],
+    );
+
+    const videoModelSelectorItems = useMemo(
+        () => buildVideoModelSelectorItems(VIDEO_MODEL_DEFINITIONS),
+        [],
+    );
+
+    const audioModelSelectorItems = useMemo(
+        () => buildAudioModelSelectorItems(AUDIO_MODEL_DEFINITIONS),
+        [],
     );
 
     const catalogSections = useMemo(() => [
@@ -1359,12 +1601,17 @@ function App() {
         {
             id: 'image-models',
             labelKey: 'catalogSectionPhoto',
-            tools: IMAGE_MODEL_DEFINITIONS,
+            tools: buildCatalogImageTools(IMAGE_MODEL_DEFINITIONS),
         },
         {
             id: 'video-models',
             labelKey: 'catalogSectionVideo',
-            tools: VIDEO_MODEL_DEFINITIONS,
+            tools: buildCatalogVideoTools(VIDEO_MODEL_DEFINITIONS),
+        },
+        {
+            id: 'audio-models',
+            labelKey: 'catalogSectionVoice',
+            tools: buildCatalogAudioTools(AUDIO_MODEL_DEFINITIONS),
         },
     ], [effectiveTextModels]);
 
@@ -1384,6 +1631,10 @@ function App() {
     const getCatalogToolSub = (tool) => {
         if (tool.page === 'ai-chat') {
             return getCatalogModelDescription(tool, language);
+        }
+
+        if (tool.tiered && tool.subKey) {
+            return text[tool.subKey] ?? '';
         }
 
         return tool.sub ?? text[tool.subKey] ?? '';
@@ -1424,9 +1675,9 @@ function App() {
 
         return historyItems.filter((item) => {
             const category = String(item.category || '').toLowerCase();
+            const modelId = String(item.model || item.category || '').toLowerCase();
 
             if (historyFilter === 'chat') {
-                const modelId = String(item.model || '').toLowerCase();
                 return isKnownTextModelId(modelId, effectiveTextModels)
                     || LEGACY_TEXT_MODEL_IDS.includes(modelId)
                     || category.includes('chat')
@@ -1435,13 +1686,19 @@ function App() {
                     || category === 'gpt';
             }
             if (historyFilter === 'photo') {
-                return category.includes('photo') || category.includes('image');
+                return IMAGE_MODEL_IDS.includes(modelId)
+                    || category.includes('photo')
+                    || category.includes('image');
             }
             if (historyFilter === 'video') {
-                return category.includes('video');
+                return VIDEO_MODEL_IDS.includes(modelId)
+                    || category.includes('video');
             }
             if (historyFilter === 'music') {
-                return category.includes('music') || category.includes('audio');
+                return AUDIO_MODEL_IDS.includes(modelId)
+                    || category.includes('music')
+                    || category.includes('audio')
+                    || category.includes('voice');
             }
 
             return category.includes(historyFilter);
@@ -1534,10 +1791,51 @@ function App() {
         ));
 
         if (imageModel) {
+            const imageSelectorItem = getMediaSelectorItemForModelId(imageModelSelectorItems, imageModel.id);
+            const toolName = imageSelectorItem?.type === 'tiered'
+                ? getImageSelectorChipLabel(imageSelectorItem, text)
+                : text[imageModel.nameKey];
+
             return {
                 accent: imageModel.accent,
                 icon: imageModel.icon,
-                toolName: text[imageModel.nameKey],
+                toolName,
+                emoji: null,
+            };
+        }
+
+        const videoModel = VIDEO_MODEL_DEFINITIONS.find((model) => (
+            value === model.id || value.includes(model.id)
+        ));
+
+        if (videoModel) {
+            const videoSelectorItem = getMediaSelectorItemForModelId(videoModelSelectorItems, videoModel.id);
+            const toolName = videoSelectorItem?.type === 'tiered'
+                ? getVideoSelectorChipLabel(videoSelectorItem, text)
+                : text[videoModel.nameKey];
+
+            return {
+                accent: videoModel.accent,
+                icon: videoModel.icon,
+                toolName,
+                emoji: null,
+            };
+        }
+
+        const audioModelDef = AUDIO_MODEL_DEFINITIONS.find((model) => (
+            value === model.id || value.includes(model.id)
+        ));
+
+        if (audioModelDef) {
+            const audioSelectorItem = getMediaSelectorItemForModelId(audioModelSelectorItems, audioModelDef.id);
+            const toolName = audioSelectorItem?.type === 'tiered'
+                ? getAudioSelectorChipLabel(audioSelectorItem, text)
+                : text[audioModelDef.nameKey];
+
+            return {
+                accent: audioModelDef.accent,
+                icon: audioModelDef.icon,
+                toolName,
                 emoji: null,
             };
         }
@@ -1596,10 +1894,34 @@ function App() {
             return model;
         }
 
+        if (VIDEO_MODEL_IDS.includes(model)) {
+            return model;
+        }
+
+        if (AUDIO_MODEL_IDS.includes(model)) {
+            return model;
+        }
+
         const category = String(topic?.category || model).toLowerCase();
+
+        if (IMAGE_MODEL_IDS.includes(category)) {
+            return category;
+        }
+
+        if (VIDEO_MODEL_IDS.includes(category)) {
+            return category;
+        }
+
+        if (AUDIO_MODEL_IDS.includes(category)) {
+            return category;
+        }
 
         if (category.includes('image') || category.includes('photo')) {
             return IMAGE_MODEL_IDS[0];
+        }
+
+        if (category.includes('video')) {
+            return VIDEO_MODEL_IDS[0];
         }
 
         return resolveTextModelId(textModel, effectiveTextModels);
@@ -1608,28 +1930,39 @@ function App() {
     const openHistoryTopic = (topic) => {
         const modelId = resolveHistoryTopicModel(topic);
         const isImageTopic = IMAGE_MODEL_IDS.includes(modelId);
+        const isVideoTopic = VIDEO_MODEL_IDS.includes(modelId);
+        const isAudioTopic = AUDIO_MODEL_IDS.includes(modelId);
+        const mediaSessionFromHistory = topic.sessionId
+            || topic.items?.[0]?.sessionId
+            || topic.items?.[0]?.session_id
+            || null;
 
         if (isImageTopic) {
-            const imageSessionFromHistory = topic.sessionId
-                || topic.items?.[0]?.sessionId
-                || topic.items?.[0]?.session_id
-                || null;
-
-            const restored = buildChatMessagesFromHistoryTopic(topic).map((message, index, list) => {
-                if (message.role !== 'assistant') {
-                    return message;
-                }
-
-                const prevUser = list.slice(0, index).reverse().find((item) => item.role === 'user');
-                return {
-                    ...message,
-                    scenePrompt: prevUser?.content || message.content,
-                };
-            });
-
             openAiImage(modelId, 'history', {
-                messages: restored,
-                sessionId: imageSessionFromHistory,
+                messages: buildImageMessagesFromHistoryTopic(topic),
+                sessionId: mediaSessionFromHistory,
+            });
+            return;
+        }
+
+        if (isVideoTopic) {
+            openAiVideo(modelId, 'history', {
+                messages: buildVideoMessagesFromHistoryTopic(topic),
+                sessionId: mediaSessionFromHistory,
+            });
+            return;
+        }
+
+        if (isAudioTopic) {
+            const items = Array.isArray(topic?.items) ? topic.items : [];
+            const lastItem = items[items.length - 1] ?? topic?.lastItem;
+            const restoredPrompt = String(lastItem?.prompt || topic?.topicTitle || '').trim();
+            const restoredAudioUrl = String(lastItem?.response || '').trim();
+
+            openAiVoice(modelId, 'history', {
+                sessionId: mediaSessionFromHistory,
+                prompt: restoredPrompt,
+                audioUrl: restoredAudioUrl,
             });
             return;
         }
@@ -1685,18 +2018,57 @@ function App() {
         startNewImageSession();
         setImageSessionMessages([]);
         setImagePrompt('');
+        setImageAttachment(null);
         setGeneratedImageUrl('');
         setGeneratedImageUrls([]);
         setImageError('');
+    };
+
+    const handleImageModelGroupSelect = (item) => {
+        if (item.type === 'single') {
+            handleImageModelChange(item.model.id);
+            return;
+        }
+
+        const activeVariant = item.variants.find((variant) => variant.id === imageModel);
+        const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
+            ?? item.variants[0];
+
+        handleImageModelChange(activeVariant?.id ?? defaultVariant.id);
     };
 
     const handleNewImageDialog = () => {
         startNewImageSession();
         setImageSessionMessages([]);
         setImagePrompt('');
+        setImageAttachment(null);
         setGeneratedImageUrl('');
         setGeneratedImageUrls([]);
         setImageError('');
+    };
+
+    const handleImagePhotoSelect = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) {
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            setImageError('Можно прикрепить только изображение.');
+            return;
+        }
+        if (file.size > 12 * 1024 * 1024) {
+            setImageError('Изображение слишком большое (макс. 12 МБ).');
+            return;
+        }
+
+        try {
+            const compressed = await compressImageFile(file);
+            setImageAttachment(compressed);
+            setImageError('');
+        } catch {
+            setImageError('Не удалось обработать изображение.');
+        }
     };
 
     const startNewImageSession = useCallback(() => {
@@ -1715,6 +2087,18 @@ function App() {
         const defaults = getVideoModelDefaults(modelId);
         setVideoAspectRatio(defaults.aspectRatio ?? '16:9');
         setVideoDuration(defaults.duration ?? 5);
+        setVideoResolution(defaults.resolution ?? '');
+        setVideoGenerateAudio(Boolean(defaults.generateAudio));
+        setVideoCameraFixed(Boolean(defaults.cameraFixed));
+        setVideoTurboMode(Boolean(defaults.turboMode));
+    }, []);
+
+    const applyAudioModelOptions = useCallback((modelId) => {
+        const defaults = getAudioModelDefaults(modelId);
+        setAudioLanguage(defaults.language ?? 'auto');
+        setAudioVoice(defaults.voice ?? 'Dylan');
+        setAudioStyleInstruction(defaults.styleInstruction ?? '');
+        setAudioReferenceText(defaults.referenceText ?? '');
     }, []);
 
     const handleImageOptionChange = (key, value) => {
@@ -1744,6 +2128,45 @@ function App() {
             case 'duration':
                 setVideoDuration(value);
                 break;
+            case 'resolution':
+                setVideoResolution(value);
+                if (value === '480p') {
+                    setVideoTurboMode(false);
+                }
+                break;
+            case 'generateAudio':
+                setVideoGenerateAudio(Boolean(value));
+                break;
+            case 'cameraFixed':
+                setVideoCameraFixed(Boolean(value));
+                break;
+            case 'turboMode': {
+                const enabled = Boolean(value);
+                setVideoTurboMode(enabled);
+                if (enabled && videoResolution === '480p') {
+                    setVideoResolution('720p');
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    };
+
+    const handleAudioOptionChange = (key, value) => {
+        switch (key) {
+            case 'language':
+                setAudioLanguage(value);
+                break;
+            case 'voice':
+                setAudioVoice(value);
+                break;
+            case 'styleInstruction':
+                setAudioStyleInstruction(value);
+                break;
+            case 'referenceText':
+                setAudioReferenceText(value);
+                break;
             default:
                 break;
         }
@@ -1759,9 +2182,13 @@ function App() {
         } else if (!options.messages?.length) {
             startNewImageSession();
         }
-        setImageSessionMessages(options.messages ?? []);
+        const restoredMessages = options.messages ?? [];
+        const restoredImageUrl = getLastSessionImageUrl(restoredMessages) ?? '';
+        setImageSessionMessages(restoredMessages);
         setImagePrompt('');
-        setGeneratedImageUrl('');
+        setImageAttachment(null);
+        setGeneratedImageUrl(restoredImageUrl);
+        setGeneratedImageUrls(restoredImageUrl ? [restoredImageUrl] : []);
         setImageReturnPage(returnPage);
         setImageError('');
         setCurrentPage('ai-image');
@@ -1776,28 +2203,143 @@ function App() {
         applyVideoModelOptions(modelId);
         startNewVideoSession();
         setVideoSessionMessages([]);
+        setVideoSourceImageUrl('');
+        setVideoSourceVideoUrl('');
         setVideoPrompt('');
         setGeneratedVideoUrl('');
         setVideoError('');
+    };
+
+    const handleVideoModelGroupSelect = (item) => {
+        if (item.type === 'single') {
+            handleVideoModelChange(item.model.id);
+            return;
+        }
+
+        const activeVariant = item.variants.find((variant) => variant.id === videoModel);
+        const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
+            ?? item.variants[0];
+
+        handleVideoModelChange(activeVariant?.id ?? defaultVariant.id);
     };
 
     const handleNewVideoDialog = () => {
         startNewVideoSession();
         setVideoSessionMessages([]);
+        setVideoSourceImageUrl('');
+        setVideoSourceVideoUrl('');
         setVideoPrompt('');
         setGeneratedVideoUrl('');
         setVideoError('');
     };
 
-    const openAiVideo = (modelId, returnPage = currentPage) => {
+    const startNewAudioSession = useCallback(() => {
+        setAudioSessionId(createChatSessionId());
+    }, []);
+
+    const handleAudioModelChange = (modelId) => {
+        setAudioModel(modelId);
+        applyAudioModelOptions(modelId);
+        startNewAudioSession();
+        setAudioPrompt('');
+        setAudioAttachment(null);
+        setGeneratedAudioUrl('');
+        setAudioError('');
+    };
+
+    const handleAudioModelGroupSelect = (item) => {
+        if (item.type === 'single') {
+            handleAudioModelChange(item.model.id);
+            return;
+        }
+
+        const activeVariant = item.variants.find((variant) => variant.id === audioModel);
+        const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
+            ?? item.variants[0];
+
+        handleAudioModelChange(activeVariant?.id ?? defaultVariant.id);
+    };
+
+    const handleNewAudioDialog = () => {
+        startNewAudioSession();
+        setAudioPrompt('');
+        setAudioAttachment(null);
+        setGeneratedAudioUrl('');
+        setAudioError('');
+    };
+
+    const handleAudioAttachmentSelect = (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) {
+            return;
+        }
+        if (!file.type.startsWith('audio/')) {
+            setAudioError(language === 'ru' ? 'Можно прикрепить только аудиофайл.' : 'Only audio files are supported.');
+            return;
+        }
+        if (file.size > 12 * 1024 * 1024) {
+            setAudioError(language === 'ru' ? 'Аудио слишком большое (макс. 12 МБ).' : 'Audio file is too large (max 12 MB).');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+            if (!dataUrl) {
+                return;
+            }
+            const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+            setAudioAttachment({
+                previewUrl: dataUrl,
+                base64,
+                mimeType: file.type,
+                name: file.name,
+            });
+            setAudioError('');
+        };
+        reader.onerror = () => {
+            setAudioError(language === 'ru' ? 'Не удалось прочитать аудиофайл.' : 'Failed to read audio file.');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const openAiVoice = (modelId, returnPage = currentPage, options = {}) => {
+        if (modelId) {
+            setAudioModel(modelId);
+            applyAudioModelOptions(modelId);
+        }
+        if (options.sessionId) {
+            setAudioSessionId(options.sessionId);
+        } else if (!options.prompt && !options.audioUrl) {
+            startNewAudioSession();
+        }
+        setAudioPrompt(options.prompt ?? '');
+        setAudioAttachment(null);
+        setGeneratedAudioUrl(options.audioUrl ?? '');
+        setAudioReturnPage(returnPage);
+        setAudioError('');
+        setCurrentPage('ai-voice');
+    };
+
+    const openAiVideo = (modelId, returnPage = currentPage, options = {}) => {
         if (modelId) {
             setVideoModel(modelId);
             applyVideoModelOptions(modelId);
         }
-        startNewVideoSession();
-        setVideoSessionMessages([]);
+        if (options.sessionId) {
+            setVideoSessionId(options.sessionId);
+        } else if (!options.messages?.length) {
+            startNewVideoSession();
+        }
+        const restoredMessages = options.messages ?? [];
+        const restoredVideoUrl = getLastSessionVideoUrl(restoredMessages) ?? '';
+        const restoredSourceImageUrl = getLastSessionSourceImageUrl(restoredMessages) ?? '';
+        setVideoSessionMessages(restoredMessages);
+        setVideoSourceImageUrl(restoredSourceImageUrl);
+        setVideoSourceVideoUrl('');
         setVideoPrompt('');
-        setGeneratedVideoUrl('');
+        setGeneratedVideoUrl(restoredVideoUrl);
         setVideoReturnPage(returnPage);
         setVideoError('');
         setCurrentPage('ai-video');
@@ -1818,6 +2360,11 @@ function App() {
             return;
         }
 
+        if (tool.page === 'ai-voice') {
+            openAiVoice(tool.id, 'catalog');
+            return;
+        }
+
         if (tool.page === 'ai-chat') {
             openAiChat(tool.id, 'catalog');
         }
@@ -1832,10 +2379,13 @@ function App() {
         }
 
         const contextMessages = buildImageContextMessages(imageSessionMessages);
-        const sourceImageUrl = imageModelSupportsEdit(imageModel)
+        const attachedImage = imageAttachment;
+        const canEdit = imageModelSupportsEdit(imageModel);
+        const sessionImageUrl = canEdit
             ? (getLastSessionImageUrl(imageSessionMessages) ?? generatedImageUrl?.trim() ?? '')
             : '';
-        const isEdit = Boolean(sourceImageUrl);
+        const sourceImageUrl = attachedImage ? '' : sessionImageUrl;
+        const isEdit = Boolean(attachedImage || sourceImageUrl);
 
         try {
             setIsGeneratingImage(true);
@@ -1847,7 +2397,9 @@ function App() {
                 model: imageModel,
                 messages: contextMessages,
                 sessionId: imageSessionId,
-                sourceImageUrl: isEdit ? sourceImageUrl : undefined,
+                sourceImageUrl: sourceImageUrl || undefined,
+                imageBase64: attachedImage?.base64,
+                imageMimeType: attachedImage?.mimeType,
                 aspectRatio: imageAspectRatio || undefined,
                 resolution: imageResolution || undefined,
                 quality: imageQuality || undefined,
@@ -1875,6 +2427,7 @@ function App() {
                 },
             ]);
             setImagePrompt('');
+            setImageAttachment(null);
             setGeneratedImageUrl(imageUrl);
             setGeneratedImageUrls(imageUrls);
 
@@ -1882,6 +2435,9 @@ function App() {
                 const historyResponse = await savePromptHistory({
                     prompt: trimmedPrompt,
                     category: imageModel,
+                    model: imageModel,
+                    response: imageUrl,
+                    sessionId: imageSessionId,
                 });
                 const savedItem = historyResponse?.item;
 
@@ -1912,7 +2468,37 @@ function App() {
             return;
         }
 
+        const requiresImage = videoModelRequiresImage(videoModel);
+        const requiresVideo = videoModelRequiresVideo(videoModel);
+        const isExtend = videoModel === 'seedance-v2-video-extend';
+        const resolvedSourceImageUrl = requiresImage
+            ? (
+                videoSourceImageUrl.trim()
+                || getLastSessionSourceImageUrl(videoSessionMessages)
+                || ''
+            )
+            : '';
+        const resolvedSourceVideoUrl = requiresVideo
+            ? (
+                getLastSessionVideoUrl(videoSessionMessages)
+                || generatedVideoUrl?.trim()
+                || videoSourceVideoUrl.trim()
+                || ''
+            )
+            : '';
+
+        if (requiresImage && !resolvedSourceImageUrl) {
+            setVideoError(text.videoSourceImageRequired);
+            return;
+        }
+
+        if (requiresVideo && !resolvedSourceVideoUrl) {
+            setVideoError(text.videoSourceVideoRequired);
+            return;
+        }
+
         const contextMessages = buildImageContextMessages(videoSessionMessages);
+        const hasVideoContext = Boolean(resolvedSourceVideoUrl && requiresVideo);
 
         try {
             setIsGeneratingVideo(true);
@@ -1925,6 +2511,19 @@ function App() {
                 sessionId: videoSessionId,
                 aspectRatio: videoAspectRatio || undefined,
                 duration: videoDuration,
+                resolution: videoResolution || undefined,
+                sourceImageUrl: resolvedSourceImageUrl || undefined,
+                sourceVideoUrl: resolvedSourceVideoUrl || undefined,
+                generateAudio: getVideoModelCapabilities(videoModel).options?.generateAudio
+                    ? videoGenerateAudio
+                    : undefined,
+                cameraFixed: getVideoModelCapabilities(videoModel).options?.cameraFixed
+                    ? videoCameraFixed
+                    : undefined,
+                turboMode: (
+                    getVideoModelCapabilities(videoModel).options?.turboMode
+                    && videoTurboMode
+                ) ? true : undefined,
             });
             const videoUrl = response?.videoUrl?.trim() ?? '';
 
@@ -1933,16 +2532,29 @@ function App() {
                 return;
             }
 
+            const assistantNote = hasVideoContext
+                ? (isExtend ? text.videoExtendedNote : text.videoEditedNote)
+                : text.videoGeneratedNote;
+
             setVideoSessionMessages((prev) => [
                 ...prev,
-                { id: `vid-user-${Date.now()}`, role: 'user', content: trimmedPrompt },
+                {
+                    id: `vid-user-${Date.now()}`,
+                    role: 'user',
+                    content: trimmedPrompt,
+                    ...(resolvedSourceImageUrl ? { sourceImageUrl: resolvedSourceImageUrl } : {}),
+                },
                 {
                     id: `vid-assistant-${Date.now()}`,
                     role: 'assistant',
-                    content: text.videoGeneratedNote,
+                    content: assistantNote,
                     scenePrompt: trimmedPrompt,
+                    videoUrl,
                 },
             ]);
+            if (resolvedSourceImageUrl) {
+                setVideoSourceImageUrl(resolvedSourceImageUrl);
+            }
             setVideoPrompt('');
             setGeneratedVideoUrl(videoUrl);
 
@@ -1950,6 +2562,9 @@ function App() {
                 const historyResponse = await savePromptHistory({
                     prompt: trimmedPrompt,
                     category: videoModel,
+                    model: videoModel,
+                    response: videoUrl,
+                    sessionId: videoSessionId,
                 });
                 const savedItem = historyResponse?.item;
 
@@ -1967,6 +2582,68 @@ function App() {
             setVideoError(message || 'Не удалось сгенерировать видео.');
         } finally {
             setIsGeneratingVideo(false);
+        }
+    };
+
+    const handleGenerateAudio = async () => {
+        const trimmedPrompt = audioPrompt.trim();
+
+        if (!trimmedPrompt) {
+            setAudioError(text.textPromptEmpty);
+            return;
+        }
+
+        const isCloneMode = Boolean(audioAttachment) && audioModelSupportsClone(audioModel);
+
+        try {
+            setIsGeneratingAudio(true);
+            setAudioError('');
+            setGeneratedAudioUrl('');
+
+            const response = await generateAudio({
+                prompt: trimmedPrompt,
+                model: audioModel,
+                sessionId: audioSessionId,
+                language: audioLanguage || undefined,
+                voice: isCloneMode ? undefined : (audioVoice || undefined),
+                styleInstruction: isCloneMode ? undefined : (audioStyleInstruction || undefined),
+                referenceText: isCloneMode ? (audioReferenceText || undefined) : undefined,
+                audioBase64: isCloneMode ? audioAttachment?.base64 : undefined,
+                audioMimeType: isCloneMode ? audioAttachment?.mimeType : undefined,
+            });
+            const audioUrl = response?.audioUrl?.trim() ?? '';
+
+            if (!audioUrl) {
+                setAudioError(text.voiceGenerateEmpty);
+                return;
+            }
+
+            setGeneratedAudioUrl(audioUrl);
+
+            try {
+                const historyResponse = await savePromptHistory({
+                    prompt: trimmedPrompt,
+                    category: audioModel,
+                    model: audioModel,
+                    response: audioUrl,
+                    sessionId: audioSessionId,
+                });
+                const savedItem = historyResponse?.item;
+
+                if (savedItem) {
+                    setPromptHistoryData((prev) => ({
+                        items: [savedItem, ...(Array.isArray(prev?.items) ? prev.items : [])],
+                    }));
+                }
+            } catch {
+                // History save is optional.
+            }
+        } catch (error) {
+            setGeneratedAudioUrl('');
+            const message = error instanceof Error ? error.message : '';
+            setAudioError(message || (language === 'ru' ? 'Не удалось сгенерировать аудио.' : 'Failed to generate audio.'));
+        } finally {
+            setIsGeneratingAudio(false);
         }
     };
 
@@ -2236,6 +2913,17 @@ function App() {
         }
     };
 
+    const handleAudioComposerKeyDown = (event) => {
+        if (isGeneratingAudio) {
+            return;
+        }
+
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            handleGenerateAudio();
+        }
+    };
+
     const handleChatComposerKeyDown = (event) => {
         if (isGeneratingText) {
             return;
@@ -2266,6 +2954,11 @@ function App() {
 
         if (card.id === 'video') {
             openAiVideo('kling-v3-std', 'home');
+            return;
+        }
+
+        if (card.id === 'voice' || card.page === 'ai-voice') {
+            openAiVoice('qwen3-tts', 'home');
             return;
         }
 
@@ -2420,7 +3113,7 @@ function App() {
 
                             return (
                                 <button
-                                    key={tool.id}
+                                    key={tool.groupId ?? tool.id}
                                     type="button"
                                     className={`catalog-concept__card ${tool.locked ? 'catalog-concept__card--locked' : ''}`}
                                     onClick={() => handleCatalogToolClick(tool)}
@@ -2452,12 +3145,15 @@ function App() {
         const activeVisual = getTextModelVisual(activeModel);
         const ActiveIcon = activeVisual.icon;
         const activeSelectorItem = getSelectorItemForModelId(textModelSelectorItems, textModel);
-        const headerTitle = activeModel?.label
-            ?? getModelLabel(effectiveTextModels, textModel, textModelSelectorItems);
-        const headerSubtitle = activeModel?.description
-            ?? (activeSelectorItem?.type === 'tiered' && activeModel
-                ? getTierLabelForModel(activeModel, text)
-                : text.chatTitle);
+        const headerTitle = activeSelectorItem?.type === 'tiered'
+            ? activeSelectorItem.label
+            : (activeModel?.label ?? getModelLabel(effectiveTextModels, textModel, textModelSelectorItems));
+        const headerSubtitle = activeSelectorItem?.type === 'tiered' && activeModel
+            ? [
+                getTierLabelForModel(activeModel, text),
+                activeModel.label,
+            ].filter(Boolean).join(' · ')
+            : (activeModel?.description ?? text.chatTitle);
         const supportsChatImage = textModelSupportsImage(activeModel);
 
         return (
@@ -2634,11 +3330,19 @@ function App() {
     const renderAiImageScreen = () => {
         const activeModel = getImageModelDefinition(imageModel);
         const ActiveIcon = activeModel.icon;
+        const activeSelectorItem = getMediaSelectorItemForModelId(imageModelSelectorItems, imageModel);
+        const headerTitle = activeSelectorItem?.type === 'tiered'
+            ? getImageSelectorChipLabel(activeSelectorItem, text)
+            : text[activeModel.nameKey];
+        const headerSubtitle = text[activeModel.subKey];
         const canEdit = imageModelSupportsEdit(imageModel);
-        const sourceImageUrl = canEdit
+        const supportsSourceUpload = imageModelSupportsSourceUpload(imageModel);
+        const hasAttachedImage = Boolean(imageAttachment);
+        const sessionImageUrl = canEdit
             ? (getLastSessionImageUrl(imageSessionMessages) ?? generatedImageUrl?.trim() ?? '')
             : '';
-        const promptPlaceholder = sourceImageUrl
+        const usesSessionEdit = canEdit && !hasAttachedImage && Boolean(sessionImageUrl);
+        const promptPlaceholder = (usesSessionEdit || hasAttachedImage)
             ? text.imageEditPlaceholder
             : text.imagePromptPlaceholder;
 
@@ -2658,8 +3362,8 @@ function App() {
                             <ActiveIcon size={16} aria-hidden="true" />
                         </span>
                         <div>
-                            <h1 className="ai-chat__title">{text[activeModel.nameKey]}</h1>
-                            <p className="ai-chat__subtitle">{text[activeModel.subKey]}</p>
+                            <h1 className="ai-chat__title">{headerTitle}</h1>
+                            <p className="ai-chat__subtitle">{headerSubtitle}</p>
                         </div>
                     </div>
                     <button
@@ -2673,26 +3377,60 @@ function App() {
                 </header>
 
                 <div className="ai-chat__models" role="tablist" aria-label={text.imageGenerateTitle}>
-                    {IMAGE_MODEL_DEFINITIONS.map((model) => {
-                        const ModelIcon = model.icon;
-                        const isActive = imageModel === model.id;
+                    {imageModelSelectorItems.map((item) => {
+                        const isActive = item.type === 'single'
+                            ? imageModel === item.model.id
+                            : item.variants.some((variant) => variant.id === imageModel);
+                        const chipVisual = getImageSelectorChipVisual(item);
+                        const ModelIcon = chipVisual.icon;
+                        const chipLabel = getImageSelectorChipLabel(item, text);
+                        const chipKey = item.type === 'single' ? item.model.id : item.id;
 
                         return (
                             <button
-                                key={model.id}
+                                key={chipKey}
                                 type="button"
                                 role="tab"
                                 aria-selected={isActive}
-                                className={`ai-chat__model-chip ai-chat__model-chip--${model.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
-                                onClick={() => handleImageModelChange(model.id)}
+                                className={`ai-chat__model-chip ai-chat__model-chip--${chipVisual.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
+                                onClick={() => handleImageModelGroupSelect(item)}
                                 disabled={isGeneratingImage}
                             >
                                 <ModelIcon size={14} aria-hidden="true" />
-                                <span>{text[model.nameKey]}</span>
+                                <span>{chipLabel}</span>
                             </button>
                         );
                     })}
                 </div>
+
+                {activeSelectorItem?.type === 'tiered' ? (
+                    <div className="ai-chat__tiers" role="tablist" aria-label={text.imageGenerateTitle}>
+                        {activeSelectorItem.variants.map((variant) => {
+                            const isTierActive = imageModel === variant.id;
+                            const VariantIcon = variant.icon;
+
+                            return (
+                                <button
+                                    key={variant.id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={isTierActive}
+                                    className={`ai-chat__tier-chip ai-chat__tier-chip--${variant.accent} ${isTierActive ? 'ai-chat__tier-chip--active' : ''}`}
+                                    onClick={() => handleImageModelChange(variant.id)}
+                                    disabled={isGeneratingImage}
+                                >
+                                    {variant.badge ? (
+                                        <span className={`ai-chat__model-tier ai-chat__model-tier--${variant.badge}`}>
+                                            {getCatalogBadgeLabel(variant.badge)}
+                                        </span>
+                                    ) : null}
+                                    <VariantIcon size={12} aria-hidden="true" />
+                                    <span>{text[variant.nameKey]}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                ) : null}
 
                 <MediaModelOptionsBar
                     capabilities={getImageModelCapabilities(imageModel)}
@@ -2709,6 +3447,8 @@ function App() {
                         resolution: text.mediaOptionResolution,
                         quality: text.mediaOptionQuality,
                         outputFormat: text.mediaOptionOutputFormat,
+                        toggleOn: text.mediaToggleOn,
+                        toggleOff: text.mediaToggleOff,
                         qualityValues: {
                             low: text.mediaQualityLow,
                             medium: text.mediaQualityMedium,
@@ -2749,16 +3489,55 @@ function App() {
                     )}
                 </div>
 
-                {sourceImageUrl && canEdit ? (
+                {usesSessionEdit ? (
                     <p className="ai-image__edit-hint">{text.imageEditHint}</p>
+                ) : null}
+
+                {hasAttachedImage ? (
+                    <p className="ai-image__edit-hint">{text.imageAttachmentHint}</p>
                 ) : null}
 
                 {imageError ? (
                     <p className="ai-chat__inline-error" role="alert">{imageError}</p>
                 ) : null}
 
-                <footer className="ai-chat__composer ai-chat__composer--no-attach">
+                <footer className={`ai-chat__composer ${supportsSourceUpload ? '' : 'ai-chat__composer--no-attach'}`}>
+                    {supportsSourceUpload ? (
+                        <input
+                            ref={imagePhotoInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="ai-chat__file-input"
+                            aria-hidden="true"
+                            tabIndex={-1}
+                            onChange={handleImagePhotoSelect}
+                        />
+                    ) : null}
+                    {supportsSourceUpload ? (
+                        <button
+                            type="button"
+                            className="ai-chat__attach"
+                            aria-label={text.imageAttachPhoto}
+                            disabled={isGeneratingImage}
+                            onClick={() => imagePhotoInputRef.current?.click()}
+                        >
+                            <Paperclip size={18} aria-hidden="true" />
+                        </button>
+                    ) : null}
                     <div className="ai-chat__composer-field">
+                        {supportsSourceUpload && imageAttachment ? (
+                            <div className="ai-chat__attachment-preview">
+                                <img src={imageAttachment.previewUrl} alt="" />
+                                <button
+                                    type="button"
+                                    className="ai-chat__attachment-remove"
+                                    aria-label={text.imageRemovePhoto}
+                                    onClick={() => setImageAttachment(null)}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ) : null}
                         <textarea
                             id="ai-image-prompt"
                             className="ai-chat__input"
@@ -2787,6 +3566,20 @@ function App() {
     const renderAiVideoScreen = () => {
         const activeModel = getVideoModelDefinition(videoModel);
         const ActiveIcon = activeModel.icon;
+        const activeSelectorItem = getMediaSelectorItemForModelId(videoModelSelectorItems, videoModel);
+        const headerTitle = activeSelectorItem?.type === 'tiered'
+            ? getVideoSelectorChipLabel(activeSelectorItem, text)
+            : text[activeModel.nameKey];
+        const headerSubtitle = text[activeModel.subKey];
+        const requiresImage = videoModelRequiresImage(videoModel);
+        const requiresVideo = videoModelRequiresVideo(videoModel);
+        const isExtend = videoModel === 'seedance-v2-video-extend';
+        const isUnifiedEdit = videoModel === 'seedance-v2-video-edit';
+        const sessionVideoUrl = getLastSessionVideoUrl(videoSessionMessages) ?? generatedVideoUrl?.trim() ?? '';
+        const hasVideoContext = Boolean(requiresVideo && sessionVideoUrl);
+        const promptPlaceholder = hasVideoContext
+            ? (isExtend ? text.videoExtendPlaceholder : text.videoEditPlaceholder)
+            : text.videoPromptPlaceholder;
 
         return (
             <section className="ai-image-screen ai-image-screen--concept" aria-label={text.videoGenerateTitle}>
@@ -2804,8 +3597,8 @@ function App() {
                             <ActiveIcon size={16} aria-hidden="true" />
                         </span>
                         <div>
-                            <h1 className="ai-chat__title">{text[activeModel.nameKey]}</h1>
-                            <p className="ai-chat__subtitle">{text[activeModel.subKey]}</p>
+                            <h1 className="ai-chat__title">{headerTitle}</h1>
+                            <p className="ai-chat__subtitle">{headerSubtitle}</p>
                         </div>
                     </div>
                     <button
@@ -2819,43 +3612,127 @@ function App() {
                 </header>
 
                 <div className="ai-chat__models" role="tablist" aria-label={text.videoGenerateTitle}>
-                    {VIDEO_MODEL_DEFINITIONS.map((model) => {
-                        const ModelIcon = model.icon;
-                        const isActive = videoModel === model.id;
+                    {videoModelSelectorItems.map((item) => {
+                        const isActive = item.type === 'single'
+                            ? videoModel === item.model.id
+                            : item.variants.some((variant) => variant.id === videoModel);
+                        const chipVisual = getVideoSelectorChipVisual(item);
+                        const ModelIcon = chipVisual.icon;
+                        const chipLabel = getVideoSelectorChipLabel(item, text);
+                        const chipKey = item.type === 'single' ? item.model.id : item.id;
 
                         return (
                             <button
-                                key={model.id}
+                                key={chipKey}
                                 type="button"
                                 role="tab"
                                 aria-selected={isActive}
-                                className={`ai-chat__model-chip ai-chat__model-chip--${model.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
-                                onClick={() => handleVideoModelChange(model.id)}
+                                className={`ai-chat__model-chip ai-chat__model-chip--${chipVisual.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
+                                onClick={() => handleVideoModelGroupSelect(item)}
                                 disabled={isGeneratingVideo}
                             >
                                 <ModelIcon size={14} aria-hidden="true" />
-                                <span>{text[model.nameKey]}</span>
+                                <span>{chipLabel}</span>
                             </button>
                         );
                     })}
                 </div>
+
+                {activeSelectorItem?.type === 'tiered' ? (
+                    <div className="ai-chat__tiers" role="tablist" aria-label={text.videoGenerateTitle}>
+                        {activeSelectorItem.variants.map((variant) => {
+                            const isTierActive = videoModel === variant.id;
+                            const VariantIcon = variant.icon;
+
+                            return (
+                                <button
+                                    key={variant.id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={isTierActive}
+                                    className={`ai-chat__tier-chip ai-chat__tier-chip--${variant.accent} ${isTierActive ? 'ai-chat__tier-chip--active' : ''}`}
+                                    onClick={() => handleVideoModelChange(variant.id)}
+                                    disabled={isGeneratingVideo}
+                                >
+                                    {variant.badge ? (
+                                        <span className={`ai-chat__model-tier ai-chat__model-tier--${variant.badge}`}>
+                                            {getCatalogBadgeLabel(variant.badge)}
+                                        </span>
+                                    ) : null}
+                                    <VariantIcon size={12} aria-hidden="true" />
+                                    <span>{text[variant.nameKey]}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                ) : null}
 
                 <MediaModelOptionsBar
                     capabilities={getVideoModelCapabilities(videoModel)}
                     values={{
                         aspectRatio: videoAspectRatio,
                         duration: videoDuration,
+                        resolution: videoResolution,
+                        generateAudio: videoGenerateAudio,
+                        cameraFixed: videoCameraFixed,
+                        turboMode: videoTurboMode,
                     }}
                     onChange={handleVideoOptionChange}
                     labels={{
                         group: text.mediaOptionsGroup,
                         aspectRatio: text.mediaOptionAspectRatio,
+                        resolution: text.mediaOptionResolution,
                         duration: text.mediaOptionDuration,
+                        generateAudio: text.mediaOptionGenerateAudio,
+                        cameraFixed: text.mediaOptionCameraFixed,
+                        turboMode: text.mediaOptionTurboMode,
+                        toggleOn: text.mediaToggleOn,
+                        toggleOff: text.mediaToggleOff,
                         durationValue: (seconds) => `${seconds} ${language === 'en' ? 'sec' : 'сек'}`,
                     }}
                     disabled={isGeneratingVideo}
                     idPrefix="video"
                 />
+
+                {isUnifiedEdit ? (
+                    <p className="ai-video__edit-hint">{text.videoEditTurboHint}</p>
+                ) : null}
+
+                {requiresImage ? (
+                    <label className="ai-video__source-field" htmlFor="ai-video-source-image">
+                        <span className="ai-image__label">{text.videoSourceImageLabel}</span>
+                        <input
+                            id="ai-video-source-image"
+                            className="ai-video__source-input"
+                            type="url"
+                            value={videoSourceImageUrl}
+                            onChange={(event) => setVideoSourceImageUrl(event.target.value)}
+                            placeholder={text.videoSourceImagePlaceholder}
+                            disabled={isGeneratingVideo}
+                        />
+                    </label>
+                ) : null}
+
+                {requiresVideo && !hasVideoContext ? (
+                    <label className="ai-video__source-field" htmlFor="ai-video-source-video">
+                        <span className="ai-image__label">{text.videoSourceVideoLabel}</span>
+                        <input
+                            id="ai-video-source-video"
+                            className="ai-video__source-input"
+                            type="url"
+                            value={videoSourceVideoUrl}
+                            onChange={(event) => setVideoSourceVideoUrl(event.target.value)}
+                            placeholder={text.videoSourceVideoPlaceholder}
+                            disabled={isGeneratingVideo}
+                        />
+                    </label>
+                ) : null}
+
+                {hasVideoContext ? (
+                    <p className="ai-video__edit-hint">
+                        {isExtend ? text.videoExtendHint : text.videoEditHint}
+                    </p>
+                ) : null}
 
                 <div className="ai-image__body">
                     <label className="ai-image__label" htmlFor="ai-video-prompt">{text.videoPromptLabel}</label>
@@ -2864,7 +3741,7 @@ function App() {
                         className="ai-image__prompt"
                         value={videoPrompt}
                         onChange={(event) => setVideoPrompt(event.target.value)}
-                        placeholder={text.videoPromptPlaceholder}
+                        placeholder={promptPlaceholder}
                         rows={4}
                         disabled={isGeneratingVideo}
                     />
@@ -2894,6 +3771,187 @@ function App() {
                         </section>
                     ) : null}
                 </div>
+            </section>
+        );
+    };
+
+    const renderAiVoiceScreen = () => {
+        const activeModel = getAudioModelDefinition(audioModel);
+        const ActiveIcon = activeModel?.icon ?? Mic;
+        const activeSelectorItem = getMediaSelectorItemForModelId(audioModelSelectorItems, audioModel);
+        const headerTitle = activeSelectorItem?.type === 'tiered'
+            ? getAudioSelectorChipLabel(activeSelectorItem, text)
+            : text[activeModel?.nameKey ?? 'modelQwen3TtsName'];
+        const headerSubtitle = text[activeModel?.subKey ?? 'modelQwen3TtsSub'];
+        const supportsClone = audioModelSupportsClone(audioModel);
+        const isCloneMode = Boolean(audioAttachment) && supportsClone;
+        const promptPlaceholder = isCloneMode
+            ? text.voiceClonePlaceholder
+            : text.voicePromptPlaceholder;
+
+        return (
+            <section className="ai-image-screen ai-image-screen--concept" aria-label={text.voiceGenerateTitle}>
+                <header className="ai-chat__header">
+                    <button
+                        type="button"
+                        className="ai-chat__back"
+                        aria-label={text.back}
+                        onClick={() => setCurrentPage(audioReturnPage)}
+                    >
+                        <ArrowLeft size={20} aria-hidden="true" />
+                    </button>
+                    <div className="ai-chat__header-main">
+                        <span className={`ai-chat__model-icon ai-chat__model-icon--${activeModel?.accent ?? 'violet'}`}>
+                            <ActiveIcon size={16} aria-hidden="true" />
+                        </span>
+                        <div>
+                            <h1 className="ai-chat__title">{headerTitle}</h1>
+                            <p className="ai-chat__subtitle">{headerSubtitle}</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        className="ai-chat__new"
+                        onClick={handleNewAudioDialog}
+                        disabled={isGeneratingAudio}
+                    >
+                        {text.chatNewDialog}
+                    </button>
+                </header>
+
+                <div className="ai-chat__models" role="tablist" aria-label={text.voiceGenerateTitle}>
+                    {audioModelSelectorItems.map((item) => {
+                        const isActive = item.type === 'single'
+                            ? audioModel === item.model.id
+                            : item.variants.some((variant) => variant.id === audioModel);
+                        const chipVisual = getAudioSelectorChipVisual(item);
+                        const ModelIcon = chipVisual.icon;
+                        const chipLabel = getAudioSelectorChipLabel(item, text);
+                        const chipKey = item.type === 'single' ? item.model.id : item.id;
+
+                        return (
+                            <button
+                                key={chipKey}
+                                type="button"
+                                role="tab"
+                                aria-selected={isActive}
+                                className={`ai-chat__model-chip ai-chat__model-chip--${chipVisual.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
+                                onClick={() => handleAudioModelGroupSelect(item)}
+                                disabled={isGeneratingAudio}
+                            >
+                                <ModelIcon size={14} aria-hidden="true" />
+                                <span>{chipLabel}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <MediaModelOptionsBar
+                    capabilities={getAudioModelCapabilities(audioModel)}
+                    values={{
+                        language: audioLanguage,
+                        voice: audioVoice,
+                        styleInstruction: audioStyleInstruction,
+                        referenceText: audioReferenceText,
+                    }}
+                    onChange={handleAudioOptionChange}
+                    labels={{
+                        group: text.mediaOptionsGroup,
+                        language: text.mediaOptionLanguage,
+                        voice: text.mediaOptionVoice,
+                        styleInstruction: text.mediaOptionStyleInstruction,
+                        referenceText: text.mediaOptionReferenceText,
+                        styleInstructionPlaceholder: text.mediaStyleInstructionPlaceholder,
+                        referenceTextPlaceholder: text.mediaReferenceTextPlaceholder,
+                    }}
+                    disabled={isGeneratingAudio}
+                    idPrefix="audio"
+                    cloneMode={isCloneMode}
+                />
+
+                <div className="ai-image__content">
+                    {isGeneratingAudio ? (
+                        <p className="ai-chat__empty">{text.voiceGenerating}</p>
+                    ) : generatedAudioUrl ? (
+                        <section className="ai-image__result" aria-label={text.voiceResultTitle}>
+                            <p className="ai-image__result-label">{text.voiceResultTitle}</p>
+                            <audio
+                                className="ai-image__preview"
+                                src={generatedAudioUrl}
+                                controls
+                            />
+                        </section>
+                    ) : (
+                        <p className="ai-chat__empty">{text.voicePromptPlaceholder}</p>
+                    )}
+                </div>
+
+                {supportsClone && isCloneMode ? (
+                    <p className="ai-image__edit-hint">{text.voiceCloneHint}</p>
+                ) : null}
+
+                {audioError ? (
+                    <p className="ai-chat__inline-error" role="alert">{audioError}</p>
+                ) : null}
+
+                <footer className={`ai-chat__composer ${supportsClone ? '' : 'ai-chat__composer--no-attach'}`}>
+                    {supportsClone ? (
+                        <input
+                            ref={audioFileInputRef}
+                            type="file"
+                            accept="audio/*"
+                            className="ai-chat__file-input"
+                            aria-hidden="true"
+                            tabIndex={-1}
+                            onChange={handleAudioAttachmentSelect}
+                        />
+                    ) : null}
+                    {supportsClone ? (
+                        <button
+                            type="button"
+                            className="ai-chat__attach"
+                            aria-label={text.voiceAttachAudio}
+                            disabled={isGeneratingAudio}
+                            onClick={() => audioFileInputRef.current?.click()}
+                        >
+                            <Paperclip size={18} aria-hidden="true" />
+                        </button>
+                    ) : null}
+                    <div className="ai-chat__composer-field">
+                        {supportsClone && audioAttachment ? (
+                            <div className="ai-chat__attachment-preview ai-chat__attachment-preview--audio">
+                                <audio src={audioAttachment.previewUrl} controls />
+                                <button
+                                    type="button"
+                                    className="ai-chat__attachment-remove"
+                                    aria-label={text.voiceRemoveAudio}
+                                    onClick={() => setAudioAttachment(null)}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ) : null}
+                        <textarea
+                            id="ai-voice-prompt"
+                            className="ai-chat__input"
+                            value={audioPrompt}
+                            onChange={(event) => setAudioPrompt(event.target.value)}
+                            onKeyDown={handleAudioComposerKeyDown}
+                            placeholder={promptPlaceholder}
+                            rows={2}
+                            disabled={isGeneratingAudio}
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        className="ai-chat__send"
+                        aria-label={text.voiceGenerateButton}
+                        onClick={handleGenerateAudio}
+                        disabled={isGeneratingAudio}
+                    >
+                        <Send size={18} aria-hidden="true" />
+                    </button>
+                </footer>
             </section>
         );
     };
@@ -2940,15 +3998,17 @@ function App() {
                 </header>
 
                 <div className="profile-concept__avatar-section">
-                    <div className="profile-concept__avatar">
-                        {userData.avatarUrl ? (
-                            <img src={userData.avatarUrl} alt={userData.displayName} />
-                        ) : (
-                            <span>{profileInitials}</span>
-                        )}
-                        {userData.subscriptionIsPaid ? (
-                            <span className="profile-concept__avatar-crown" aria-hidden="true">👑</span>
-                        ) : null}
+                    <div className="profile-concept__avatar-outer">
+                        <div className="profile-concept__avatar-inner">
+                            {userData.avatarUrl ? (
+                                <img src={userData.avatarUrl} alt={userData.displayName} />
+                            ) : (
+                                <span>{profileInitials}</span>
+                            )}
+                            {userData.subscriptionIsPaid ? (
+                                <span className="profile-concept__avatar-crown" aria-hidden="true">👑</span>
+                            ) : null}
+                        </div>
                     </div>
                     <h3 className="profile-concept__user-name">{userData.displayName}</h3>
                     {userData.handle ? (
@@ -3270,6 +4330,10 @@ function App() {
                         {group.topics.map((topic) => {
                             const visual = getHistoryVisual(topic.model);
                             const ThumbIcon = visual.icon;
+                            const mediaPreview = getHistoryTopicMediaPreview(topic, {
+                                imageModelIds: IMAGE_MODEL_IDS,
+                                videoModelIds: VIDEO_MODEL_IDS,
+                            });
                             const toolName = getModelLabel(
                                 effectiveTextModels,
                                 resolveTextModelId(topic.model, effectiveTextModels),
@@ -3318,11 +4382,28 @@ function App() {
                                             openHistoryTopic(topic);
                                         }}
                                     >
-                                        {visual.emoji ? (
+                                        {mediaPreview?.kind === 'image' ? (
+                                            <img
+                                                className="history-concept__result-media"
+                                                src={mediaPreview.url}
+                                                alt=""
+                                            />
+                                        ) : null}
+                                        {mediaPreview?.kind === 'video' ? (
+                                            <video
+                                                className="history-concept__result-media"
+                                                src={mediaPreview.url}
+                                                muted
+                                                playsInline
+                                                preload="metadata"
+                                            />
+                                        ) : null}
+                                        {!mediaPreview && visual.emoji ? (
                                             <span>{visual.emoji}</span>
-                                        ) : (
+                                        ) : null}
+                                        {!mediaPreview && !visual.emoji ? (
                                             <MessageSquare size={14} aria-hidden="true" />
-                                        )}
+                                        ) : null}
                                     </button>
                                 </article>
                             );
@@ -3444,6 +4525,11 @@ function App() {
 
     return (
         <div className="app-shell" data-page={currentPage}>
+            <div className="app-shell__orbs" aria-hidden="true">
+                <span className="app-shell__orb app-shell__orb--1" />
+                <span className="app-shell__orb app-shell__orb--2" />
+                <span className="app-shell__orb app-shell__orb--3" />
+            </div>
             <main className="app-main">
                 {currentPage === 'home'
                     ? renderHomeScreen()
@@ -3465,13 +4551,20 @@ function App() {
                                                     ? renderAiImageScreen()
                                                     : currentPage === 'ai-video'
                                                         ? renderAiVideoScreen()
-                                                        : renderInfoScreen()}
+                                                        : currentPage === 'ai-voice'
+                                                            ? renderAiVoiceScreen()
+                                                            : renderInfoScreen()}
             </main>
 
             {showBottomNav ? (
                 <nav className="bottom-nav bottom-nav--concept" aria-label={language === 'ru' ? 'Основная навигация' : 'Main navigation'}>
-                    <div className="bottom-nav__inner">
-                        {navigationItems.map((item) => {
+                    <div className="bottom-nav__inner" ref={navInnerRef}>
+                        <span
+                            className="bottom-nav__indicator"
+                            style={navIndicatorStyle}
+                            aria-hidden="true"
+                        />
+                        {navigationItems.map((item, index) => {
                             const { key, labelKey, icon: NavIcon } = item;
                             const isActive = activeNavKey === key;
                             const label = text[labelKey];
@@ -3479,6 +4572,9 @@ function App() {
                             return (
                                 <button
                                     key={key}
+                                    ref={(element) => {
+                                        navButtonRefs.current[index] = element;
+                                    }}
                                     type="button"
                                     className={`nav-button ${isActive ? 'nav-button--active' : ''}`}
                                     aria-label={label}
@@ -3491,7 +4587,9 @@ function App() {
                                         setIsLanguageMenuOpen(false);
                                     }}
                                 >
-                                    <NavIcon size={19} aria-hidden="true" />
+                                    <span className="nav-button__icon-wrap" aria-hidden="true">
+                                        <NavIcon size={19} />
+                                    </span>
                                     <span className="nav-button__label">{label}</span>
                                 </button>
                             );

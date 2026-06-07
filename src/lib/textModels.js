@@ -1,4 +1,9 @@
 import { Bot, Brain, Sparkles, Zap } from 'lucide-react';
+import {
+    buildGroupedSelectorItems,
+    formatGroupIdLabel,
+    getSelectorItemForModelId as findSelectorItemForModelId,
+} from './modelGroups.js';
 
 export const TEXT_MODEL_STORAGE_KEY = 'cybermate-text-model-id';
 
@@ -232,6 +237,12 @@ export function getCatalogModelDescription(tool, language = 'ru') {
         return descriptions[tool.id];
     }
 
+    const variantDescription = tool.variants?.find((variant) => variant.description)?.description;
+
+    if (variantDescription) {
+        return variantDescription;
+    }
+
     return tool.sub || '';
 }
 
@@ -248,41 +259,14 @@ export function sortModelsByDisplayTier(models) {
  * @param {Array<{ id: string, label: string, group: string, description?: string, tier: string }>} models
  */
 export function buildTextModelSelectorItems(models) {
-    const grouped = new Map();
-
-    models.forEach((model) => {
-        const group = model.group || 'Other';
-
-        if (!grouped.has(group)) {
-            grouped.set(group, []);
-        }
-
-        grouped.get(group).push(model);
+    return buildGroupedSelectorItems(models, {
+        getGroupKey: (model) => model.group || 'Other',
+        getGroupLabel: (group) => MERGED_GROUPS[group]?.displayName ?? formatGroupIdLabel(group),
+        getDefaultItemId: (group, groupModels) => (
+            MERGED_GROUPS[group]?.defaultModelId ?? groupModels[0]?.id
+        ),
+        sortGroupItems: sortModelsByDisplayTier,
     });
-
-    const items = [];
-
-    grouped.forEach((groupModels, group) => {
-        const mergeConfig = MERGED_GROUPS[group];
-
-        if (mergeConfig && groupModels.length > 1) {
-            items.push({
-                type: 'tiered',
-                id: group,
-                label: mergeConfig.displayName,
-                group,
-                variants: sortModelsByDisplayTier(groupModels),
-                defaultModelId: mergeConfig.defaultModelId,
-            });
-            return;
-        }
-
-        groupModels.forEach((model) => {
-            items.push({ type: 'single', model });
-        });
-    });
-
-    return items;
 }
 
 /**
@@ -299,7 +283,7 @@ export function buildCatalogTextTools(models) {
                 id: defaultVariant.id,
                 groupId: item.id,
                 label: item.label,
-                sub: '',
+                sub: defaultVariant.description ?? '',
                 page: 'ai-chat',
                 tab: 'chat',
                 categories: ['chat', 'code'],
@@ -392,11 +376,7 @@ export function isKnownTextModelId(modelId, models) {
 }
 
 export function getSelectorItemForModelId(items, modelId) {
-    return items.find((item) => (
-        item.type === 'single'
-            ? item.model.id === modelId
-            : item.variants.some((variant) => variant.id === modelId)
-    )) ?? null;
+    return findSelectorItemForModelId(items, modelId);
 }
 
 export function getModelLabel(models, modelId, selectorItems) {

@@ -1,0 +1,373 @@
+/* Compact density — smaller nav, cards, chat, profile */
+
+:root {
+  --ui-density: 0.88;
+  --nav-bar-height: 52px;
+  --page-pad-x: clamp(10px, 3.2vw, 16px);
+}
+
+html,
+body {
+  font-size: clamp(13px, 3.2vw, 15px);
+}
+
+.app-shell {
+  padding-bottom: calc(var(--nav-bar-height) + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+.app-notice {
+  bottom: calc(var(--nav-bar-height) + 8px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+/* Bottom nav */
+.bottom-nav__inner {
+  padding: 5px var(--page-pad-x, 10px) calc(8px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+:root:not([data-theme='light']) .bottom-nav__inner,
+:root[data-theme='light'] .bottom-nav__inner {
+  margin: 0 10px;
+  padding: 5px;
+  padding-bottom: calc(5px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  border-radius: 18px;
+}
+
+.nav-button {
+  gap: 2px;
+  padding: 6px 0 4px;
+}
+
+.nav-button svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.nav-button__label {
+  font-size: 9px;
+}
+
+/* Home */
+.home-screen--concept {
+  padding: 4px 0 16px;
+}
+
+.home-concept__logo-image {
+  width: 44px;
+  height: 44px;
+}
+
+.home-concept__logo-name {
+  font-size: 13px;
+}
+
+.home-concept__icon-btn {
+  width: 30px;
+  height: 30px;
+}
+
+.home-concept__greeting h2 {
+  font-size: 17px;
+}
+
+.home-concept__greeting p {
+  font-size: 11px;
+}
+
+.home-concept__search {
+  padding: 7px 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.home-concept__chip {
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.home-concept__card {
+  padding: 11px;
+}
+
+.home-concept__card-icon {
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+}
+
+.home-concept__card-title {
+  font-size: 12px;
+}
+
+.home-concept__card-sub {
+  font-size: 10px;
+}
+
+/* Catalog */
+.catalog-screen--concept {
+  padding: 4px 2px 12px;
+}
+
+.catalog-concept__title {
+  font-size: 15px;
+}
+
+.catalog-concept__search {
+  padding: 7px 10px;
+}
+
+.catalog-concept__tab {
+  padding: 4px 10px;
+  font-size: 10px;
+}
+
+.catalog-concept__card {
+  padding: 10px;
+}
+
+.catalog-concept__icon {
+  width: 30px;
+  height: 30px;
+}
+
+.catalog-concept__name {
+  font-size: 12px;
+}
+
+.catalog-concept__sub {
+  font-size: 10px;
+}
+
+/* Profile */
+.profile-concept__avatar-outer {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 10px;
+}
+
+.profile-concept__avatar-inner {
+  font-size: 20px;
+}
+
+.profile-concept__user-name {
+  font-size: 16px !important;
+}
+
+.profile-concept__avatar-section {
+  padding: 16px 4px 14px;
+}
+
+.profile-concept__stat {
+  padding: 9px 4px;
+}
+
+.profile-concept__stat-val {
+  font-size: 16px !important;
+}
+
+.profile-concept__stat-label {
+  font-size: 9px;
+}
+
+.profile-concept__balance-card {
+  padding: 12px 14px;
+}
+
+.profile-concept__balance-num {
+  font-size: 22px !important;
+}
+
+.profile-concept__coin-icon {
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 10px;
+}
+
+.profile-concept__topup-btn {
+  padding: 6px 11px;
+  font-size: 11px;
+}
+
+.profile-concept__menu-item {
+  padding: 9px 12px;
+  gap: 10px;
+}
+
+.profile-concept__menu-ico {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.profile-concept__menu-title {
+  font-size: 12px;
+}
+
+.profile-concept__menu-sub {
+  font-size: 10px;
+}
+
+/* Chat / image / video screens */
+.ai-chat-screen--concept,
+.ai-image-screen--concept {
+  padding: 4px var(--page-pad-x, 10px) 0;
+}
+
+.ai-chat__header {
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.ai-chat__back {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.ai-chat__model-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.ai-chat__title {
+  font-size: 13px;
+}
+
+.ai-chat__subtitle {
+  font-size: 9px;
+}
+
+.ai-chat__new {
+  padding: 5px 8px;
+  font-size: 9px;
+}
+
+.ai-chat__models {
+  min-height: 34px;
+  padding: 6px 0;
+  gap: 5px;
+}
+
+.ai-chat__model-chip {
+  padding: 4px 8px 4px 5px;
+  font-size: 10px;
+  gap: 5px;
+  border-radius: 16px;
+}
+
+.ai-chat__model-chip svg {
+  padding: 3px;
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.ai-chat__model-tier {
+  padding: 1px 5px;
+  font-size: 8px;
+}
+
+.ai-chat__tiers {
+  padding: 0 0 6px;
+  gap: 5px;
+}
+
+.ai-chat__tier-chip {
+  padding: 4px 8px;
+  font-size: 10px;
+  border-radius: 12px;
+}
+
+.ai-chat__composer {
+  gap: 6px;
+  padding: 6px 0 calc(8px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+.ai-chat__attach,
+.ai-chat__send {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.ai-chat__input {
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.ai-chat__attachment-preview img {
+  max-height: 48px;
+}
+
+/* History */
+.history-concept__item {
+  padding: 8px 10px;
+  gap: 8px;
+}
+
+.history-concept__thumb {
+  width: 34px;
+  height: 34px;
+}
+
+.history-concept__filter {
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+/* Concept page headers */
+.concept-page__title,
+.profile-concept__header-title {
+  font-size: 14px;
+}
+
+.concept-page__back,
+.profile-concept__back {
+  font-size: 12px;
+}
+
+/* Settings */
+.settings-concept__lang-card {
+  padding: 10px 12px;
+}
+
+/* Desktop scaling — keep compact */
+@media (min-width: 768px) {
+  :root {
+    --ui-scale: clamp(1, calc(100vw / var(--layout-ref-width)), 1.12);
+    --home-ui-scale: clamp(1, calc(1 + (var(--ui-scale) - 1) * 0.3), 1.1);
+    --chat-ui-scale: clamp(1, calc(1 + (var(--ui-scale) - 1) * 0.2), 1.08);
+    --header-ui-scale: clamp(1, calc(1 + (var(--ui-scale) - 1) * 0.35), 1.12);
+    --nav-ui-scale: clamp(1, var(--ui-scale), 1.1);
+    --page-pad-x: clamp(16px, 2.5vw, 32px);
+  }
+
+  .app-shell {
+    padding-bottom: calc(var(--nav-bar-height) * var(--ui-scale, 1) + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  }
+
+  .bottom-nav__inner {
+    padding: 5px;
+    padding-bottom: calc(5px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  }
+
+  .nav-button svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .nav-button__label {
+    font-size: 9px;
+  }
+
+  .profile-screen,
+  .referral-screen,
+  .wallet-screen,
+  .history-screen,
+  .catalog-screen--concept,
+  .history-screen--concept,
+  .referral-screen--concept,
+  .wallet-screen--concept,
+  .settings-screen--concept {
+    padding-top: 12px;
+  }
+}

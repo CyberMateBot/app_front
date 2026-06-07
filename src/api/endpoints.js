@@ -50,13 +50,19 @@ export const API_ENDPOINTS = {
         method: 'POST',
         path: '/v1/generate/image',
         when: 'Генерация изображения (Nano Banana)',
-        body: '{ telegramId, prompt, category: "image", model: "nano-banana"|"nano-banana-pro"|"nano-banana-2"|"gpt-image-2"|"gpt-image-1.5"|"flux-dev"|"alice-ai-art", sourceImageUrl?: string, aspect_ratio?: string, resolution?: string, quality?: string, output_format?: string, messages?: [{ role, content }] }',
+        body: '{ telegramId, prompt, category: "image", model: "nano-banana"|..., sourceImageUrl?: string, imageBase64?: string, imageMimeType?: string, aspect_ratio?, resolution?, quality?, output_format?, messages?: [{ role, content }] }',
     },
     generateVideo: {
         method: 'POST',
         path: '/v1/generate/video',
         when: 'Генерация видео (WaveSpeed / Kling)',
-        body: '{ telegramId, prompt, category: "video", model: "kling-v3-std"|"kling-v3-pro", aspect_ratio?: "16:9"|"9:16"|"1:1", duration?: 5|10, messages?: [{ role, content }] }',
+        body: '{ telegramId, prompt, category: "video", model: "kling-v3-std"|"kling-v3-pro"|"seedance-*", aspect_ratio?, duration?, resolution?: "720p"|"1080p", sourceImageUrl?, sourceVideoUrl?, generate_audio?, camera_fixed?, messages?: [{ role, content }] }',
+    },
+    generateAudio: {
+        method: 'POST',
+        path: '/v1/generate/audio',
+        when: 'Озвучка текста и клонирование голоса (Qwen3 TTS)',
+        body: '{ telegramId, prompt, category: "audio", model: "qwen3-tts", language?, voice?, style_instruction?, reference_text?, audioBase64?, audioMimeType?, sourceAudioUrl?, sessionId? }',
     },
 };
 
@@ -71,11 +77,6 @@ export const API_ENDPOINTS_PLANNED = {
         method: 'POST',
         path: '/v1/generate/music',
         when: 'Генерация музыки',
-    },
-    generateVoice: {
-        method: 'POST',
-        path: '/v1/generate/voice',
-        when: 'Озвучка / клон голоса',
     },
     chatCompletions: {
         method: 'POST',

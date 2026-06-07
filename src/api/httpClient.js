@@ -4,8 +4,8 @@ import {
     API_BASE_URL_MISSING_IN_PROD,
 } from '../config/env.js';
 
-/** Должен быть ≥ SERVER_WRITE_TIMEOUT на бэкенде; Railway может обрывать ~60–120 с. */
-const API_FETCH_TIMEOUT_MS = 130_000;
+/** Должен быть ≥ SERVER_WRITE_TIMEOUT на бэкенде и Vite proxy timeout. */
+const API_FETCH_TIMEOUT_MS = 400_000;
 
 export function resolveApiUrl(pathname) {
     const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
@@ -95,11 +95,17 @@ function formatFetchError(error, url, method, wasUserAborted = false) {
     }
 
     if (lower === 'load failed' || lower.includes('failed to fetch') || lower.includes('networkerror')) {
+        const devHint = import.meta.env.DEV
+            ? ' Локально: запустите Postgres (docker compose up -d), затем бэкенд (go run ./cmd/service/main.go) и фронт (npm run dev). В .env фронта VITE_API_BASE_URL лучше оставить пустым — тогда работает proxy.'
+            : '';
         return [
             'Не удалось связаться с API (Load failed).',
-            `Проверьте VITE_API_BASE_URL (${API_BASE_URL || 'не задан'}) и CORS_ALLOWED_ORIGINS на бэкенде.`,
-            'На Railway для бэкенда: CORS_ALLOWED_ORIGINS=* или URL вашего фронта.',
-        ].join(' ');
+            API_BASE_URL
+                ? `Проверьте VITE_API_BASE_URL (${API_BASE_URL}) и CORS_ALLOWED_ORIGINS на бэкенде.`
+                : 'Проверьте, что бэкенд слушает :8090 (curl http://127.0.0.1:8090/health → ok).',
+            'На Railway: CORS_ALLOWED_ORIGINS=* или URL фронта.',
+            devHint,
+        ].filter(Boolean).join(' ');
     }
 
     return raw || 'Сетевая ошибка при запросе к API.';
