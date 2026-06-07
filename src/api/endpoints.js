@@ -26,8 +26,8 @@ export const API_ENDPOINTS = {
     },
     referrals: {
         method: 'GET',
-        path: '/v1/referrals/telegram/:telegramId',
-        when: 'Профиль, Рефералы',
+        path: '/v1/users/telegram/:telegramId/referrals',
+        when: 'Профиль, Рефералы — список приглашённых',
     },
     promptHistoryList: {
         method: 'GET',

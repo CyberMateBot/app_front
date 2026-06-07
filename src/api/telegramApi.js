@@ -4,6 +4,7 @@ import {
     resolveTelegramUserId,
 } from '../lib/telegramWebApp.js';
 import { errorFromResponse } from './apiError.js';
+import { fetchReferralLink, fetchReferrals } from './referrals.js';
 import { apiFetch } from './httpClient.js';
 
 function encodeBase64(value) {
@@ -135,24 +136,16 @@ export async function getMyWallet() {
 export async function getMyReferrals() {
     const telegramId = getCurrentTelegramId();
 
-    return fetchTelegramResource(`/v1/referrals/telegram/${telegramId}`, 'Failed to load referrals.');
+    return fetchReferrals(telegramId);
 }
 
 export async function getMyReferralLink() {
     const telegramId = getCurrentTelegramId();
-    const payload = await fetchTelegramResource(
-        `/v1/users/telegram/${telegramId}/referral-link`,
-        'Failed to load referral link.',
-    );
 
-    const referralLink = payload?.referral_link ?? payload?.data?.referral_link ?? '';
-
-    if (!referralLink) {
-        throw new Error('Referral link is not available.');
-    }
-
-    return { referral_link: String(referralLink) };
+    return fetchReferralLink(telegramId);
 }
+
+export { fetchReferralLink, fetchReferrals } from './referrals.js';
 
 export async function getMyPromptHistory() {
     const telegramId = getCurrentTelegramId();

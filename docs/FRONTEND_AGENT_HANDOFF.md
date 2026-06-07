@@ -34,9 +34,12 @@
 3. `GET /v1/users/telegram/{id}` — профиль и тема
 4. Остальные экраны по требованию
 
+Рефералы: [FRONTEND_REFERRAL_PAGE.md](./FRONTEND_REFERRAL_PAGE.md) — `GET .../referral-link` + `GET .../referrals` при открытии страницы.
+
 ## Чеклист
 
 - [ ] `.env`: `VITE_API_BASE_URL=http://localhost:8090`
 - [ ] Бэкенд: `CORS_ALLOWED_ORIGINS=http://localhost:5173`
 - [ ] `npm run dev`, Mini App в Telegram или `VITE_ENABLE_TELEGRAM_MOCK=true`
 - [ ] Переключение темы → PATCH в Network; после перезагрузки тема из API/localStorage
+- [ ] Рефералы: `GET .../referral-link` и `GET .../referrals` → 200 (или 404 до register)

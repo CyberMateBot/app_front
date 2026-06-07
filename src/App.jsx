@@ -44,8 +44,9 @@ import {
     getMyProfile,
     getMyPromptHistory,
     clearMyPromptHistory,
-    getMyReferralLink,
     getMyReferrals,
+    fetchReferralLink,
+    fetchReferrals,
     getMyWallet,
     normalizeProfileResponse,
     fetchTextModels,
@@ -345,7 +346,7 @@ const translations = {
         referralCopyButton: 'Копировать',
         referralCopied: 'Ссылка скопирована',
         referralEmpty: 'Пока нет активных рефералов.',
-        activeReferralsTitle: 'Активные рефералы',
+        activeReferralsTitle: 'Мои рефералы',
         walletPageTitle: 'Подписка',
         walletCurrentPlan: 'Текущий план',
         walletBalanceTotal: 'Баланс',
@@ -1110,7 +1111,7 @@ function App() {
             needWallet = (currentPage === 'wallet' || currentPage === 'profile')
                 && !pageDataLoadedRef.current.wallet
                 && !pageDataInFlightRef.current.wallet;
-            needReferrals = (currentPage === 'referrals' || currentPage === 'profile')
+            needReferrals = currentPage === 'profile'
                 && !pageDataLoadedRef.current.referrals
                 && !pageDataInFlightRef.current.referrals;
             needHistory = (currentPage === 'history' || currentPage === 'profile')
@@ -1165,12 +1166,12 @@ function App() {
                     getMyReferrals()
                         .then((data) => {
                             if (!isCancelled) {
-                                setReferralData(data ?? { items: [] });
+                                setReferralData(data ?? { referrals: [], total_count: 0 });
                             }
                         })
                         .catch((error) => {
                             if (!isCancelled) {
-                                setReferralData({ items: [] });
+                                setReferralData({ referrals: [], total_count: 0 });
                                 showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить рефералов.');
                             }
                         })
@@ -1235,24 +1236,36 @@ function App() {
 
         let isCancelled = false;
         setReferralLinkLoading(true);
+        setPageLoading((prev) => ({ ...prev, referrals: true }));
 
-        getMyReferralLink()
-            .then(({ referral_link: link }) => {
-                if (!isCancelled) {
-                    setReferralLink(link);
+        Promise.all([
+            fetchReferralLink(telegramUser.id),
+            fetchReferrals(telegramUser.id),
+        ])
+            .then(([linkResult, stats]) => {
+                if (isCancelled) {
+                    return;
                 }
+
+                setReferralLink(linkResult?.referral_link ?? '');
+                setReferralData(stats ?? { referrals: [], total_count: 0 });
+                pageDataLoadedRef.current.referrals = true;
             })
             .catch((error) => {
-                if (!isCancelled) {
-                    setReferralLink('');
-                    showAppNotice(
-                        error instanceof Error ? error.message : 'Не удалось загрузить реферальную ссылку.',
-                    );
+                if (isCancelled) {
+                    return;
                 }
+
+                setReferralLink('');
+                setReferralData({ referrals: [], total_count: 0 });
+                showAppNotice(
+                    error instanceof Error ? error.message : 'Не удалось загрузить реферальную программу.',
+                );
             })
             .finally(() => {
                 if (!isCancelled) {
                     setReferralLinkLoading(false);
+                    setPageLoading((prev) => ({ ...prev, referrals: false }));
                 }
             });
 
@@ -1279,14 +1292,41 @@ function App() {
         };
     }, [profile, telegramUser, walletData, text]);
     const referralItems = useMemo(() => {
-        const sourceItems = Array.isArray(referralData?.items) ? referralData.items : [];
+        const sourceItems = Array.isArray(referralData?.referrals)
+            ? referralData.referrals
+            : Array.isArray(referralData?.items)
+                ? referralData.items
+                : [];
 
-        return sourceItems.map((item, index) => ({
-            id: item.id ?? `referral-${index}`,
-            name: item.name || item.username || item.fullName || `${language === 'ru' ? 'Друг' : 'Friend'} ${index + 1}`,
-            reward: `+${item.earnings ?? item.reward ?? 0}`,
-        }));
+        return sourceItems.map((item, index) => {
+            const fullName = [item.first_name, item.last_name].filter(Boolean).join(' ').trim();
+
+            return {
+                id: item.id ?? item.telegram_id ?? `referral-${index}`,
+                name: item.name
+                    || fullName
+                    || (item.username ? `@${String(item.username).replace(/^@/, '')}` : '')
+                    || item.fullName
+                    || `${language === 'ru' ? 'Друг' : 'Friend'} ${index + 1}`,
+                reward: `+${item.bonus ?? item.earnings ?? item.reward ?? 0}`,
+            };
+        });
     }, [referralData, language]);
+
+    const referralsCount = useMemo(() => {
+        const total = Number(referralData?.total_count);
+
+        if (Number.isFinite(total) && total >= 0) {
+            return total;
+        }
+
+        return referralItems.length;
+    }, [referralData, referralItems.length]);
+
+    const referralBonusTotal = useMemo(() => referralItems.reduce((sum, item) => {
+        const reward = Number(String(item.reward).replace('+', ''));
+        return sum + (Number.isNaN(reward) ? 0 : reward);
+    }, 0), [referralItems]);
     const historyItems = useMemo(
         () => (Array.isArray(promptHistoryData?.items) ? promptHistoryData.items : []),
         [promptHistoryData],
@@ -2873,11 +2913,7 @@ function App() {
             ? Math.min(100, Math.round((usageUsed / usageLimit) * 100))
             : 0;
         const requestsCount = historyItems.length;
-        const referralsCount = referralItems.length;
-        const referralBonus = referralItems.reduce((sum, item) => {
-            const reward = Number(String(item.reward).replace('+', ''));
-            return sum + (Number.isNaN(reward) ? 0 : reward);
-        }, 0);
+        const referralBonus = referralBonusTotal;
         const subscriptionPlanName = userData.subscriptionPlanName;
         const subscriptionPlanId = userData.subscriptionPlanId;
         const subscriptionUntil = userData.subscriptionUntil;
@@ -3035,14 +3071,7 @@ function App() {
         );
     };
 
-    const renderReferralScreen = () => {
-        const referralsCount = referralItems.length;
-        const referralBonus = referralItems.reduce((sum, item) => {
-            const reward = Number(String(item.reward).replace('+', ''));
-            return sum + (Number.isNaN(reward) ? 0 : reward);
-        }, 0);
-
-        return (
+    const renderReferralScreen = () => (
             <section className="referral-screen referral-screen--concept">
                 {renderConceptPageHeader(text.referralProgramTitle, () => setCurrentPage('profile'))}
 
@@ -3058,7 +3087,7 @@ function App() {
                         </div>
                         <div className="referral-concept__stat">
                             <span className="referral-concept__stat-val referral-concept__stat-val--gold">
-                                +{formatNumber(referralBonus || 0)}
+                                +{formatNumber(referralBonusTotal || 0)}
                             </span>
                             <span className="referral-concept__stat-label">{text.referralStatEarned}</span>
                         </div>
@@ -3118,8 +3147,7 @@ function App() {
                     })}
                 </div>
             </section>
-        );
-    };
+    );
 
     const renderWalletScreen = () => {
         const cyberCoins = Number(walletData?.wallet?.balance ?? userData.balance ?? 0) || 0;

@@ -52,8 +52,30 @@
 ### `GET /v1/wallet/telegram/{telegramId}`
 Баланс и транзакции.
 
-### `GET /v1/referrals/telegram/{telegramId}`
-Реферальная программа.
+### `GET /v1/users/telegram/{telegramId}/referrals`
+Список приглашённых пользователей.
+
+```json
+{
+  "referrals": [
+    {
+      "id": "1",
+      "telegram_id": "987654321",
+      "username": "friend",
+      "first_name": "Alex",
+      "bonus": 300
+    }
+  ],
+  "total_count": 1
+}
+```
+
+`404` — профиль ещё не создан через `POST /v1/register` (показывать пустой список).
+
+Подробнее: [FRONTEND_REFERRAL_PAGE.md](./FRONTEND_REFERRAL_PAGE.md).
+
+### `GET /v1/referrals/telegram/{telegramId}` (legacy)
+Устаревший путь; используйте `/v1/users/telegram/{telegramId}/referrals`.
 
 ### `GET /v1/prompts/history/telegram/{telegramId}`
 История промтов.
