@@ -50,7 +50,13 @@ export const API_ENDPOINTS = {
         method: 'POST',
         path: '/v1/generate/image',
         when: 'Генерация изображения (Nano Banana)',
-        body: '{ telegramId, prompt, category: "image", model: "nano-banana"|"alice-ai-art", messages?: [{ role, content }] }',
+        body: '{ telegramId, prompt, category: "image", model: "nano-banana"|"flux-dev"|"alice-ai-art", messages?: [{ role, content }] }',
+    },
+    generateVideo: {
+        method: 'POST',
+        path: '/v1/generate/video',
+        when: 'Генерация видео (WaveSpeed / Kling)',
+        body: '{ telegramId, prompt, category: "video", model: "kling-v3-std"|"kling-v3-pro", aspect_ratio?: "16:9", duration?: 5 }',
     },
 };
 
@@ -60,11 +66,6 @@ export const API_ENDPOINTS_PLANNED = {
         method: 'GET',
         path: '/v1/models',
         when: 'Каталог — список доступных моделей с бэкенда',
-    },
-    generateVideo: {
-        method: 'POST',
-        path: '/v1/generate/video',
-        when: 'Генерация видео',
     },
     generateMusic: {
         method: 'POST',

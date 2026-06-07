@@ -1,4 +1,4 @@
-import { Image as ImageIcon, Palette } from 'lucide-react';
+import { Image as ImageIcon, Palette, Sparkles } from 'lucide-react';
 import { IMAGE_MODEL_IDS } from '../api/telegramApi.js';
 
 export const IMAGE_MODEL_DEFINITIONS = [
@@ -13,6 +13,18 @@ export const IMAGE_MODEL_DEFINITIONS = [
         badge: 'new',
         page: 'ai-image',
         backendModel: 'nano-banana',
+    },
+    {
+        id: 'flux-dev',
+        nameKey: 'modelFluxDevName',
+        subKey: 'modelFluxDevSub',
+        tab: 'photo',
+        categories: ['photo'],
+        accent: 'blue',
+        icon: Sparkles,
+        badge: 'new',
+        page: 'ai-image',
+        backendModel: 'flux-dev',
     },
     {
         id: 'alice-ai-art',

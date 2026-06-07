@@ -3,21 +3,29 @@ import { Bot, Brain, Sparkles, Zap } from 'lucide-react';
 export const TEXT_MODEL_STORAGE_KEY = 'cybermate-text-model-id';
 
 /** @deprecated legacy ids kept for history entries */
-export const LEGACY_TEXT_MODEL_IDS = ['gemini-flash', 'openai'];
+export const LEGACY_TEXT_MODEL_IDS = ['gemini-flash', 'openai', 'gemini'];
 
 const DISPLAY_TIER_ORDER = { lite: 0, pro: 1 };
 
 const MERGED_GROUPS = {
     'Open-weight GPT': { displayName: 'GPT OSS', defaultModelId: 'gpt-oss-20b' },
     Qwen: { displayName: 'Qwen', defaultModelId: 'qwen3.6-35b' },
+    Claude: { displayName: 'Claude', defaultModelId: 'claude-haiku-4.5' },
+    Gemini: { displayName: 'Gemini', defaultModelId: 'gemini-2.5-flash' },
 };
 
-/** UI tier for merged groups: Lite / Pro (Qwen 35B = Pro, 235B = Lite) */
+/** UI tier for merged groups: Lite / Pro */
 const MODEL_DISPLAY_TIER = {
     'gpt-oss-20b': 'lite',
     'gpt-oss-120b': 'pro',
     'qwen3-235b': 'lite',
     'qwen3.6-35b': 'pro',
+    'claude-haiku-4.5': 'lite',
+    'claude-sonnet-4.5': 'pro',
+    'claude-opus-4.7': 'pro',
+    'claude-opus-4.8': 'pro',
+    'gemini-2.5-flash': 'lite',
+    'gemini-2.5-pro': 'pro',
 };
 
 const MODELS_WITHOUT_BADGE = new Set(['yandexgpt', 'deepseek']);
@@ -26,6 +34,8 @@ const GROUP_ACCENTS = {
     Yandex: 'violet',
     'Open-weight GPT': 'blue',
     Qwen: 'teal',
+    Claude: 'orange',
+    Gemini: 'amber',
 };
 
 const MODEL_ACCENTS = {
@@ -35,6 +45,12 @@ const MODEL_ACCENTS = {
     'gpt-oss-120b': 'blue',
     'qwen3.6-35b': 'teal',
     'qwen3-235b': 'teal',
+    'claude-haiku-4.5': 'orange',
+    'claude-sonnet-4.5': 'orange',
+    'claude-opus-4.7': 'orange',
+    'claude-opus-4.8': 'orange',
+    'gemini-2.5-flash': 'amber',
+    'gemini-2.5-pro': 'amber',
 };
 
 const MODEL_ICONS = {
@@ -44,12 +60,20 @@ const MODEL_ICONS = {
     'gpt-oss-120b': Zap,
     'qwen3.6-35b': Brain,
     'qwen3-235b': Brain,
+    'claude-haiku-4.5': Sparkles,
+    'claude-sonnet-4.5': Sparkles,
+    'claude-opus-4.7': Sparkles,
+    'claude-opus-4.8': Sparkles,
+    'gemini-2.5-flash': Sparkles,
+    'gemini-2.5-pro': Sparkles,
 };
 
 const GROUP_ICONS = {
     Yandex: Bot,
     'Open-weight GPT': Zap,
     Qwen: Brain,
+    Claude: Sparkles,
+    Gemini: Sparkles,
 };
 
 const CATALOG_DESCRIPTIONS = {
@@ -58,17 +82,22 @@ const CATALOG_DESCRIPTIONS = {
         deepseek: 'Код, отладка, алгоритмы и пошаговые рассуждения',
         'Open-weight GPT': 'Тексты и идеи: черновики, правки и рассуждения',
         Qwen: 'Длинные документы, сводки и мультиязычный анализ',
+        Claude: 'Anthropic Claude: от быстрых ответов до максимального качества',
+        Gemini: 'Google Gemini: текст и изображения через Wavespeed',
     },
     en: {
         yandexgpt: 'Everyday questions, emails, and text in Russian',
         deepseek: 'Code, debugging, algorithms, and step-by-step reasoning',
         'Open-weight GPT': 'Writing and ideas: drafts, edits, and reasoning',
         Qwen: 'Long documents, summaries, and multilingual analysis',
+        Claude: 'Anthropic Claude: from fast replies to top-tier quality',
+        Gemini: 'Google Gemini: text and images via Wavespeed',
     },
 };
 
 const LEGACY_MODEL_ALIASES = {
-    'gemini-flash': 'yandexgpt',
+    'gemini-flash': 'gemini-2.5-flash',
+    gemini: 'gemini-2.5-flash',
     openai: 'yandexgpt',
     yandex: 'yandexgpt',
     default: 'yandexgpt',
@@ -171,7 +200,10 @@ export function textModelSupportsImage(model) {
     // Fallback: allow-list for known multimodal models (in case backend is not updated yet).
     // Keep this list small and explicit to avoid showing an upload UI that backend can't handle.
     const id = String(model.id || '').trim().toLowerCase();
-    return id === 'qwen3.6-35b';
+    return id === 'qwen3.6-35b'
+        || id === 'gemini-2.5-flash'
+        || id === 'gemini-2.5-pro'
+        || id === 'gemini';
 }
 
 export function getTierLabelForModel(model, text) {

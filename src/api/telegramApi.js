@@ -177,8 +177,9 @@ export async function clearMyPromptHistory() {
 }
 
 /** @deprecated use GET /v1/generate/models; kept for legacy history entries */
-export const LEGACY_TEXT_MODEL_IDS = ['gemini-flash', 'openai'];
-export const IMAGE_MODEL_IDS = ['nano-banana', 'alice-ai-art'];
+export const LEGACY_TEXT_MODEL_IDS = ['gemini-flash', 'openai', 'gemini'];
+export const IMAGE_MODEL_IDS = ['nano-banana', 'flux-dev', 'alice-ai-art'];
+export const VIDEO_MODEL_IDS = ['kling-v3-std', 'kling-v3-pro'];
 
 export async function fetchTextModels() {
     const res = await apiFetch('/v1/generate/models', {
@@ -361,6 +362,57 @@ export async function generateImage({ prompt, model = 'nano-banana', messages = 
         imageUrl,
         model: data?.model ?? normalizedModel,
         tokensUsed: data?.tokensUsed ?? data?.tokens ?? null,
+    };
+}
+
+export async function generateVideo({ prompt, model = 'kling-v3-std', aspectRatio, duration, sessionId }) {
+    const telegramId = getCurrentTelegramId();
+    const trimmedPrompt = prompt?.trim();
+    const normalizedModel = VIDEO_MODEL_IDS.includes(model) ? model : 'kling-v3-std';
+
+    if (!trimmedPrompt) {
+        throw new Error('Prompt is required.');
+    }
+
+    const body = {
+        telegramId: String(telegramId),
+        prompt: trimmedPrompt,
+        category: 'video',
+        model: normalizedModel,
+    };
+
+    if (aspectRatio?.trim()) {
+        body.aspect_ratio = aspectRatio.trim();
+    }
+
+    if (Number.isFinite(duration) && duration > 0) {
+        body.duration = duration;
+    }
+
+    const trimmedSessionId = sessionId?.trim();
+    if (trimmedSessionId) {
+        body.sessionId = trimmedSessionId;
+    }
+
+    const res = await apiFetch('/v1/generate/video', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to generate video.');
+    }
+
+    const payload = await res.json();
+    const data = payload?.data ?? payload;
+
+    return {
+        videoUrl: data?.videoUrl ?? data?.video_url ?? '',
+        model: data?.model ?? normalizedModel,
     };
 }
 

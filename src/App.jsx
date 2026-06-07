@@ -51,6 +51,7 @@ import {
     fetchTextModels,
     generateImage,
     generateText,
+    generateVideo,
     patchUserTheme,
     registerTelegramUser,
     savePromptHistory,
@@ -82,6 +83,10 @@ import {
     IMAGE_MODEL_DEFINITIONS,
     getImageModelDefinition,
 } from './config/aiModels.js';
+import {
+    VIDEO_MODEL_DEFINITIONS,
+    getVideoModelDefinition,
+} from './config/videoModels.js';
 import {
     buildCatalogTextTools,
     buildTextModelSelectorItems,
@@ -234,8 +239,14 @@ const translations = {
         modelDeepSeekSub: 'Мощная модель для текста и кода',
         modelNanoBananaName: 'Nano Banana',
         modelNanoBananaSub: 'Быстрые иллюстрации и картинки по тексту',
+        modelFluxDevName: 'FLUX Dev',
+        modelFluxDevSub: 'Качественные изображения через WaveSpeed',
         modelAliceAIArtName: 'Alice AI ART',
         modelAliceAIArtSub: 'Художественные изображения и иллюстрации от Yandex ART',
+        modelKlingStdName: 'Kling 3.0 Standard',
+        modelKlingStdSub: 'Быстрая генерация видео по тексту',
+        modelKlingProName: 'Kling 3.0 Pro',
+        modelKlingProSub: 'Высокое качество видео через WaveSpeed',
         imageGenerateTitle: 'Генерация фото',
         imagePromptLabel: 'Описание',
         imagePromptPlaceholder: 'Опишите изображение, которое нужно создать...',
@@ -245,6 +256,15 @@ const translations = {
         imageGenerateEmpty: 'Изображение не получено. Попробуйте другой промт.',
         imageGeneratedNote: 'Изображение создано.',
         imageContentPolicy: 'Модель отклонила запрос. Попробуйте другую формулировку без запрещённых тем.',
+        videoGenerateTitle: 'Генерация видео',
+        videoPromptLabel: 'Описание',
+        videoPromptPlaceholder: 'Опишите сцену, которую нужно создать...',
+        videoGenerateButton: 'Сгенерировать',
+        videoGenerating: 'Генерация видео...',
+        videoResultTitle: 'Результат',
+        videoGenerateEmpty: 'Видео не получено. Попробуйте другой промт.',
+        videoGeneratedNote: 'Видео создано.',
+        catalogSectionVideo: 'Генерация видео',
         chatTitle: 'AI Чат',
         chatEmpty: 'Напишите сообщение — модель ответит здесь.',
         chatPlaceholder: 'Сообщение...',
@@ -252,7 +272,7 @@ const translations = {
         chatStop: 'Остановить',
         chatAttachPhoto: 'Прикрепить фото',
         chatRemovePhoto: 'Убрать фото',
-        chatImageNeedsGeminiKey: 'Для фото нужен GEMINI_API_KEY на сервере (описание изображения).',
+        chatImageNeedsWavespeedKey: 'Для фото нужен WAVESPEED_API_KEY на сервере.',
         chatNewDialog: 'Новый диалог',
         chatGenerating: 'Generating',
         historyDeleteConfirm: 'Удалить всю историю промтов? Это действие нельзя отменить.',
@@ -464,8 +484,14 @@ const translations = {
         modelDeepSeekSub: 'Strong model for text and code',
         modelNanoBananaName: 'Nano Banana',
         modelNanoBananaSub: 'Quick illustrations and images from a text prompt',
+        modelFluxDevName: 'FLUX Dev',
+        modelFluxDevSub: 'High-quality images via WaveSpeed',
         modelAliceAIArtName: 'Alice AI ART',
         modelAliceAIArtSub: 'Artistic images and illustrations via Yandex ART',
+        modelKlingStdName: 'Kling 3.0 Standard',
+        modelKlingStdSub: 'Fast text-to-video generation',
+        modelKlingProName: 'Kling 3.0 Pro',
+        modelKlingProSub: 'High-quality video via WaveSpeed',
         imageGenerateTitle: 'Image generation',
         imagePromptLabel: 'Description',
         imagePromptPlaceholder: 'Describe the image you want to create...',
@@ -475,6 +501,15 @@ const translations = {
         imageGenerateEmpty: 'No image returned. Try a different prompt.',
         imageGeneratedNote: 'Image created.',
         imageContentPolicy: 'The model rejected this prompt. Try a different wording.',
+        videoGenerateTitle: 'Video generation',
+        videoPromptLabel: 'Description',
+        videoPromptPlaceholder: 'Describe the scene you want to create...',
+        videoGenerateButton: 'Generate',
+        videoGenerating: 'Generating video...',
+        videoResultTitle: 'Result',
+        videoGenerateEmpty: 'No video returned. Try a different prompt.',
+        videoGeneratedNote: 'Video created.',
+        catalogSectionVideo: 'Video generation',
         chatTitle: 'AI Chat',
         chatEmpty: 'Send a message — the model will reply here.',
         chatPlaceholder: 'Message...',
@@ -482,7 +517,7 @@ const translations = {
         chatStop: 'Stop',
         chatAttachPhoto: 'Attach photo',
         chatRemovePhoto: 'Remove photo',
-        chatImageNeedsGeminiKey: 'Image uploads require GEMINI_API_KEY on the server.',
+        chatImageNeedsWavespeedKey: 'Image uploads require WAVESPEED_API_KEY on the server.',
         chatNewDialog: 'New chat',
         chatGenerating: 'Generating',
         historyDeleteConfirm: 'Delete all prompt history? This cannot be undone.',
@@ -710,6 +745,7 @@ function App() {
     const [appNotice, setAppNotice] = useState(null);
     const [chatError, setChatError] = useState('');
     const [imageError, setImageError] = useState('');
+    const [videoError, setVideoError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [walletData, setWalletData] = useState(null);
     const [referralData, setReferralData] = useState(null);
@@ -733,11 +769,16 @@ function App() {
     const [imageSessionMessages, setImageSessionMessages] = useState([]);
     const [imageSessionId, setImageSessionId] = useState(() => createChatSessionId());
     const [generatedImageUrl, setGeneratedImageUrl] = useState('');
+    const [videoModel, setVideoModel] = useState('kling-v3-std');
+    const [videoPrompt, setVideoPrompt] = useState('');
+    const [generatedVideoUrl, setGeneratedVideoUrl] = useState('');
+    const [videoSessionId, setVideoSessionId] = useState(() => createChatSessionId());
     const [chatMessages, setChatMessages] = useState([]);
     const [chatTopicTitle, setChatTopicTitle] = useState('');
     const [chatSessionId, setChatSessionId] = useState(() => createChatSessionId());
     const [chatReturnPage, setChatReturnPage] = useState('catalog');
     const [imageReturnPage, setImageReturnPage] = useState('catalog');
+    const [videoReturnPage, setVideoReturnPage] = useState('catalog');
     const [historyReturnPage, setHistoryReturnPage] = useState('home');
     const [isGeneratingText, setIsGeneratingText] = useState(false);
     const [chatAttachment, setChatAttachment] = useState(null);
@@ -746,6 +787,7 @@ function App() {
     const chatPhotoInputRef = useRef(null);
     const pendingAssistantIdRef = useRef(null);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+    const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
     const [homeCategoryChip, setHomeCategoryChip] = useState('all');
     const [catalogTab, setCatalogTab] = useState('all');
     const [catalogSearch, setCatalogSearch] = useState('');
@@ -1191,13 +1233,13 @@ function App() {
     const walletTransactions = Array.isArray(walletData?.transactions) ? walletData.transactions : [];
     const activeNavKey = currentPage === 'settings' || currentPage === 'wallet' || currentPage === 'referrals'
         ? 'profile'
-        : currentPage === 'ai-chat' || currentPage === 'ai-image'
+        : currentPage === 'ai-chat' || currentPage === 'ai-image' || currentPage === 'ai-video'
             ? 'catalog'
             : ['home', 'catalog', 'history', 'profile'].includes(currentPage)
                 ? currentPage
                 : 'home';
 
-    const showBottomNav = !['ai-chat', 'ai-image', 'settings', 'wallet', 'referrals'].includes(currentPage);
+    const showBottomNav = !['ai-chat', 'ai-image', 'ai-video', 'settings', 'wallet', 'referrals'].includes(currentPage);
 
     const textModelSelectorItems = useMemo(
         () => buildTextModelSelectorItems(effectiveTextModels),
@@ -1214,6 +1256,11 @@ function App() {
             id: 'image-models',
             labelKey: 'catalogSectionPhoto',
             tools: IMAGE_MODEL_DEFINITIONS,
+        },
+        {
+            id: 'video-models',
+            labelKey: 'catalogSectionVideo',
+            tools: VIDEO_MODEL_DEFINITIONS,
         },
     ], [effectiveTextModels]);
 
@@ -1566,6 +1613,37 @@ function App() {
         setCurrentPage('ai-image');
     };
 
+    const startNewVideoSession = useCallback(() => {
+        setVideoSessionId(createChatSessionId());
+    }, []);
+
+    const handleVideoModelChange = (modelId) => {
+        setVideoModel(modelId);
+        startNewVideoSession();
+        setVideoPrompt('');
+        setGeneratedVideoUrl('');
+        setVideoError('');
+    };
+
+    const handleNewVideoDialog = () => {
+        startNewVideoSession();
+        setVideoPrompt('');
+        setGeneratedVideoUrl('');
+        setVideoError('');
+    };
+
+    const openAiVideo = (modelId, returnPage = currentPage) => {
+        if (modelId) {
+            setVideoModel(modelId);
+        }
+        startNewVideoSession();
+        setVideoPrompt('');
+        setGeneratedVideoUrl('');
+        setVideoReturnPage(returnPage);
+        setVideoError('');
+        setCurrentPage('ai-video');
+    };
+
     const handleCatalogToolClick = (tool) => {
         if (tool.locked) {
             return;
@@ -1573,6 +1651,11 @@ function App() {
 
         if (tool.page === 'ai-image') {
             openAiImage(tool.id, 'catalog');
+            return;
+        }
+
+        if (tool.page === 'ai-video') {
+            openAiVideo(tool.id, 'catalog');
             return;
         }
 
@@ -1644,6 +1727,57 @@ function App() {
             );
         } finally {
             setIsGeneratingImage(false);
+        }
+    };
+
+    const handleGenerateVideo = async () => {
+        const trimmedPrompt = videoPrompt.trim();
+
+        if (!trimmedPrompt) {
+            setVideoError(text.textPromptEmpty);
+            return;
+        }
+
+        try {
+            setIsGeneratingVideo(true);
+            setVideoError('');
+            setGeneratedVideoUrl('');
+            const response = await generateVideo({
+                prompt: trimmedPrompt,
+                model: videoModel,
+                sessionId: videoSessionId,
+            });
+            const videoUrl = response?.videoUrl?.trim() ?? '';
+
+            if (!videoUrl) {
+                setVideoError(text.videoGenerateEmpty);
+                return;
+            }
+
+            setVideoPrompt('');
+            setGeneratedVideoUrl(videoUrl);
+
+            try {
+                const historyResponse = await savePromptHistory({
+                    prompt: trimmedPrompt,
+                    category: videoModel,
+                });
+                const savedItem = historyResponse?.item;
+
+                if (savedItem) {
+                    setPromptHistoryData((prev) => ({
+                        items: [savedItem, ...(Array.isArray(prev?.items) ? prev.items : [])],
+                    }));
+                }
+            } catch {
+                // History save is optional.
+            }
+        } catch (error) {
+            setGeneratedVideoUrl('');
+            const message = error instanceof Error ? error.message : '';
+            setVideoError(message || 'Не удалось сгенерировать видео.');
+        } finally {
+            setIsGeneratingVideo(false);
         }
     };
 
@@ -1967,6 +2101,11 @@ function App() {
     const handleToolCardClick = (card) => {
         if (card.id === 'images') {
             openAiImage('nano-banana', 'home');
+            return;
+        }
+
+        if (card.id === 'video') {
+            openAiVideo('kling-v3-std', 'home');
             return;
         }
 
@@ -2428,6 +2567,103 @@ function App() {
                         <Send size={18} aria-hidden="true" />
                     </button>
                 </footer>
+            </section>
+        );
+    };
+
+    const renderAiVideoScreen = () => {
+        const activeModel = getVideoModelDefinition(videoModel);
+        const ActiveIcon = activeModel.icon;
+
+        return (
+            <section className="ai-image-screen ai-image-screen--concept" aria-label={text.videoGenerateTitle}>
+                <header className="ai-chat__header">
+                    <button
+                        type="button"
+                        className="ai-chat__back"
+                        aria-label={text.back}
+                        onClick={() => setCurrentPage(videoReturnPage)}
+                    >
+                        <ArrowLeft size={20} aria-hidden="true" />
+                    </button>
+                    <div className="ai-chat__header-main">
+                        <span className={`ai-chat__model-icon ai-chat__model-icon--${activeModel.accent}`}>
+                            <ActiveIcon size={16} aria-hidden="true" />
+                        </span>
+                        <div>
+                            <h1 className="ai-chat__title">{text[activeModel.nameKey]}</h1>
+                            <p className="ai-chat__subtitle">{text[activeModel.subKey]}</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        className="ai-chat__new"
+                        onClick={handleNewVideoDialog}
+                        disabled={isGeneratingVideo}
+                    >
+                        {text.chatNewDialog}
+                    </button>
+                </header>
+
+                <div className="ai-chat__models" role="tablist" aria-label={text.videoGenerateTitle}>
+                    {VIDEO_MODEL_DEFINITIONS.map((model) => {
+                        const ModelIcon = model.icon;
+                        const isActive = videoModel === model.id;
+
+                        return (
+                            <button
+                                key={model.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={isActive}
+                                className={`ai-chat__model-chip ai-chat__model-chip--${model.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
+                                onClick={() => handleVideoModelChange(model.id)}
+                                disabled={isGeneratingVideo}
+                            >
+                                <ModelIcon size={14} aria-hidden="true" />
+                                <span>{text[model.nameKey]}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="ai-image__body">
+                    <label className="ai-image__label" htmlFor="ai-video-prompt">{text.videoPromptLabel}</label>
+                    <textarea
+                        id="ai-video-prompt"
+                        className="ai-image__prompt"
+                        value={videoPrompt}
+                        onChange={(event) => setVideoPrompt(event.target.value)}
+                        placeholder={text.videoPromptPlaceholder}
+                        rows={4}
+                        disabled={isGeneratingVideo}
+                    />
+
+                    {videoError ? (
+                        <p className="ai-image__inline-error" role="alert">{videoError}</p>
+                    ) : null}
+
+                    <button
+                        type="button"
+                        className="ai-image__submit"
+                        onClick={handleGenerateVideo}
+                        disabled={isGeneratingVideo}
+                    >
+                        {isGeneratingVideo ? text.videoGenerating : text.videoGenerateButton}
+                    </button>
+
+                    {generatedVideoUrl ? (
+                        <section className="ai-image__result" aria-label={text.videoResultTitle}>
+                            <p className="ai-image__result-label">{text.videoResultTitle}</p>
+                            <video
+                                className="ai-image__preview"
+                                src={generatedVideoUrl}
+                                controls
+                                playsInline
+                            />
+                        </section>
+                    ) : null}
+                </div>
             </section>
         );
     };
@@ -3013,7 +3249,9 @@ function App() {
                                                 ? renderAiChatScreen()
                                                 : currentPage === 'ai-image'
                                                     ? renderAiImageScreen()
-                                                    : renderInfoScreen()}
+                                                    : currentPage === 'ai-video'
+                                                        ? renderAiVideoScreen()
+                                                        : renderInfoScreen()}
             </main>
 
             {showBottomNav ? (
