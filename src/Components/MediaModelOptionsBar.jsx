@@ -95,23 +95,113 @@ function OptionTextField({
     onChange,
     disabled,
     placeholder,
+    multiline = false,
 }) {
     if (label == null) {
         return null;
     }
 
+    const InputTag = multiline ? 'textarea' : 'input';
+
     return (
         <label className="media-options__group" htmlFor={id}>
             <span className="media-options__label">{label}</span>
-            <input
+            <InputTag
                 id={id}
-                type="text"
-                className="media-options__input"
+                type={multiline ? undefined : 'text'}
+                className={`media-options__input ${multiline ? 'media-options__input--area' : ''}`}
                 value={value ?? ''}
                 onChange={(event) => onChange(event.target.value)}
                 disabled={disabled}
                 placeholder={placeholder}
+                rows={multiline ? 2 : undefined}
             />
+        </label>
+    );
+}
+
+function OptionDurationRange({
+    idPrefix,
+    label,
+    value,
+    values,
+    presets,
+    onChange,
+    disabled,
+    formatValue,
+}) {
+    if (!values?.length) {
+        return null;
+    }
+
+    const min = values[0];
+    const max = values[values.length - 1];
+    const presetList = presets?.length ? presets : [5, 10];
+
+    return (
+        <div className="media-options__group">
+            <span className="media-options__label">{label}</span>
+            <div className="media-options__chips">
+                {presetList.map((preset) => {
+                    const isActive = Number(value) === preset;
+                    return (
+                        <button
+                            key={preset}
+                            type="button"
+                            className={`media-options__chip ${isActive ? 'media-options__chip--active' : ''}`}
+                            onClick={() => onChange(preset)}
+                            disabled={disabled}
+                            aria-pressed={isActive}
+                        >
+                            {formatValue ? formatValue(preset) : `${preset}s`}
+                        </button>
+                    );
+                })}
+            </div>
+            <div className="media-options__range-row">
+                <input
+                    id={`${idPrefix}-duration-range`}
+                    type="range"
+                    className="media-options__range"
+                    min={min}
+                    max={max}
+                    step={1}
+                    value={value ?? min}
+                    onChange={(event) => onChange(Number(event.target.value))}
+                    disabled={disabled}
+                />
+                <span className="media-options__range-value">
+                    {formatValue ? formatValue(Number(value ?? min)) : `${value ?? min}s`}
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function OptionCameraAxis({
+    id,
+    label,
+    value,
+    min,
+    max,
+    onChange,
+    disabled,
+}) {
+    return (
+        <label className="media-options__axis" htmlFor={id}>
+            <span className="media-options__axis-label">{label}</span>
+            <input
+                id={id}
+                type="range"
+                className="media-options__range media-options__range--axis"
+                min={min}
+                max={max}
+                step={1}
+                value={value ?? 0}
+                onChange={(event) => onChange(Number(event.target.value))}
+                disabled={disabled}
+            />
+            <span className="media-options__axis-value">{value ?? 0}</span>
         </label>
     );
 }
@@ -200,16 +290,80 @@ export default function MediaModelOptionsBar({
                 disabled={disabled}
                 formatValue={(item) => labels.qualityValues?.[item] ?? item}
             />
+            {options.duration?.presets ? (
+                <OptionDurationRange
+                    idPrefix={idPrefix}
+                    label={labels.duration}
+                    value={values.duration}
+                    values={options.duration.values}
+                    presets={options.duration.presets}
+                    onChange={(next) => onChange('duration', next)}
+                    disabled={disabled}
+                    formatValue={(seconds) => labels.durationValue?.(seconds) ?? `${seconds}s`}
+                />
+            ) : (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="duration"
+                    label={labels.duration}
+                    value={String(values.duration ?? '')}
+                    values={options.duration?.values?.map(String)}
+                    onChange={(next) => onChange('duration', Number(next))}
+                    disabled={disabled}
+                    formatValue={(item) => labels.durationValue?.(Number(item)) ?? `${item}s`}
+                />
+            )}
             <OptionChipGroup
                 idPrefix={idPrefix}
-                optionKey="duration"
-                label={labels.duration}
-                value={String(values.duration ?? '')}
-                values={options.duration?.values?.map(String)}
-                onChange={(next) => onChange('duration', Number(next))}
+                optionKey="quality-tier"
+                label={labels.qualityTier}
+                value={values.qualityTier}
+                values={options.qualityTier?.values}
+                onChange={(next) => onChange('qualityTier', next)}
                 disabled={disabled}
-                formatValue={(item) => labels.durationValue?.(Number(item)) ?? `${item}s`}
+                formatValue={(item) => labels.qualityTierValues?.[item] ?? item}
             />
+            {options.negativePrompt ? (
+                <OptionTextField
+                    id={`${idPrefix}-negative-prompt`}
+                    label={labels.negativePrompt}
+                    value={values.negativePrompt}
+                    onChange={(next) => onChange('negativePrompt', next)}
+                    disabled={disabled}
+                    placeholder={labels.negativePromptPlaceholder}
+                    multiline
+                />
+            ) : null}
+            <OptionChipGroup
+                idPrefix={idPrefix}
+                optionKey="camera-movement"
+                label={labels.cameraMovement}
+                value={values.cameraMovement}
+                values={options.cameraMovement?.values}
+                onChange={(next) => onChange('cameraMovement', next)}
+                disabled={disabled}
+                formatValue={(item) => labels.cameraMovementValues?.[item] ?? item}
+            />
+            {options.cameraAxes && values.cameraMovement === 'simple' ? (
+                <div className="media-options__group media-options__group--camera">
+                    <span className="media-options__label">{labels.cameraAxes}</span>
+                    <p className="media-options__hint">{labels.cameraAxesHint}</p>
+                    <div className="media-options__axes">
+                        {options.cameraAxes.keys.map((axisKey) => (
+                            <OptionCameraAxis
+                                key={axisKey}
+                                id={`${idPrefix}-camera-${axisKey}`}
+                                label={labels.cameraAxisValues?.[axisKey] ?? axisKey}
+                                value={values[`camera${axisKey.charAt(0).toUpperCase()}${axisKey.slice(1)}`]}
+                                min={options.cameraAxes.min}
+                                max={options.cameraAxes.max}
+                                onChange={(next) => onChange(`camera${axisKey.charAt(0).toUpperCase()}${axisKey.slice(1)}`, next)}
+                                disabled={disabled}
+                            />
+                        ))}
+                    </div>
+                </div>
+            ) : null}
             <OptionChipGroup
                 idPrefix={idPrefix}
                 optionKey="output-format"
@@ -220,6 +374,17 @@ export default function MediaModelOptionsBar({
                 disabled={disabled}
                 formatValue={formatOutputFormatLabel}
             />
+            {options.sound ? (
+                <OptionToggleChip
+                    id={`${idPrefix}-sound`}
+                    label={labels.sound}
+                    checked={Boolean(values.sound)}
+                    onChange={(next) => onChange('sound', next)}
+                    disabled={disabled}
+                    onLabel={labels.toggleOn}
+                    offLabel={labels.toggleOff}
+                />
+            ) : null}
             {options.generateAudio ? (
                 <OptionToggleChip
                     id={`${idPrefix}-generate-audio`}

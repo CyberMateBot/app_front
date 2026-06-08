@@ -57,18 +57,33 @@ export const IMAGE_MODEL_CAPABILITIES = {
 
 const SEEDANCE_V15_ASPECT = ['16:9', '9:16', '4:3', '1:1', '3:4', '21:9'];
 const SEEDANCE_V2_ASPECT = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9'];
+const KLING_DURATIONS = Array.from({ length: 13 }, (_, index) => index + 3);
+const KLING_CAMERA_MOVEMENTS = [
+    'auto', 'simple', 'down_back', 'forward_up', 'right_turn_forward', 'left_turn_forward',
+];
+const KLING_CAMERA_AXES = ['horizontal', 'vertical', 'pan', 'tilt', 'roll', 'zoom'];
+
+const KLING_BASE_OPTIONS = {
+    aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+    duration: { values: KLING_DURATIONS, default: 5, presets: [5, 10] },
+    qualityTier: { values: ['std', 'pro'] },
+    negativePrompt: { default: '' },
+    cameraMovement: { values: KLING_CAMERA_MOVEMENTS, default: 'auto' },
+    cameraAxes: { keys: KLING_CAMERA_AXES, min: -10, max: 10, default: 0 },
+};
 
 export const VIDEO_MODEL_CAPABILITIES = {
     'kling-v3-std': {
         options: {
-            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
-            duration: { values: [5, 10], default: 5 },
+            ...KLING_BASE_OPTIONS,
+            qualityTier: { values: ['std', 'pro'], default: 'std' },
         },
     },
     'kling-v3-pro': {
         options: {
-            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
-            duration: { values: [5, 10], default: 5 },
+            ...KLING_BASE_OPTIONS,
+            qualityTier: { values: ['std', 'pro'], default: 'pro' },
+            sound: { default: false },
         },
     },
     'seedance-v1-pro-i2v': {
@@ -155,6 +170,26 @@ function buildDefaults(capabilities) {
     if (options.turboMode) {
         defaults.turboMode = options.turboMode.default;
     }
+    if (options.qualityTier) {
+        defaults.qualityTier = options.qualityTier.default;
+    }
+    if (options.negativePrompt) {
+        defaults.negativePrompt = options.negativePrompt.default ?? '';
+    }
+    if (options.cameraMovement) {
+        defaults.cameraMovement = options.cameraMovement.default ?? 'auto';
+    }
+    if (options.cameraAxes) {
+        defaults.cameraHorizontal = options.cameraAxes.default ?? 0;
+        defaults.cameraVertical = options.cameraAxes.default ?? 0;
+        defaults.cameraPan = options.cameraAxes.default ?? 0;
+        defaults.cameraTilt = options.cameraAxes.default ?? 0;
+        defaults.cameraRoll = options.cameraAxes.default ?? 0;
+        defaults.cameraZoom = options.cameraAxes.default ?? 0;
+    }
+    if (options.sound) {
+        defaults.sound = options.sound.default ?? false;
+    }
     if (options.language) {
         defaults.language = options.language.default;
     }
@@ -199,6 +234,10 @@ export const AUDIO_MODEL_CAPABILITIES = {
 
 export function getVideoModelCapabilities(modelId) {
     return VIDEO_MODEL_CAPABILITIES[modelId] ?? { options: {} };
+}
+
+export function videoModelIsKling(modelId) {
+    return String(modelId || '').startsWith('kling-');
 }
 
 export function getAudioModelCapabilities(modelId) {

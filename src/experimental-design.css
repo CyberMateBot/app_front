@@ -46,49 +46,6 @@
   background: #07080f;
 }
 
-.app-shell__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.app-shell__video-wrap {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-
-.app-shell__video {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  min-width: 100%;
-  min-height: 100%;
-  width: auto;
-  height: auto;
-  transform: translate3d(-50%, -50%, 0);
-  object-fit: cover;
-  opacity: 1;
-  filter: contrast(1.03) saturate(1.06);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-.app-shell__video-overlay {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(7, 8, 15, 0.06) 0%, rgba(7, 8, 15, 0.22) 100%),
-    radial-gradient(ellipse at 20% 0%, rgba(90, 70, 255, 0.05), transparent 55%),
-    radial-gradient(ellipse at 80% 100%, rgba(0, 180, 255, 0.04), transparent 50%);
-}
-
-:root[data-theme='light'] .app-shell__backdrop {
-  display: none;
-}
-
 .app-shell__orbs {
   position: fixed;
   inset: 0;
@@ -193,10 +150,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell__backdrop {
-    display: none;
-  }
-
   .app-shell__orb--1,
   .app-shell__orb--2,
   .app-shell__orb--3 {
@@ -232,7 +185,8 @@
 :root:not([data-theme='light']) .ai-chat__tier-chip:not(.ai-chat__tier-chip--active),
 :root:not([data-theme='light']) .ai-chat__attach,
 :root:not([data-theme='light']) .ai-chat__input,
-:root:not([data-theme='light']) .ai-image__prompt {
+:root:not([data-theme='light']) .ai-image__prompt,
+:root:not([data-theme='light']) .ai-video__prompt {
   backdrop-filter: var(--cm-glass-blur);
   -webkit-backdrop-filter: var(--cm-glass-blur);
 }

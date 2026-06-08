@@ -82,6 +82,8 @@ import {
 import {
     getLastSessionSourceImageUrl,
     getLastSessionVideoUrl,
+    klingModelIdForQualityTier,
+    klingQualityTierForModel,
     videoModelRequiresImage,
     videoModelRequiresVideo,
 } from './lib/videoModels.js';
@@ -374,6 +376,27 @@ const translations = {
         mediaOptionGenerateAudio: 'Генерировать аудио',
         mediaOptionCameraFixed: 'Фиксировать камеру',
         mediaOptionTurboMode: 'Быстрое редактирование (Turbo)',
+        mediaOptionNegativePrompt: 'Негативный промпт',
+        mediaNegativePromptPlaceholder: 'Чего избегать: размытие, искажения...',
+        mediaOptionQualityTier: 'Качество',
+        mediaQualityTierStd: 'Стандартное',
+        mediaQualityTierPro: 'Профессиональное',
+        mediaOptionSound: 'Генерировать звук',
+        mediaOptionCameraMovement: 'Движение камеры',
+        mediaCameraMovementAuto: 'Авто',
+        mediaCameraMovementSimple: 'Простое',
+        mediaCameraMovementDownBack: 'Вниз-назад',
+        mediaCameraMovementForwardUp: 'Вперёд-вверх',
+        mediaCameraMovementRightTurn: 'Поворот вправо',
+        mediaCameraMovementLeftTurn: 'Поворот влево',
+        mediaOptionCameraAxes: 'Управление камерой',
+        mediaCameraAxesHint: 'Для «Простого» режима — только одна ось может быть ненулевой',
+        mediaCameraAxisHorizontal: 'Горизонталь',
+        mediaCameraAxisVertical: 'Вертикаль',
+        mediaCameraAxisPan: 'Панорамирование',
+        mediaCameraAxisTilt: 'Наклон',
+        mediaCameraAxisRoll: 'Вращение',
+        mediaCameraAxisZoom: 'Зум',
         videoEditTurboHint: '720p и 1080p автоматически используют Turbo. 480p — только стандартная модель.',
         videoGenerateTitle: 'Генерация видео',
         videoPromptLabel: 'Описание',
@@ -698,6 +721,27 @@ const translations = {
         mediaOptionGenerateAudio: 'Generate audio',
         mediaOptionCameraFixed: 'Fixed camera',
         mediaOptionTurboMode: 'Fast editing (Turbo)',
+        mediaOptionNegativePrompt: 'Negative prompt',
+        mediaNegativePromptPlaceholder: 'What to avoid: blur, distortion...',
+        mediaOptionQualityTier: 'Quality',
+        mediaQualityTierStd: 'Standard',
+        mediaQualityTierPro: 'Professional',
+        mediaOptionSound: 'Generate sound',
+        mediaOptionCameraMovement: 'Camera movement',
+        mediaCameraMovementAuto: 'Auto',
+        mediaCameraMovementSimple: 'Simple',
+        mediaCameraMovementDownBack: 'Down-back',
+        mediaCameraMovementForwardUp: 'Forward-up',
+        mediaCameraMovementRightTurn: 'Turn right',
+        mediaCameraMovementLeftTurn: 'Turn left',
+        mediaOptionCameraAxes: 'Camera control',
+        mediaCameraAxesHint: 'In Simple mode only one axis may be non-zero',
+        mediaCameraAxisHorizontal: 'Horizontal',
+        mediaCameraAxisVertical: 'Vertical',
+        mediaCameraAxisPan: 'Pan',
+        mediaCameraAxisTilt: 'Tilt',
+        mediaCameraAxisRoll: 'Roll',
+        mediaCameraAxisZoom: 'Zoom',
         videoEditTurboHint: '720p and 1080p use Turbo automatically. 480p uses the standard model only.',
         videoGenerateTitle: 'Video generation',
         videoPromptLabel: 'Description',
@@ -995,6 +1039,16 @@ function App() {
     const [videoGenerateAudio, setVideoGenerateAudio] = useState(initialVideoDefaults.generateAudio ?? false);
     const [videoCameraFixed, setVideoCameraFixed] = useState(initialVideoDefaults.cameraFixed ?? false);
     const [videoTurboMode, setVideoTurboMode] = useState(Boolean(initialVideoDefaults.turboMode));
+    const [videoNegativePrompt, setVideoNegativePrompt] = useState(initialVideoDefaults.negativePrompt ?? '');
+    const [videoQualityTier, setVideoQualityTier] = useState(initialVideoDefaults.qualityTier ?? 'std');
+    const [videoCameraMovement, setVideoCameraMovement] = useState(initialVideoDefaults.cameraMovement ?? 'auto');
+    const [videoCameraHorizontal, setVideoCameraHorizontal] = useState(0);
+    const [videoCameraVertical, setVideoCameraVertical] = useState(0);
+    const [videoCameraPan, setVideoCameraPan] = useState(0);
+    const [videoCameraTilt, setVideoCameraTilt] = useState(0);
+    const [videoCameraRoll, setVideoCameraRoll] = useState(0);
+    const [videoCameraZoom, setVideoCameraZoom] = useState(0);
+    const [videoSound, setVideoSound] = useState(Boolean(initialVideoDefaults.sound));
     const [videoSourceImageUrl, setVideoSourceImageUrl] = useState('');
     const [videoSourceVideoUrl, setVideoSourceVideoUrl] = useState('');
     const [generatedVideoUrl, setGeneratedVideoUrl] = useState('');
@@ -1024,7 +1078,6 @@ function App() {
     const imagePhotoInputRef = useRef(null);
     const audioFileInputRef = useRef(null);
     const pendingAssistantIdRef = useRef(null);
-    const backgroundVideoRef = useRef(null);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
     const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
     const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
@@ -1062,50 +1115,6 @@ function App() {
 
         return () => window.clearTimeout(timer);
     }, [appNotice]);
-
-    useEffect(() => {
-        const video = backgroundVideoRef.current;
-
-        if (!video) {
-            return undefined;
-        }
-
-        const BACKGROUND_VIDEO_PLAYBACK_RATE = 0.38;
-
-        video.muted = true;
-        video.defaultMuted = true;
-        video.playbackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
-
-        const applyPlaybackRate = () => {
-            video.playbackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
-        };
-
-        const playVideo = () => {
-            applyPlaybackRate();
-            const promise = video.play();
-
-            if (promise && typeof promise.catch === 'function') {
-                promise.catch(() => {});
-            }
-        };
-
-        applyPlaybackRate();
-        playVideo();
-        video.addEventListener('loadedmetadata', applyPlaybackRate);
-
-        const handleVisibilityChange = () => {
-            if (!document.hidden) {
-                playVideo();
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            video.removeEventListener('loadedmetadata', applyPlaybackRate);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -2136,6 +2145,16 @@ function App() {
         setVideoGenerateAudio(Boolean(defaults.generateAudio));
         setVideoCameraFixed(Boolean(defaults.cameraFixed));
         setVideoTurboMode(Boolean(defaults.turboMode));
+        setVideoNegativePrompt(defaults.negativePrompt ?? '');
+        setVideoQualityTier(defaults.qualityTier ?? klingQualityTierForModel(modelId));
+        setVideoCameraMovement(defaults.cameraMovement ?? 'auto');
+        setVideoCameraHorizontal(0);
+        setVideoCameraVertical(0);
+        setVideoCameraPan(0);
+        setVideoCameraTilt(0);
+        setVideoCameraRoll(0);
+        setVideoCameraZoom(0);
+        setVideoSound(Boolean(defaults.sound));
     }, []);
 
     const applyAudioModelOptions = useCallback((modelId) => {
@@ -2165,6 +2184,43 @@ function App() {
         }
     };
 
+    const resetVideoCameraAxes = useCallback(() => {
+        setVideoCameraHorizontal(0);
+        setVideoCameraVertical(0);
+        setVideoCameraPan(0);
+        setVideoCameraTilt(0);
+        setVideoCameraRoll(0);
+        setVideoCameraZoom(0);
+    }, []);
+
+    const handleVideoCameraAxisChange = (axis, value) => {
+        const next = Number(value);
+        const clamped = Math.max(-10, Math.min(10, next));
+        resetVideoCameraAxes();
+        switch (axis) {
+            case 'cameraHorizontal':
+                setVideoCameraHorizontal(clamped);
+                break;
+            case 'cameraVertical':
+                setVideoCameraVertical(clamped);
+                break;
+            case 'cameraPan':
+                setVideoCameraPan(clamped);
+                break;
+            case 'cameraTilt':
+                setVideoCameraTilt(clamped);
+                break;
+            case 'cameraRoll':
+                setVideoCameraRoll(clamped);
+                break;
+            case 'cameraZoom':
+                setVideoCameraZoom(clamped);
+                break;
+            default:
+                break;
+        }
+    };
+
     const handleVideoOptionChange = (key, value) => {
         switch (key) {
             case 'aspectRatio':
@@ -2178,6 +2234,35 @@ function App() {
                 if (value === '480p') {
                     setVideoTurboMode(false);
                 }
+                break;
+            case 'qualityTier': {
+                const tier = value === 'pro' ? 'pro' : 'std';
+                const nextModelId = klingModelIdForQualityTier(tier);
+                setVideoQualityTier(tier);
+                if (nextModelId !== videoModel) {
+                    setVideoModel(nextModelId);
+                }
+                break;
+            }
+            case 'negativePrompt':
+                setVideoNegativePrompt(value);
+                break;
+            case 'cameraMovement':
+                setVideoCameraMovement(value);
+                if (value !== 'simple') {
+                    resetVideoCameraAxes();
+                }
+                break;
+            case 'cameraHorizontal':
+            case 'cameraVertical':
+            case 'cameraPan':
+            case 'cameraTilt':
+            case 'cameraRoll':
+            case 'cameraZoom':
+                handleVideoCameraAxisChange(key, value);
+                break;
+            case 'sound':
+                setVideoSound(Boolean(value));
                 break;
             case 'generateAudio':
                 setVideoGenerateAudio(Boolean(value));
@@ -2549,6 +2634,25 @@ function App() {
             setIsGeneratingVideo(true);
             setVideoError('');
             setGeneratedVideoUrl('');
+            const videoCapabilities = getVideoModelCapabilities(videoModel);
+            const cameraControl = videoCapabilities.options?.cameraMovement
+                && videoCameraMovement
+                && videoCameraMovement !== 'auto'
+                ? {
+                    type: videoCameraMovement,
+                    config: videoCameraMovement === 'simple'
+                        ? {
+                            horizontal: videoCameraHorizontal,
+                            vertical: videoCameraVertical,
+                            pan: videoCameraPan,
+                            tilt: videoCameraTilt,
+                            roll: videoCameraRoll,
+                            zoom: videoCameraZoom,
+                        }
+                        : undefined,
+                }
+                : undefined;
+
             const response = await generateVideo({
                 prompt: trimmedPrompt,
                 model: videoModel,
@@ -2557,16 +2661,21 @@ function App() {
                 aspectRatio: videoAspectRatio || undefined,
                 duration: videoDuration,
                 resolution: videoResolution || undefined,
+                negativePrompt: videoCapabilities.options?.negativePrompt
+                    ? (videoNegativePrompt.trim() || undefined)
+                    : undefined,
                 sourceImageUrl: resolvedSourceImageUrl || undefined,
                 sourceVideoUrl: resolvedSourceVideoUrl || undefined,
-                generateAudio: getVideoModelCapabilities(videoModel).options?.generateAudio
+                sound: videoCapabilities.options?.sound ? videoSound : undefined,
+                cameraControl,
+                generateAudio: videoCapabilities.options?.generateAudio
                     ? videoGenerateAudio
                     : undefined,
-                cameraFixed: getVideoModelCapabilities(videoModel).options?.cameraFixed
+                cameraFixed: videoCapabilities.options?.cameraFixed
                     ? videoCameraFixed
                     : undefined,
                 turboMode: (
-                    getVideoModelCapabilities(videoModel).options?.turboMode
+                    videoCapabilities.options?.turboMode
                     && videoTurboMode
                 ) ? true : undefined,
             });
@@ -3712,12 +3821,23 @@ function App() {
                     </div>
                 ) : null}
 
+                <div className="ai-video__main">
                 <MediaModelOptionsBar
                     capabilities={getVideoModelCapabilities(videoModel)}
                     values={{
                         aspectRatio: videoAspectRatio,
                         duration: videoDuration,
                         resolution: videoResolution,
+                        qualityTier: videoQualityTier,
+                        negativePrompt: videoNegativePrompt,
+                        cameraMovement: videoCameraMovement,
+                        cameraHorizontal: videoCameraHorizontal,
+                        cameraVertical: videoCameraVertical,
+                        cameraPan: videoCameraPan,
+                        cameraTilt: videoCameraTilt,
+                        cameraRoll: videoCameraRoll,
+                        cameraZoom: videoCameraZoom,
+                        sound: videoSound,
                         generateAudio: videoGenerateAudio,
                         cameraFixed: videoCameraFixed,
                         turboMode: videoTurboMode,
@@ -3728,6 +3848,33 @@ function App() {
                         aspectRatio: text.mediaOptionAspectRatio,
                         resolution: text.mediaOptionResolution,
                         duration: text.mediaOptionDuration,
+                        qualityTier: text.mediaOptionQualityTier,
+                        qualityTierValues: {
+                            std: text.mediaQualityTierStd,
+                            pro: text.mediaQualityTierPro,
+                        },
+                        negativePrompt: text.mediaOptionNegativePrompt,
+                        negativePromptPlaceholder: text.mediaNegativePromptPlaceholder,
+                        cameraMovement: text.mediaOptionCameraMovement,
+                        cameraMovementValues: {
+                            auto: text.mediaCameraMovementAuto,
+                            simple: text.mediaCameraMovementSimple,
+                            down_back: text.mediaCameraMovementDownBack,
+                            forward_up: text.mediaCameraMovementForwardUp,
+                            right_turn_forward: text.mediaCameraMovementRightTurn,
+                            left_turn_forward: text.mediaCameraMovementLeftTurn,
+                        },
+                        cameraAxes: text.mediaOptionCameraAxes,
+                        cameraAxesHint: text.mediaCameraAxesHint,
+                        cameraAxisValues: {
+                            horizontal: text.mediaCameraAxisHorizontal,
+                            vertical: text.mediaCameraAxisVertical,
+                            pan: text.mediaCameraAxisPan,
+                            tilt: text.mediaCameraAxisTilt,
+                            roll: text.mediaCameraAxisRoll,
+                            zoom: text.mediaCameraAxisZoom,
+                        },
+                        sound: text.mediaOptionSound,
                         generateAudio: text.mediaOptionGenerateAudio,
                         cameraFixed: text.mediaOptionCameraFixed,
                         turboMode: text.mediaOptionTurboMode,
@@ -3779,33 +3926,8 @@ function App() {
                     </p>
                 ) : null}
 
-                <div className="ai-image__body">
-                    <label className="ai-image__label" htmlFor="ai-video-prompt">{text.videoPromptLabel}</label>
-                    <textarea
-                        id="ai-video-prompt"
-                        className="ai-image__prompt"
-                        value={videoPrompt}
-                        onChange={(event) => setVideoPrompt(event.target.value)}
-                        placeholder={promptPlaceholder}
-                        rows={4}
-                        disabled={isGeneratingVideo}
-                    />
-
-                    {videoError ? (
-                        <p className="ai-image__inline-error" role="alert">{videoError}</p>
-                    ) : null}
-
-                    <button
-                        type="button"
-                        className="ai-image__submit"
-                        onClick={handleGenerateVideo}
-                        disabled={isGeneratingVideo}
-                    >
-                        {isGeneratingVideo ? text.videoGenerating : text.videoGenerateButton}
-                    </button>
-
                     {generatedVideoUrl ? (
-                        <section className="ai-image__result" aria-label={text.videoResultTitle}>
+                        <section className="ai-image__result ai-video__result" aria-label={text.videoResultTitle}>
                             <p className="ai-image__result-label">{text.videoResultTitle}</p>
                             <video
                                 className="ai-image__preview"
@@ -3816,6 +3938,34 @@ function App() {
                         </section>
                     ) : null}
                 </div>
+
+                <footer className="ai-video__composer">
+                    <div className="ai-video__composer-field">
+                        <label className="ai-video__label" htmlFor="ai-video-prompt">{text.videoPromptLabel}</label>
+                        <textarea
+                            id="ai-video-prompt"
+                            className="ai-video__prompt"
+                            value={videoPrompt}
+                            onChange={(event) => setVideoPrompt(event.target.value)}
+                            placeholder={promptPlaceholder}
+                            rows={3}
+                            disabled={isGeneratingVideo}
+                        />
+                    </div>
+
+                    {videoError ? (
+                        <p className="ai-chat__inline-error" role="alert">{videoError}</p>
+                    ) : null}
+
+                    <button
+                        type="button"
+                        className="ai-video__submit"
+                        onClick={handleGenerateVideo}
+                        disabled={isGeneratingVideo}
+                    >
+                        {isGeneratingVideo ? text.videoGenerating : text.videoGenerateButton}
+                    </button>
+                </footer>
             </section>
         );
     };
@@ -4570,22 +4720,6 @@ function App() {
 
     return (
         <div className="app-shell" data-page={currentPage}>
-            <div className="app-shell__backdrop" aria-hidden="true">
-                <div className="app-shell__video-wrap">
-                    <video
-                        ref={backgroundVideoRef}
-                        className="app-shell__video"
-                        src="/background/app-bg.mp4"
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="auto"
-                        tabIndex={-1}
-                    />
-                </div>
-                <div className="app-shell__video-overlay" />
-            </div>
             <div className="app-shell__orbs" aria-hidden="true">
                 <span className="app-shell__orb app-shell__orb--1" />
                 <span className="app-shell__orb app-shell__orb--2" />

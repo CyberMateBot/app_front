@@ -49,3 +49,11 @@ export function videoModelRequiresVideo(modelId) {
 export function videoModelSupportsEdit(modelId) {
     return videoModelRequiresVideo(modelId);
 }
+
+export function klingModelIdForQualityTier(tier) {
+    return tier === 'pro' ? 'kling-v3-pro' : 'kling-v3-std';
+}
+
+export function klingQualityTierForModel(modelId) {
+    return modelId === 'kling-v3-pro' ? 'pro' : 'std';
+}

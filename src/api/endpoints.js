@@ -56,7 +56,7 @@ export const API_ENDPOINTS = {
         method: 'POST',
         path: '/v1/generate/video',
         when: 'Генерация видео (WaveSpeed / Kling)',
-        body: '{ telegramId, prompt, category: "video", model: "kling-v3-std"|"kling-v3-pro"|"seedance-*", aspect_ratio?, duration?, resolution?: "720p"|"1080p", sourceImageUrl?, sourceVideoUrl?, generate_audio?, camera_fixed?, messages?: [{ role, content }] }',
+        body: '{ telegramId, prompt, category: "video", model: "kling-v3-std"|"kling-v3-pro"|"seedance-*", aspect_ratio?, duration?: 3-15, negative_prompt?, sound?, camera_control?: { type, config? }, resolution?: "720p"|"1080p", sourceImageUrl?, sourceVideoUrl?, generate_audio?, camera_fixed?, messages?: [{ role, content }] }',
     },
     generateAudio: {
         method: 'POST',

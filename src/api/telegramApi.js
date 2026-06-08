@@ -438,8 +438,11 @@ export async function generateVideo({
     aspectRatio,
     duration,
     resolution,
+    negativePrompt,
     sourceImageUrl,
     sourceVideoUrl,
+    sound,
+    cameraControl,
     generateAudio,
     cameraFixed,
     turboMode,
@@ -487,6 +490,21 @@ export async function generateVideo({
 
     if (resolution?.trim()) {
         body.resolution = resolution.trim();
+    }
+
+    if (negativePrompt?.trim()) {
+        body.negative_prompt = negativePrompt.trim();
+    }
+
+    if (typeof sound === 'boolean') {
+        body.sound = sound;
+    }
+
+    if (cameraControl?.type) {
+        body.camera_control = {
+            type: cameraControl.type,
+            ...(cameraControl.config ? { config: cameraControl.config } : {}),
+        };
     }
 
     const trimmedSourceImage = sourceImageUrl?.trim();
