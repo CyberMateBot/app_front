@@ -59,8 +59,8 @@ html {
 }
 
 html, body {
-  min-height: var(--app-height);
-  height: var(--app-height);
+  min-height: max(var(--app-height, 100dvh), 100dvh);
+  height: max(var(--app-height, 100dvh), 100dvh);
   width: 100%;
   max-width: 100%;
   background-color: var(--bg-color);
@@ -73,8 +73,8 @@ html, body {
 }
 
 #root {
-  min-height: var(--app-height);
-  height: var(--app-height);
+  min-height: max(var(--app-height, 100dvh), 100dvh);
+  height: max(var(--app-height, 100dvh), 100dvh);
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;

@@ -43,8 +43,28 @@
 }
 
 :root:not([data-theme='light']) .app-shell {
-  background: #07080f;
+  background-color: #07080f;
+  background-image: radial-gradient(
+    ellipse 120% 80% at 50% -20%,
+    rgba(90, 70, 255, 0.07) 0%,
+    transparent 55%
+  );
+  background-size: 100% 100%, 200% 200%;
+  background-position: 0% 0%, 50% 0%;
+  animation: app-shell-dark-glow 180s ease-in-out infinite;
 }
+
+@keyframes app-shell-dark-glow {
+  0%,
+  100% {
+    background-position: 0% 0%, 50% 0%;
+  }
+
+  50% {
+    background-position: 0% 0%, 50% 28%;
+  }
+}
+
 
 .app-shell__orbs {
   position: fixed;
@@ -67,7 +87,8 @@
   height: 220px;
   background: rgba(90, 70, 255, 0.2);
   filter: blur(50px);
-  animation: app-orb-float-1 78s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+  will-change: transform, opacity;
+  animation: app-orb-float-1 140s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
 .app-shell__orb--2 {
@@ -77,8 +98,9 @@
   height: 180px;
   background: rgba(0, 180, 255, 0.12);
   filter: blur(40px);
-  animation: app-orb-float-2 92s cubic-bezier(0.42, 0, 0.58, 1) infinite;
-  animation-delay: -24s;
+  will-change: transform, opacity;
+  animation: app-orb-float-2 165s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  animation-delay: -48s;
 }
 
 .app-shell__orb--3 {
@@ -88,72 +110,122 @@
   height: 140px;
   background: rgba(180, 60, 255, 0.1);
   filter: blur(35px);
-  animation: app-orb-float-3 84s cubic-bezier(0.42, 0, 0.58, 1) infinite;
-  animation-delay: -36s;
+  will-change: transform, opacity;
+  animation: app-orb-float-3 155s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  animation-delay: -72s;
+}
+
+:root[data-theme='light'] .app-shell__orb--1 {
+  background: rgba(90, 70, 255, 0.07);
+  filter: blur(64px);
+}
+
+:root[data-theme='light'] .app-shell__orb--2 {
+  background: rgba(0, 140, 220, 0.05);
+  filter: blur(56px);
+}
+
+:root[data-theme='light'] .app-shell__orb--3 {
+  background: rgba(140, 80, 220, 0.045);
+  filter: blur(48px);
 }
 
 @keyframes app-orb-float-1 {
   0%,
   100% {
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.88;
   }
 
-  25% {
-    transform: translate3d(6px, 10px, 0);
+  20% {
+    transform: translate3d(18px, 24px, 0) scale(1.04);
+    opacity: 0.96;
   }
 
-  50% {
-    transform: translate3d(12px, 16px, 0);
+  40% {
+    transform: translate3d(32px, 48px, 0) scale(1.07);
+    opacity: 1;
   }
 
-  75% {
-    transform: translate3d(5px, 8px, 0);
+  60% {
+    transform: translate3d(20px, 64px, 0) scale(1.02);
+    opacity: 0.92;
+  }
+
+  80% {
+    transform: translate3d(8px, 36px, 0) scale(0.98);
+    opacity: 0.9;
   }
 }
 
 @keyframes app-orb-float-2 {
   0%,
   100% {
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.86;
   }
 
-  25% {
-    transform: translate3d(-8px, 6px, 0);
+  20% {
+    transform: translate3d(-22px, 14px, 0) scale(1.03);
+    opacity: 0.94;
   }
 
-  50% {
-    transform: translate3d(-14px, 12px, 0);
+  40% {
+    transform: translate3d(-38px, 32px, 0) scale(1.06);
+    opacity: 1;
   }
 
-  75% {
-    transform: translate3d(-6px, 5px, 0);
+  60% {
+    transform: translate3d(-28px, 52px, 0) scale(1.01);
+    opacity: 0.9;
+  }
+
+  80% {
+    transform: translate3d(-12px, 28px, 0) scale(0.97);
+    opacity: 0.88;
   }
 }
 
 @keyframes app-orb-float-3 {
   0%,
   100% {
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.84;
   }
 
-  25% {
-    transform: translate3d(5px, -6px, 0);
+  20% {
+    transform: translate3d(14px, -18px, 0) scale(1.05);
+    opacity: 0.92;
   }
 
-  50% {
-    transform: translate3d(10px, -12px, 0);
+  40% {
+    transform: translate3d(28px, -36px, 0) scale(1.08);
+    opacity: 0.98;
   }
 
-  75% {
-    transform: translate3d(4px, -5px, 0);
+  60% {
+    transform: translate3d(42px, -20px, 0) scale(1.03);
+    opacity: 0.9;
+  }
+
+  80% {
+    transform: translate3d(22px, -8px, 0) scale(0.96);
+    opacity: 0.86;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  :root:not([data-theme='light']) .app-shell {
+    animation: none;
+    background-size: 100% 100%;
+  }
+
   .app-shell__orb--1,
   .app-shell__orb--2,
   .app-shell__orb--3 {
     animation: none;
+    opacity: 1;
+    will-change: auto;
   }
 }
 

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 
 function OptionChipGroup({
     label,
@@ -96,26 +97,35 @@ function OptionTextField({
     disabled,
     placeholder,
     multiline = false,
+    hideLabel = false,
 }) {
-    if (label == null) {
+    if (!hideLabel && label == null) {
         return null;
     }
 
     const InputTag = multiline ? 'textarea' : 'input';
 
+    const field = (
+        <InputTag
+            id={id}
+            type={multiline ? undefined : 'text'}
+            className={`media-options__input ${multiline ? 'media-options__input--area' : ''}`}
+            value={value ?? ''}
+            onChange={(event) => onChange(event.target.value)}
+            disabled={disabled}
+            placeholder={placeholder}
+            rows={multiline ? 2 : undefined}
+        />
+    );
+
+    if (hideLabel) {
+        return field;
+    }
+
     return (
         <label className="media-options__group" htmlFor={id}>
             <span className="media-options__label">{label}</span>
-            <InputTag
-                id={id}
-                type={multiline ? undefined : 'text'}
-                className={`media-options__input ${multiline ? 'media-options__input--area' : ''}`}
-                value={value ?? ''}
-                onChange={(event) => onChange(event.target.value)}
-                disabled={disabled}
-                placeholder={placeholder}
-                rows={multiline ? 2 : undefined}
-            />
+            {field}
         </label>
     );
 }
@@ -129,6 +139,7 @@ function OptionDurationRange({
     onChange,
     disabled,
     formatValue,
+    hideLabel = false,
 }) {
     if (!values?.length) {
         return null;
@@ -138,9 +149,8 @@ function OptionDurationRange({
     const max = values[values.length - 1];
     const presetList = presets?.length ? presets : [5, 10];
 
-    return (
-        <div className="media-options__group">
-            <span className="media-options__label">{label}</span>
+    const content = (
+        <>
             <div className="media-options__chips">
                 {presetList.map((preset) => {
                     const isActive = Number(value) === preset;
@@ -174,6 +184,17 @@ function OptionDurationRange({
                     {formatValue ? formatValue(Number(value ?? min)) : `${value ?? min}s`}
                 </span>
             </div>
+        </>
+    );
+
+    if (hideLabel) {
+        return <div className="media-options__group">{content}</div>;
+    }
+
+    return (
+        <div className="media-options__group">
+            <span className="media-options__label">{label}</span>
+            {content}
         </div>
     );
 }
@@ -206,6 +227,67 @@ function OptionCameraAxis({
     );
 }
 
+function OptionPicker({
+    id,
+    label,
+    summary,
+    open,
+    onToggle,
+    disabled,
+    children,
+}) {
+    return (
+        <div className={`media-picker ${open ? 'media-picker--open' : ''}`}>
+            <button
+                id={id}
+                type="button"
+                className="media-picker__trigger"
+                onClick={onToggle}
+                disabled={disabled}
+                aria-expanded={open}
+            >
+                <span className="media-picker__label">{label}</span>
+                <span className="media-picker__summary">{summary}</span>
+                <ChevronDown size={14} className="media-picker__chevron" aria-hidden="true" />
+            </button>
+            {open ? (
+                <div className="media-picker__panel">
+                    {children}
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
+function wrapPicker({
+    collapsed,
+    openKey,
+    setOpenKey,
+    optionKey,
+    label,
+    summary,
+    disabled,
+    idPrefix,
+    children,
+}) {
+    if (!collapsed) {
+        return children;
+    }
+
+    return (
+        <OptionPicker
+            id={`${idPrefix}-picker-${optionKey}`}
+            label={label}
+            summary={summary}
+            open={openKey === optionKey}
+            onToggle={() => setOpenKey((prev) => (prev === optionKey ? null : optionKey))}
+            disabled={disabled}
+        >
+            {children}
+        </OptionPicker>
+    );
+}
+
 export default function MediaModelOptionsBar({
     capabilities,
     values,
@@ -214,22 +296,41 @@ export default function MediaModelOptionsBar({
     disabled = false,
     idPrefix = 'media',
     cloneMode = false,
+    collapsed = false,
 }) {
     const { options = {} } = capabilities ?? {};
+    const [openKey, setOpenKey] = useState(null);
+
+    const picker = (optionKey, label, summary, content) => wrapPicker({
+        collapsed,
+        openKey,
+        setOpenKey,
+        optionKey,
+        label,
+        summary,
+        disabled,
+        idPrefix,
+        children: content,
+    });
+
+    const formatDuration = (seconds) => labels.durationValue?.(Number(seconds)) ?? `${seconds}s`;
 
     return (
-        <div className="media-options" role="group" aria-label={labels.group}>
-            <OptionChipGroup
-                idPrefix={idPrefix}
-                optionKey="language"
-                label={labels.language}
-                value={values.language}
-                values={options.language?.values}
-                onChange={(next) => onChange('language', next)}
-                disabled={disabled}
-                formatValue={(item) => labels.languageValues?.[item] ?? item}
-            />
-            {!cloneMode ? (
+        <div className={`media-options ${collapsed ? 'media-options--collapsed' : ''}`} role="group" aria-label={labels.group}>
+            {options.language?.values ? picker('language', labels.language, labels.languageValues?.[values.language] ?? values.language, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="language"
+                    label={labels.language}
+                    value={values.language}
+                    values={options.language?.values}
+                    onChange={(next) => onChange('language', next)}
+                    disabled={disabled}
+                    formatValue={(item) => labels.languageValues?.[item] ?? item}
+                />
+            )) : null}
+
+            {!cloneMode && options.voice?.values ? picker('voice', labels.voice, labels.voiceValues?.[values.voice] ?? values.voice, (
                 <OptionChipGroup
                     idPrefix={idPrefix}
                     optionKey="voice"
@@ -240,8 +341,9 @@ export default function MediaModelOptionsBar({
                     disabled={disabled}
                     formatValue={(item) => labels.voiceValues?.[item] ?? item}
                 />
-            ) : null}
-            {!cloneMode && options.styleInstruction ? (
+            )) : null}
+
+            {!cloneMode && options.styleInstruction ? picker('styleInstruction', labels.styleInstruction, values.styleInstruction?.trim() || '—', (
                 <OptionTextField
                     id={`${idPrefix}-style-instruction`}
                     label={labels.styleInstruction}
@@ -249,9 +351,11 @@ export default function MediaModelOptionsBar({
                     onChange={(next) => onChange('styleInstruction', next)}
                     disabled={disabled}
                     placeholder={labels.styleInstructionPlaceholder}
+                    hideLabel={collapsed}
                 />
-            ) : null}
-            {cloneMode && options.referenceText ? (
+            )) : null}
+
+            {cloneMode && options.referenceText ? picker('referenceText', labels.referenceText, values.referenceText?.trim() || '—', (
                 <OptionTextField
                     id={`${idPrefix}-reference-text`}
                     label={labels.referenceText}
@@ -259,71 +363,89 @@ export default function MediaModelOptionsBar({
                     onChange={(next) => onChange('referenceText', next)}
                     disabled={disabled}
                     placeholder={labels.referenceTextPlaceholder}
+                    hideLabel={collapsed}
                 />
-            ) : null}
-            <OptionChipGroup
-                idPrefix={idPrefix}
-                optionKey="aspect-ratio"
-                label={labels.aspectRatio}
-                value={values.aspectRatio}
-                values={options.aspectRatio?.values}
-                onChange={(next) => onChange('aspectRatio', next)}
-                disabled={disabled}
-            />
-            <OptionChipGroup
-                idPrefix={idPrefix}
-                optionKey="resolution"
-                label={labels.resolution}
-                value={values.resolution}
-                values={options.resolution?.values}
-                onChange={(next) => onChange('resolution', next)}
-                disabled={disabled}
-                formatValue={formatResolutionLabel}
-            />
-            <OptionChipGroup
-                idPrefix={idPrefix}
-                optionKey="quality"
-                label={labels.quality}
-                value={values.quality}
-                values={options.quality?.values}
-                onChange={(next) => onChange('quality', next)}
-                disabled={disabled}
-                formatValue={(item) => labels.qualityValues?.[item] ?? item}
-            />
-            {options.duration?.presets ? (
-                <OptionDurationRange
-                    idPrefix={idPrefix}
-                    label={labels.duration}
-                    value={values.duration}
-                    values={options.duration.values}
-                    presets={options.duration.presets}
-                    onChange={(next) => onChange('duration', next)}
-                    disabled={disabled}
-                    formatValue={(seconds) => labels.durationValue?.(seconds) ?? `${seconds}s`}
-                />
-            ) : (
+            )) : null}
+
+            {options.aspectRatio?.values ? picker('aspectRatio', labels.aspectRatio, values.aspectRatio, (
                 <OptionChipGroup
                     idPrefix={idPrefix}
-                    optionKey="duration"
-                    label={labels.duration}
-                    value={String(values.duration ?? '')}
-                    values={options.duration?.values?.map(String)}
-                    onChange={(next) => onChange('duration', Number(next))}
+                    optionKey="aspect-ratio"
+                    label={labels.aspectRatio}
+                    value={values.aspectRatio}
+                    values={options.aspectRatio?.values}
+                    onChange={(next) => onChange('aspectRatio', next)}
                     disabled={disabled}
-                    formatValue={(item) => labels.durationValue?.(Number(item)) ?? `${item}s`}
                 />
-            )}
-            <OptionChipGroup
-                idPrefix={idPrefix}
-                optionKey="quality-tier"
-                label={labels.qualityTier}
-                value={values.qualityTier}
-                values={options.qualityTier?.values}
-                onChange={(next) => onChange('qualityTier', next)}
-                disabled={disabled}
-                formatValue={(item) => labels.qualityTierValues?.[item] ?? item}
-            />
-            {options.negativePrompt ? (
+            )) : null}
+
+            {options.resolution?.values ? picker('resolution', labels.resolution, formatResolutionLabel(values.resolution), (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="resolution"
+                    label={labels.resolution}
+                    value={values.resolution}
+                    values={options.resolution?.values}
+                    onChange={(next) => onChange('resolution', next)}
+                    disabled={disabled}
+                    formatValue={formatResolutionLabel}
+                />
+            )) : null}
+
+            {options.quality?.values ? picker('quality', labels.quality, labels.qualityValues?.[values.quality] ?? values.quality, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="quality"
+                    label={labels.quality}
+                    value={values.quality}
+                    values={options.quality?.values}
+                    onChange={(next) => onChange('quality', next)}
+                    disabled={disabled}
+                    formatValue={(item) => labels.qualityValues?.[item] ?? item}
+                />
+            )) : null}
+
+            {options.duration?.values ? picker('duration', labels.duration, formatDuration(values.duration ?? options.duration.default), (
+                options.duration?.presets ? (
+                    <OptionDurationRange
+                        idPrefix={idPrefix}
+                        label={labels.duration}
+                        value={values.duration}
+                        values={options.duration.values}
+                        presets={options.duration.presets}
+                        onChange={(next) => onChange('duration', next)}
+                        disabled={disabled}
+                        formatValue={formatDuration}
+                        hideLabel={collapsed}
+                    />
+                ) : (
+                    <OptionChipGroup
+                        idPrefix={idPrefix}
+                        optionKey="duration"
+                        label={labels.duration}
+                        value={String(values.duration ?? '')}
+                        values={options.duration?.values?.map(String)}
+                        onChange={(next) => onChange('duration', Number(next))}
+                        disabled={disabled}
+                        formatValue={(item) => formatDuration(Number(item))}
+                    />
+                )
+            )) : null}
+
+            {options.qualityTier?.values ? picker('qualityTier', labels.qualityTier, labels.qualityTierValues?.[values.qualityTier] ?? values.qualityTier, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="quality-tier"
+                    label={labels.qualityTier}
+                    value={values.qualityTier}
+                    values={options.qualityTier?.values}
+                    onChange={(next) => onChange('qualityTier', next)}
+                    disabled={disabled}
+                    formatValue={(item) => labels.qualityTierValues?.[item] ?? item}
+                />
+            )) : null}
+
+            {options.negativePrompt ? picker('negativePrompt', labels.negativePrompt, values.negativePrompt?.trim() ? `${values.negativePrompt.trim().slice(0, 28)}…` : '—', (
                 <OptionTextField
                     id={`${idPrefix}-negative-prompt`}
                     label={labels.negativePrompt}
@@ -332,21 +454,26 @@ export default function MediaModelOptionsBar({
                     disabled={disabled}
                     placeholder={labels.negativePromptPlaceholder}
                     multiline
+                    hideLabel={collapsed}
                 />
-            ) : null}
-            <OptionChipGroup
-                idPrefix={idPrefix}
-                optionKey="camera-movement"
-                label={labels.cameraMovement}
-                value={values.cameraMovement}
-                values={options.cameraMovement?.values}
-                onChange={(next) => onChange('cameraMovement', next)}
-                disabled={disabled}
-                formatValue={(item) => labels.cameraMovementValues?.[item] ?? item}
-            />
-            {options.cameraAxes && values.cameraMovement === 'simple' ? (
+            )) : null}
+
+            {options.cameraMovement?.values ? picker('cameraMovement', labels.cameraMovement, labels.cameraMovementValues?.[values.cameraMovement] ?? values.cameraMovement, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="camera-movement"
+                    label={labels.cameraMovement}
+                    value={values.cameraMovement}
+                    values={options.cameraMovement?.values}
+                    onChange={(next) => onChange('cameraMovement', next)}
+                    disabled={disabled}
+                    formatValue={(item) => labels.cameraMovementValues?.[item] ?? item}
+                />
+            )) : null}
+
+            {options.cameraAxes && values.cameraMovement === 'simple' ? picker('cameraAxes', labels.cameraAxes, labels.mediaCameraMovementSimple ?? 'Simple', (
                 <div className="media-options__group media-options__group--camera">
-                    <span className="media-options__label">{labels.cameraAxes}</span>
+                    {collapsed ? null : <span className="media-options__label">{labels.cameraAxes}</span>}
                     <p className="media-options__hint">{labels.cameraAxesHint}</p>
                     <div className="media-options__axes">
                         {options.cameraAxes.keys.map((axisKey) => (
@@ -363,18 +490,22 @@ export default function MediaModelOptionsBar({
                         ))}
                     </div>
                 </div>
-            ) : null}
-            <OptionChipGroup
-                idPrefix={idPrefix}
-                optionKey="output-format"
-                label={labels.outputFormat}
-                value={values.outputFormat}
-                values={options.outputFormat?.values}
-                onChange={(next) => onChange('outputFormat', next)}
-                disabled={disabled}
-                formatValue={formatOutputFormatLabel}
-            />
-            {options.sound ? (
+            )) : null}
+
+            {options.outputFormat?.values ? picker('outputFormat', labels.outputFormat, formatOutputFormatLabel(values.outputFormat), (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="output-format"
+                    label={labels.outputFormat}
+                    value={values.outputFormat}
+                    values={options.outputFormat?.values}
+                    onChange={(next) => onChange('outputFormat', next)}
+                    disabled={disabled}
+                    formatValue={formatOutputFormatLabel}
+                />
+            )) : null}
+
+            {options.sound ? picker('sound', labels.sound, values.sound ? labels.toggleOn : labels.toggleOff, (
                 <OptionToggleChip
                     id={`${idPrefix}-sound`}
                     label={labels.sound}
@@ -384,8 +515,9 @@ export default function MediaModelOptionsBar({
                     onLabel={labels.toggleOn}
                     offLabel={labels.toggleOff}
                 />
-            ) : null}
-            {options.generateAudio ? (
+            )) : null}
+
+            {options.generateAudio ? picker('generateAudio', labels.generateAudio, values.generateAudio ? labels.toggleOn : labels.toggleOff, (
                 <OptionToggleChip
                     id={`${idPrefix}-generate-audio`}
                     label={labels.generateAudio}
@@ -395,8 +527,9 @@ export default function MediaModelOptionsBar({
                     onLabel={labels.toggleOn}
                     offLabel={labels.toggleOff}
                 />
-            ) : null}
-            {options.cameraFixed ? (
+            )) : null}
+
+            {options.cameraFixed ? picker('cameraFixed', labels.cameraFixed, values.cameraFixed ? labels.toggleOn : labels.toggleOff, (
                 <OptionToggleChip
                     id={`${idPrefix}-camera-fixed`}
                     label={labels.cameraFixed}
@@ -406,8 +539,9 @@ export default function MediaModelOptionsBar({
                     onLabel={labels.toggleOn}
                     offLabel={labels.toggleOff}
                 />
-            ) : null}
-            {options.turboMode ? (
+            )) : null}
+
+            {options.turboMode ? picker('turboMode', labels.turboMode, values.turboMode ? labels.toggleOn : labels.toggleOff, (
                 <OptionToggleChip
                     id={`${idPrefix}-turbo-mode`}
                     label={labels.turboMode}
@@ -417,7 +551,7 @@ export default function MediaModelOptionsBar({
                     onLabel={labels.toggleOn}
                     offLabel={labels.toggleOff}
                 />
-            ) : null}
+            )) : null}
         </div>
     );
 }

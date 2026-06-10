@@ -182,6 +182,7 @@ export const IMAGE_MODEL_IDS = [
 export const VIDEO_MODEL_IDS = [
     'kling-v3-std',
     'kling-v3-pro',
+    'kling-v3-4k',
     'seedance-v1-pro-i2v',
     'seedance-v1.5-i2v-fast',
     'seedance-v1.5-t2v-fast',

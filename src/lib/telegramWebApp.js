@@ -153,9 +153,20 @@ function createBrowserMock() {
     };
     const startParam = 'dev-preview';
 
+    const viewportHeight = typeof window !== 'undefined' && window.innerHeight > 0
+        ? window.innerHeight
+        : 800;
+    const viewportWidth = typeof window !== 'undefined' && window.innerWidth > 0
+        ? window.innerWidth
+        : 390;
+
     return {
         platform: 'mock',
         colorScheme: 'dark',
+        viewportHeight,
+        viewportStableHeight: viewportHeight,
+        viewportWidth,
+        viewportStableWidth: viewportWidth,
         ready: () => {},
         expand: () => {},
         disableVerticalSwipes: () => {},
@@ -276,10 +287,19 @@ function applyTelegramLayoutVars(tg) {
     }
 
     const root = document.documentElement;
-    const height = tg?.viewportStableHeight || tg?.viewportHeight;
+    const rawHeight = tg?.viewportStableHeight || tg?.viewportHeight;
+    const tgHeight = Number(rawHeight);
+    const windowHeight = typeof window !== 'undefined' ? Number(window.innerHeight) : 0;
+    const height = (
+        Number.isFinite(tgHeight) && tgHeight > 0
+            ? tgHeight
+            : (Number.isFinite(windowHeight) && windowHeight > 0 ? windowHeight : 0)
+    );
 
-    if (height) {
+    if (height > 0) {
         root.style.setProperty('--app-height', `${height}px`);
+    } else {
+        root.style.removeProperty('--app-height');
     }
 
     const inset = tg?.safeAreaInset ?? tg?.contentSafeAreaInset;

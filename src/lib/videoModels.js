@@ -50,10 +50,34 @@ export function videoModelSupportsEdit(modelId) {
     return videoModelRequiresVideo(modelId);
 }
 
-export function klingModelIdForQualityTier(tier) {
-    return tier === 'pro' ? 'kling-v3-pro' : 'kling-v3-std';
+export function klingModelIdForResolution(resolution) {
+    const value = String(resolution || '').toLowerCase();
+
+    if (value === '4k') {
+        return 'kling-v3-4k';
+    }
+
+    if (value === '1080p') {
+        return 'kling-v3-pro';
+    }
+
+    return 'kling-v3-std';
 }
 
-export function klingQualityTierForModel(modelId) {
-    return modelId === 'kling-v3-pro' ? 'pro' : 'std';
+export function klingResolutionForModel(modelId) {
+    const id = String(modelId || '').toLowerCase();
+
+    if (id === 'kling-v3-4k') {
+        return '4k';
+    }
+
+    if (id === 'kling-v3-pro') {
+        return '1080p';
+    }
+
+    if (id.startsWith('kling-')) {
+        return '720p';
+    }
+
+    return '';
 }

@@ -230,9 +230,82 @@
   --cm-bubble-assistant-border: #d5dae6;
 }
 
+.app-boot {
+  position: fixed;
+  top: calc(12px + var(--page-pad-top, 0px));
+  left: 50%;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 0.5px solid var(--cm-border);
+  background: rgba(18, 20, 30, 0.92);
+  color: var(--cm-text);
+  font-size: 12px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.app-boot__spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(107, 111, 255, 0.25);
+  border-top-color: var(--cm-accent);
+  animation: app-boot-spin 0.8s linear infinite;
+}
+
+@keyframes app-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.app-fatal {
+  min-height: max(var(--app-height, 100dvh), 100dvh);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  color: #e0e2ec;
+  background: #07080f;
+}
+
+.app-fatal__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.app-fatal__message {
+  margin: 0;
+  max-width: 320px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #fecaca;
+  word-break: break-word;
+}
+
+.app-fatal__btn {
+  margin-top: 4px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: #4a3fff;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .app-shell {
   position: relative;
-  min-height: var(--app-height, 100dvh);
+  min-height: max(var(--app-height, 100dvh), 100dvh);
   width: 100%;
   max-width: 100%;
   color: var(--text-primary);
@@ -240,6 +313,29 @@
   padding-top: var(--page-pad-top, 0px);
   padding-bottom: calc(var(--nav-bar-height, 52px) + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
   overflow-x: hidden;
+}
+
+:root[data-theme='light'] .app-shell {
+  background-size: 100% 240%;
+  animation: app-shell-bg-drift 150s ease-in-out infinite;
+}
+
+@keyframes app-shell-bg-drift {
+  0%,
+  100% {
+    background-position: 50% 0%;
+  }
+
+  50% {
+    background-position: 50% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme='light'] .app-shell {
+    animation: none;
+    background-size: 100% 100%;
+  }
 }
 
 .app-main {
@@ -2988,8 +3084,8 @@
   width: 100%;
   max-width: 100%;
   margin: 0;
-  min-height: calc(var(--app-height, 100dvh) - var(--page-pad-top, 0px));
-  max-height: calc(var(--app-height, 100dvh) - var(--page-pad-top, 0px));
+  min-height: calc(max(var(--app-height, 100dvh), 100dvh) - var(--page-pad-top, 0px));
+  max-height: calc(max(var(--app-height, 100dvh), 100dvh) - var(--page-pad-top, 0px));
   padding: 8px var(--page-pad-x, 14px) 0;
   font-family: 'K2D', 'Inter', sans-serif;
   color: var(--cm-text);
@@ -3005,6 +3101,35 @@
   flex-shrink: 0;
   padding-bottom: 10px;
   border-bottom: 0.5px solid var(--cm-border-strong);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--cm-bg);
+}
+
+.ai-image-screen--concept .ai-chat__models,
+.ai-image-screen--concept .ai-chat__tiers {
+  position: sticky;
+  z-index: 15;
+  background: var(--cm-bg);
+}
+
+.ai-image-screen--concept .ai-chat__models {
+  top: 54px;
+  padding-bottom: 6px;
+}
+
+.ai-image-screen--concept .ai-chat__tiers {
+  top: 96px;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+
+.ai-image-screen--concept .ai-chat__tiers + .ai-video__main,
+.ai-image-screen--concept .ai-chat__models + .ai-video__main,
+.ai-chat-screen--concept .ai-chat__tiers + .ai-chat__messages,
+.ai-chat-screen--concept .ai-chat__models + .ai-chat__messages {
+  margin-top: 12px;
 }
 
 .ai-chat__back {
@@ -3613,12 +3738,34 @@
   gap: 8px;
 }
 
+.ai-image__result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
 .ai-image__result-label {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 11px;
   color: var(--cm-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.6px;
+}
+
+.ai-image__content--in-main {
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+  padding-bottom: 4px;
+}
+
+.ai-image__gallery-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .media-options {
@@ -3626,6 +3773,94 @@
   flex-direction: column;
   gap: 10px;
   padding: 0 16px 12px;
+}
+
+.media-options--collapsed {
+  gap: 8px;
+}
+
+.media-picker {
+  border: 0.5px solid var(--cm-border);
+  border-radius: 12px;
+  background: var(--cm-surface);
+  overflow: hidden;
+}
+
+.media-picker__trigger {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: var(--cm-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.media-picker__label {
+  font-size: 10px;
+  color: var(--cm-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+}
+
+.media-picker__summary {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cm-text);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-picker__chevron {
+  color: var(--cm-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.media-picker--open .media-picker__chevron {
+  transform: rotate(180deg);
+}
+
+.media-picker__panel {
+  padding: 0 10px 10px;
+  border-top: 0.5px solid var(--cm-border);
+}
+
+.media-picker__panel .media-options__group {
+  margin-top: 8px;
+}
+
+.media-picker__panel .media-options__label {
+  display: none;
+}
+
+.ai-media__download {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 0.5px solid var(--cm-border);
+  background: var(--cm-surface);
+  color: var(--cm-text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ai-media__download:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .media-options__group {

@@ -63,10 +63,12 @@ const KLING_CAMERA_MOVEMENTS = [
 ];
 const KLING_CAMERA_AXES = ['horizontal', 'vertical', 'pan', 'tilt', 'roll', 'zoom'];
 
+const KLING_RESOLUTIONS = ['720p', '1080p', '4k'];
+
 const KLING_BASE_OPTIONS = {
     aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
     duration: { values: KLING_DURATIONS, default: 5, presets: [5, 10] },
-    qualityTier: { values: ['std', 'pro'] },
+    resolution: { values: KLING_RESOLUTIONS, default: '720p' },
     negativePrompt: { default: '' },
     cameraMovement: { values: KLING_CAMERA_MOVEMENTS, default: 'auto' },
     cameraAxes: { keys: KLING_CAMERA_AXES, min: -10, max: 10, default: 0 },
@@ -76,13 +78,20 @@ export const VIDEO_MODEL_CAPABILITIES = {
     'kling-v3-std': {
         options: {
             ...KLING_BASE_OPTIONS,
-            qualityTier: { values: ['std', 'pro'], default: 'std' },
+            resolution: { values: KLING_RESOLUTIONS, default: '720p' },
         },
     },
     'kling-v3-pro': {
         options: {
             ...KLING_BASE_OPTIONS,
-            qualityTier: { values: ['std', 'pro'], default: 'pro' },
+            resolution: { values: KLING_RESOLUTIONS, default: '1080p' },
+            sound: { default: false },
+        },
+    },
+    'kling-v3-4k': {
+        options: {
+            ...KLING_BASE_OPTIONS,
+            resolution: { values: KLING_RESOLUTIONS, default: '4k' },
             sound: { default: false },
         },
     },
@@ -169,9 +178,6 @@ function buildDefaults(capabilities) {
     }
     if (options.turboMode) {
         defaults.turboMode = options.turboMode.default;
-    }
-    if (options.qualityTier) {
-        defaults.qualityTier = options.qualityTier.default;
     }
     if (options.negativePrompt) {
         defaults.negativePrompt = options.negativePrompt.default ?? '';

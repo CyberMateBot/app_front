@@ -60,6 +60,32 @@ export const VIDEO_MODEL_DEFINITIONS = [
 
     {
 
+        id: 'kling-v3-4k',
+
+        nameKey: 'modelKling4kName',
+
+        subKey: 'modelKling4kSub',
+
+        tab: 'video',
+
+        categories: ['video'],
+
+        accent: 'gold',
+
+        icon: Sparkles,
+
+        badge: 'pro',
+
+        page: 'ai-video',
+
+        backendModel: 'kling-v3-4k',
+
+        group: 'kling',
+
+    },
+
+    {
+
         id: 'seedance-v1-pro-i2v',
 
         nameKey: 'modelSeedanceV1ProI2vName',

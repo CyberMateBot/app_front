@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
+import AppErrorBoundary from './Components/AppErrorBoundary.jsx';
 import {
     API_BASE_URL,
     API_BASE_URL_MISCONFIGURED,
@@ -9,7 +10,39 @@ import {
 } from './config/env.js';
 import './index.css';
 import { initUiScale } from './lib/uiScale.js';
+import { initTelegramMiniApp } from './lib/telegramWebApp.js';
 
+function showFatalBootError(message) {
+    const root = document.getElementById('root');
+
+    if (!root) {
+        return;
+    }
+
+    root.innerHTML = `
+        <div class="app-fatal">
+            <p class="app-fatal__title">Не удалось открыть приложение</p>
+            <p class="app-fatal__message">${String(message).replace(/</g, '&lt;')}</p>
+            <button type="button" class="app-fatal__btn" onclick="window.location.reload()">Обновить</button>
+        </div>
+    `;
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('error', (event) => {
+        if (event.message) {
+            showFatalBootError(event.message);
+        }
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+        const reason = event.reason;
+        const message = reason instanceof Error ? reason.message : String(reason ?? 'Unknown error');
+        showFatalBootError(message);
+    });
+}
+
+initTelegramMiniApp();
 initUiScale();
 
 if (import.meta.env.DEV) {
@@ -24,6 +57,8 @@ if (import.meta.env.DEV) {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-        <App />
+        <AppErrorBoundary>
+            <App />
+        </AppErrorBoundary>
     </React.StrictMode>,
 );

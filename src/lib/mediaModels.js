@@ -56,6 +56,7 @@ const VIDEO_VARIANT_ORDER = {
     'seedance-v2-video-extend': 5,
     'kling-v3-std': 0,
     'kling-v3-pro': 1,
+    'kling-v3-4k': 2,
 };
 
 function sortVideoVariants(variants) {

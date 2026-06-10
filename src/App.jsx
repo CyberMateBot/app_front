@@ -82,13 +82,16 @@ import {
 import {
     getLastSessionSourceImageUrl,
     getLastSessionVideoUrl,
-    klingModelIdForQualityTier,
-    klingQualityTierForModel,
+    klingModelIdForResolution,
+    klingResolutionForModel,
     videoModelRequiresImage,
     videoModelRequiresVideo,
 } from './lib/videoModels.js';
 import { compressImageFile } from './lib/compressImage.js';
 import { createChatSessionId } from './lib/chatSession.js';
+import { downloadMediaUrl, guessMediaFilename } from './lib/downloadMedia.js';
+import { clearMediaSession, loadMediaSession, saveMediaSession } from './lib/mediaSessions.js';
+import { getHistoryTopicLabel, resolveHistoryTopicModel as resolveHistoryTopicModelId } from './lib/historyLabels.js';
 import { openSupport, resolveSupportUrl } from './lib/openSupport.js';
 import {
     applyTheme,
@@ -115,6 +118,7 @@ import {
     getAudioModelCapabilities,
     getAudioModelDefaults,
     audioModelSupportsClone,
+    videoModelIsKling,
 } from './config/mediaModelOptions.js';
 import {
     VIDEO_MODEL_DEFINITIONS,
@@ -333,6 +337,8 @@ const translations = {
         modelKlingStdSub: 'Быстрая генерация видео по тексту',
         modelKlingProName: 'Kling 3.0 Pro',
         modelKlingProSub: 'Высокое качество видео через WaveSpeed',
+        modelKling4kName: 'Kling 3.0 4K',
+        modelKling4kSub: 'Видео в разрешении 4K',
         modelSeedanceGroupName: 'Seedance',
         modelSeedanceGroupSub: 'ByteDance: I2V, T2V, edit и extend',
         modelSeedanceV1ProI2vName: 'Seedance 1.0 I2V',
@@ -359,6 +365,8 @@ const translations = {
         imageGenerateButton: 'Сгенерировать',
         imageGenerating: 'Генерация...',
         imageResultTitle: 'Результат',
+        mediaDownloadButton: 'Скачать',
+        mediaDownloading: 'Скачивание...',
         imageGenerateEmpty: 'Изображение не получено. Попробуйте другой промт.',
         imageGeneratedNote: 'Изображение создано.',
         imageContentPolicy: 'Модель отклонила запрос. Попробуйте другую формулировку без запрещённых тем.',
@@ -678,6 +686,8 @@ const translations = {
         modelKlingStdSub: 'Fast text-to-video generation',
         modelKlingProName: 'Kling 3.0 Pro',
         modelKlingProSub: 'High-quality video via WaveSpeed',
+        modelKling4kName: 'Kling 3.0 4K',
+        modelKling4kSub: '4K video generation',
         modelSeedanceGroupName: 'Seedance',
         modelSeedanceGroupSub: 'ByteDance: I2V, T2V, edit, and extend',
         modelSeedanceV1ProI2vName: 'Seedance 1.0 I2V',
@@ -704,6 +714,8 @@ const translations = {
         imageGenerateButton: 'Generate',
         imageGenerating: 'Generating...',
         imageResultTitle: 'Result',
+        mediaDownloadButton: 'Download',
+        mediaDownloading: 'Downloading...',
         imageGenerateEmpty: 'No image returned. Try a different prompt.',
         imageGeneratedNote: 'Image created.',
         imageContentPolicy: 'The model rejected this prompt. Try a different wording.',
@@ -1012,6 +1024,7 @@ function App() {
     const pageDataInFlightRef = useRef({ wallet: false, referrals: false, history: false });
     const [theme, setTheme] = useState(getInitialTheme);
     const [language, setLanguage] = useState(getInitialLanguage);
+    const text = translations[language] ?? translations.ru;
     const [, setIsLanguageMenuOpen] = useState(false);
     const [textPrompt, setTextPrompt] = useState('');
     const [textModel, setTextModel] = useState(getInitialTextModelId);
@@ -1040,7 +1053,6 @@ function App() {
     const [videoCameraFixed, setVideoCameraFixed] = useState(initialVideoDefaults.cameraFixed ?? false);
     const [videoTurboMode, setVideoTurboMode] = useState(Boolean(initialVideoDefaults.turboMode));
     const [videoNegativePrompt, setVideoNegativePrompt] = useState(initialVideoDefaults.negativePrompt ?? '');
-    const [videoQualityTier, setVideoQualityTier] = useState(initialVideoDefaults.qualityTier ?? 'std');
     const [videoCameraMovement, setVideoCameraMovement] = useState(initialVideoDefaults.cameraMovement ?? 'auto');
     const [videoCameraHorizontal, setVideoCameraHorizontal] = useState(0);
     const [videoCameraVertical, setVideoCameraVertical] = useState(0);
@@ -1081,6 +1093,7 @@ function App() {
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
     const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
     const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+    const [mediaDownloadBusy, setMediaDownloadBusy] = useState(null);
     const [homeCategoryChip, setHomeCategoryChip] = useState('all');
     const [catalogTab, setCatalogTab] = useState('all');
     const [catalogSearch, setCatalogSearch] = useState('');
@@ -1095,6 +1108,136 @@ function App() {
         setAppNotice(null);
     }, []);
 
+    const resolveHistoryTopicModel = useCallback(
+        (topic) => resolveHistoryTopicModelId(topic, effectiveTextModels),
+        [effectiveTextModels],
+    );
+
+    const archiveMediaMessagesToHistory = useCallback(async ({
+        messages,
+        model,
+        sessionId,
+        getResponse,
+        extraItems = [],
+    }) => {
+        const savedItems = [];
+
+        if (Array.isArray(messages)) {
+            for (let index = 0; index < messages.length; index += 1) {
+                const entry = messages[index];
+                if (entry?.role !== 'user') {
+                    continue;
+                }
+
+                const assistant = messages[index + 1];
+                const prompt = String(entry?.content ?? entry?.prompt ?? '').trim();
+                const response = String(getResponse?.(assistant) ?? entry?.response ?? '').trim();
+
+                if (!prompt || !response) {
+                    continue;
+                }
+
+                try {
+                    const historyResponse = await savePromptHistory({
+                        prompt,
+                        category: model,
+                        model,
+                        response,
+                        sessionId,
+                    });
+                    if (historyResponse?.item) {
+                        savedItems.push(historyResponse.item);
+                    }
+                } catch {
+                    // History save is optional.
+                }
+            }
+        }
+
+        for (const entry of extraItems) {
+            const prompt = String(entry?.prompt ?? entry?.content ?? '').trim();
+            const response = String(entry?.response ?? getResponse?.(entry) ?? '').trim();
+
+            if (!prompt || !response) {
+                continue;
+            }
+
+            try {
+                const historyResponse = await savePromptHistory({
+                    prompt,
+                    category: model,
+                    model,
+                    response,
+                    sessionId,
+                });
+                if (historyResponse?.item) {
+                    savedItems.push(historyResponse.item);
+                }
+            } catch {
+                // History save is optional.
+            }
+        }
+
+        if (savedItems.length) {
+            setPromptHistoryData((prev) => ({
+                items: [...savedItems.reverse(), ...(Array.isArray(prev?.items) ? prev.items : [])],
+            }));
+        }
+    }, []);
+
+    useEffect(() => {
+        saveMediaSession('image', {
+            model: imageModel,
+            sessionId: imageSessionId,
+            messages: imageSessionMessages,
+            generatedImageUrl,
+            generatedImageUrls,
+            isGenerating: isGeneratingImage,
+        });
+    }, [imageModel, imageSessionId, imageSessionMessages, generatedImageUrl, generatedImageUrls, isGeneratingImage]);
+
+    useEffect(() => {
+        saveMediaSession('video', {
+            model: videoModel,
+            sessionId: videoSessionId,
+            messages: videoSessionMessages,
+            generatedVideoUrl,
+            videoPrompt,
+            videoSourceImageUrl,
+            videoSourceVideoUrl,
+            isGenerating: isGeneratingVideo,
+        });
+    }, [
+        videoModel,
+        videoSessionId,
+        videoSessionMessages,
+        generatedVideoUrl,
+        videoPrompt,
+        videoSourceImageUrl,
+        videoSourceVideoUrl,
+        isGeneratingVideo,
+    ]);
+
+    useEffect(() => {
+        saveMediaSession('audio', {
+            model: audioModel,
+            sessionId: audioSessionId,
+            audioPrompt,
+            generatedAudioUrl,
+            isGenerating: isGeneratingAudio,
+        });
+    }, [audioModel, audioSessionId, audioPrompt, generatedAudioUrl, isGeneratingAudio]);
+
+    useEffect(() => {
+        saveMediaSession('chat', {
+            model: textModel,
+            sessionId: chatSessionId,
+            messages: chatMessages,
+            topicTitle: chatTopicTitle,
+            isGenerating: isGeneratingText,
+        });
+    }, [textModel, chatSessionId, chatMessages, chatTopicTitle, isGeneratingText]);
+
     const showAppNotice = useCallback((message, variant = 'error') => {
         if (!message) {
             setAppNotice(null);
@@ -1103,6 +1246,22 @@ function App() {
 
         setAppNotice({ message, variant });
     }, []);
+
+    const handleMediaDownload = useCallback(async (kind, url, fallbackName) => {
+        const trimmed = String(url || '').trim();
+        if (!trimmed) {
+            return;
+        }
+
+        setMediaDownloadBusy(kind);
+        try {
+            await downloadMediaUrl(trimmed, guessMediaFilename(trimmed, fallbackName));
+        } catch (error) {
+            showAppNotice(error instanceof Error ? error.message : text.mediaDownloading, 'error');
+        } finally {
+            setMediaDownloadBusy(null);
+        }
+    }, [showAppNotice, text.mediaDownloading]);
 
     useEffect(() => {
         if (appNotice?.variant !== 'success') {
@@ -1508,7 +1667,6 @@ function App() {
         };
     }, [currentPage, telegramUser?.id, showAppNotice]);
 
-    const text = translations[language] ?? translations.ru;
     const userData = useMemo(() => {
         const base = buildProfileView({
             ...profile,
@@ -1916,69 +2074,33 @@ function App() {
     }, []);
 
     const openAiChat = (modelId, returnPage = currentPage, options = {}) => {
-        handleStopChatGeneration();
+        const fromHistory = Boolean(options.messages?.length);
+        const stored = !fromHistory ? loadMediaSession('chat') : null;
+
         if (modelId) {
             const resolvedModelId = resolveTextModelId(modelId, effectiveTextModels);
 
             setTextModel(resolvedModelId);
             setStoredTextModelId(resolvedModelId);
+        } else if (stored?.model) {
+            const resolvedModelId = resolveTextModelId(stored.model, effectiveTextModels);
+            setTextModel(resolvedModelId);
+            setStoredTextModelId(resolvedModelId);
         }
         if (options.sessionId) {
             setChatSessionId(options.sessionId);
-        } else if (!options.messages?.length) {
+        } else if (stored?.sessionId && !fromHistory) {
+            setChatSessionId(stored.sessionId);
+        } else if (!fromHistory) {
             startNewChatSession();
         }
-        setChatMessages(options.messages ?? []);
-        setChatTopicTitle(options.topicTitle ?? '');
+        setChatMessages(fromHistory ? (options.messages ?? []) : (stored?.messages ?? []));
+        setChatTopicTitle(fromHistory ? (options.topicTitle ?? '') : (stored?.topicTitle ?? ''));
         setTextPrompt('');
         setChatAttachment(null);
         setChatReturnPage(returnPage);
         setChatError('');
         setCurrentPage('ai-chat');
-    };
-
-    const resolveHistoryTopicModel = (topic) => {
-        const model = String(topic?.model || '').toLowerCase();
-
-        if (isKnownTextModelId(model, effectiveTextModels)) {
-            return resolveTextModelId(model, effectiveTextModels);
-        }
-
-        if (IMAGE_MODEL_IDS.includes(model)) {
-            return model;
-        }
-
-        if (VIDEO_MODEL_IDS.includes(model)) {
-            return model;
-        }
-
-        if (AUDIO_MODEL_IDS.includes(model)) {
-            return model;
-        }
-
-        const category = String(topic?.category || model).toLowerCase();
-
-        if (IMAGE_MODEL_IDS.includes(category)) {
-            return category;
-        }
-
-        if (VIDEO_MODEL_IDS.includes(category)) {
-            return category;
-        }
-
-        if (AUDIO_MODEL_IDS.includes(category)) {
-            return category;
-        }
-
-        if (category.includes('image') || category.includes('photo')) {
-            return IMAGE_MODEL_IDS[0];
-        }
-
-        if (category.includes('video')) {
-            return VIDEO_MODEL_IDS[0];
-        }
-
-        return resolveTextModelId(textModel, effectiveTextModels);
     };
 
     const openHistoryTopic = (topic) => {
@@ -2091,7 +2213,14 @@ function App() {
         handleImageModelChange(activeVariant?.id ?? defaultVariant.id);
     };
 
-    const handleNewImageDialog = () => {
+    const handleNewImageDialog = async () => {
+        await archiveMediaMessagesToHistory({
+            messages: imageSessionMessages,
+            model: imageModel,
+            sessionId: imageSessionId,
+            getResponse: (message) => message?.imageUrl ?? message?.image_url ?? '',
+        });
+        clearMediaSession('image');
         startNewImageSession();
         setImageSessionMessages([]);
         setImagePrompt('');
@@ -2141,12 +2270,15 @@ function App() {
         const defaults = getVideoModelDefaults(modelId);
         setVideoAspectRatio(defaults.aspectRatio ?? '16:9');
         setVideoDuration(defaults.duration ?? 5);
-        setVideoResolution(defaults.resolution ?? '');
         setVideoGenerateAudio(Boolean(defaults.generateAudio));
         setVideoCameraFixed(Boolean(defaults.cameraFixed));
         setVideoTurboMode(Boolean(defaults.turboMode));
         setVideoNegativePrompt(defaults.negativePrompt ?? '');
-        setVideoQualityTier(defaults.qualityTier ?? klingQualityTierForModel(modelId));
+        if (videoModelIsKling(modelId)) {
+            setVideoResolution(klingResolutionForModel(modelId) || defaults.resolution || '720p');
+        } else {
+            setVideoResolution(defaults.resolution ?? '');
+        }
         setVideoCameraMovement(defaults.cameraMovement ?? 'auto');
         setVideoCameraHorizontal(0);
         setVideoCameraVertical(0);
@@ -2229,18 +2361,15 @@ function App() {
             case 'duration':
                 setVideoDuration(value);
                 break;
-            case 'resolution':
+            case 'resolution': {
                 setVideoResolution(value);
-                if (value === '480p') {
+                if (videoModelIsKling(videoModel)) {
+                    const nextModelId = klingModelIdForResolution(value);
+                    if (nextModelId !== videoModel) {
+                        setVideoModel(nextModelId);
+                    }
+                } else if (value === '480p') {
                     setVideoTurboMode(false);
-                }
-                break;
-            case 'qualityTier': {
-                const tier = value === 'pro' ? 'pro' : 'std';
-                const nextModelId = klingModelIdForQualityTier(tier);
-                setVideoQualityTier(tier);
-                if (nextModelId !== videoModel) {
-                    setVideoModel(nextModelId);
                 }
                 break;
             }
@@ -2303,22 +2432,41 @@ function App() {
     };
 
     const openAiImage = (modelId, returnPage = currentPage, options = {}) => {
+        const fromHistory = Boolean(options.messages?.length);
+        const stored = !fromHistory ? loadMediaSession('image') : null;
+
         if (modelId) {
             setImageModel(modelId);
             applyImageModelOptions(modelId);
+        } else if (stored?.model) {
+            setImageModel(stored.model);
+            applyImageModelOptions(stored.model);
         }
         if (options.sessionId) {
             setImageSessionId(options.sessionId);
-        } else if (!options.messages?.length) {
+        } else if (stored?.sessionId && !fromHistory) {
+            setImageSessionId(stored.sessionId);
+        } else if (!fromHistory) {
             startNewImageSession();
         }
-        const restoredMessages = options.messages ?? [];
-        const restoredImageUrl = getLastSessionImageUrl(restoredMessages) ?? '';
+
+        const restoredMessages = fromHistory
+            ? (options.messages ?? [])
+            : (stored?.messages ?? []);
+        const restoredImageUrl = fromHistory
+            ? (getLastSessionImageUrl(restoredMessages) ?? '')
+            : (stored?.generatedImageUrl ?? getLastSessionImageUrl(restoredMessages) ?? '');
+        const restoredImageUrls = fromHistory
+            ? (restoredImageUrl ? [restoredImageUrl] : [])
+            : (Array.isArray(stored?.generatedImageUrls) && stored.generatedImageUrls.length
+                ? stored.generatedImageUrls
+                : (restoredImageUrl ? [restoredImageUrl] : []));
+
         setImageSessionMessages(restoredMessages);
         setImagePrompt('');
         setImageAttachment(null);
         setGeneratedImageUrl(restoredImageUrl);
-        setGeneratedImageUrls(restoredImageUrl ? [restoredImageUrl] : []);
+        setGeneratedImageUrls(restoredImageUrls);
         setImageReturnPage(returnPage);
         setImageError('');
         setCurrentPage('ai-image');
@@ -2353,7 +2501,20 @@ function App() {
         handleVideoModelChange(activeVariant?.id ?? defaultVariant.id);
     };
 
-    const handleNewVideoDialog = () => {
+    const handleNewVideoDialog = async () => {
+        await archiveMediaMessagesToHistory({
+            messages: videoSessionMessages,
+            model: videoModel,
+            sessionId: videoSessionId,
+            getResponse: (message) => message?.videoUrl ?? message?.video_url ?? '',
+            extraItems: (
+                videoPrompt.trim() && generatedVideoUrl.trim()
+                && !videoSessionMessages.some((message) => message?.videoUrl === generatedVideoUrl)
+            )
+                ? [{ prompt: videoPrompt.trim(), response: generatedVideoUrl.trim() }]
+                : [],
+        });
+        clearMediaSession('video');
         startNewVideoSession();
         setVideoSessionMessages([]);
         setVideoSourceImageUrl('');
@@ -2390,7 +2551,16 @@ function App() {
         handleAudioModelChange(activeVariant?.id ?? defaultVariant.id);
     };
 
-    const handleNewAudioDialog = () => {
+    const handleNewAudioDialog = async () => {
+        await archiveMediaMessagesToHistory({
+            messages: [],
+            model: audioModel,
+            sessionId: audioSessionId,
+            extraItems: audioPrompt.trim() && generatedAudioUrl.trim()
+                ? [{ prompt: audioPrompt.trim(), response: generatedAudioUrl.trim() }]
+                : [],
+        });
+        clearMediaSession('audio');
         startNewAudioSession();
         setAudioPrompt('');
         setAudioAttachment(null);
@@ -2435,40 +2605,64 @@ function App() {
     };
 
     const openAiVoice = (modelId, returnPage = currentPage, options = {}) => {
+        const fromHistory = Boolean(options.prompt || options.audioUrl);
+        const stored = !fromHistory ? loadMediaSession('audio') : null;
+
         if (modelId) {
             setAudioModel(modelId);
             applyAudioModelOptions(modelId);
+        } else if (stored?.model) {
+            setAudioModel(stored.model);
+            applyAudioModelOptions(stored.model);
         }
         if (options.sessionId) {
             setAudioSessionId(options.sessionId);
-        } else if (!options.prompt && !options.audioUrl) {
+        } else if (stored?.sessionId && !fromHistory) {
+            setAudioSessionId(stored.sessionId);
+        } else if (!fromHistory) {
             startNewAudioSession();
         }
-        setAudioPrompt(options.prompt ?? '');
+        setAudioPrompt(fromHistory ? (options.prompt ?? '') : (stored?.audioPrompt ?? ''));
         setAudioAttachment(null);
-        setGeneratedAudioUrl(options.audioUrl ?? '');
+        setGeneratedAudioUrl(fromHistory ? (options.audioUrl ?? '') : (stored?.generatedAudioUrl ?? ''));
         setAudioReturnPage(returnPage);
         setAudioError('');
         setCurrentPage('ai-voice');
     };
 
     const openAiVideo = (modelId, returnPage = currentPage, options = {}) => {
+        const fromHistory = Boolean(options.messages?.length);
+        const stored = !fromHistory ? loadMediaSession('video') : null;
+
         if (modelId) {
             setVideoModel(modelId);
             applyVideoModelOptions(modelId);
+        } else if (stored?.model) {
+            setVideoModel(stored.model);
+            applyVideoModelOptions(stored.model);
         }
         if (options.sessionId) {
             setVideoSessionId(options.sessionId);
-        } else if (!options.messages?.length) {
+        } else if (stored?.sessionId && !fromHistory) {
+            setVideoSessionId(stored.sessionId);
+        } else if (!fromHistory) {
             startNewVideoSession();
         }
-        const restoredMessages = options.messages ?? [];
-        const restoredVideoUrl = getLastSessionVideoUrl(restoredMessages) ?? '';
-        const restoredSourceImageUrl = getLastSessionSourceImageUrl(restoredMessages) ?? '';
+
+        const restoredMessages = fromHistory
+            ? (options.messages ?? [])
+            : (stored?.messages ?? []);
+        const restoredVideoUrl = fromHistory
+            ? (getLastSessionVideoUrl(restoredMessages) ?? '')
+            : (stored?.generatedVideoUrl ?? getLastSessionVideoUrl(restoredMessages) ?? '');
+        const restoredSourceImageUrl = fromHistory
+            ? (getLastSessionSourceImageUrl(restoredMessages) ?? '')
+            : (stored?.videoSourceImageUrl ?? getLastSessionSourceImageUrl(restoredMessages) ?? '');
+
         setVideoSessionMessages(restoredMessages);
         setVideoSourceImageUrl(restoredSourceImageUrl);
-        setVideoSourceVideoUrl('');
-        setVideoPrompt('');
+        setVideoSourceVideoUrl(stored?.videoSourceVideoUrl ?? '');
+        setVideoPrompt(stored?.videoPrompt ?? '');
         setGeneratedVideoUrl(restoredVideoUrl);
         setVideoReturnPage(returnPage);
         setVideoError('');
@@ -2560,25 +2754,6 @@ function App() {
             setImageAttachment(null);
             setGeneratedImageUrl(imageUrl);
             setGeneratedImageUrls(imageUrls);
-
-            try {
-                const historyResponse = await savePromptHistory({
-                    prompt: trimmedPrompt,
-                    category: imageModel,
-                    model: imageModel,
-                    response: imageUrl,
-                    sessionId: imageSessionId,
-                });
-                const savedItem = historyResponse?.item;
-
-                if (savedItem) {
-                    setPromptHistoryData((prev) => ({
-                        items: [savedItem, ...(Array.isArray(prev?.items) ? prev.items : [])],
-                    }));
-                }
-            } catch {
-                // History save is optional.
-            }
         } catch (error) {
             setGeneratedImageUrl('');
             const message = error instanceof Error ? error.message : '';
@@ -2711,25 +2886,6 @@ function App() {
             }
             setVideoPrompt('');
             setGeneratedVideoUrl(videoUrl);
-
-            try {
-                const historyResponse = await savePromptHistory({
-                    prompt: trimmedPrompt,
-                    category: videoModel,
-                    model: videoModel,
-                    response: videoUrl,
-                    sessionId: videoSessionId,
-                });
-                const savedItem = historyResponse?.item;
-
-                if (savedItem) {
-                    setPromptHistoryData((prev) => ({
-                        items: [savedItem, ...(Array.isArray(prev?.items) ? prev.items : [])],
-                    }));
-                }
-            } catch {
-                // History save is optional.
-            }
         } catch (error) {
             setGeneratedVideoUrl('');
             const message = error instanceof Error ? error.message : '';
@@ -2773,25 +2929,6 @@ function App() {
             }
 
             setGeneratedAudioUrl(audioUrl);
-
-            try {
-                const historyResponse = await savePromptHistory({
-                    prompt: trimmedPrompt,
-                    category: audioModel,
-                    model: audioModel,
-                    response: audioUrl,
-                    sessionId: audioSessionId,
-                });
-                const savedItem = historyResponse?.item;
-
-                if (savedItem) {
-                    setPromptHistoryData((prev) => ({
-                        items: [savedItem, ...(Array.isArray(prev?.items) ? prev.items : [])],
-                    }));
-                }
-            } catch {
-                // History save is optional.
-            }
         } catch (error) {
             setGeneratedAudioUrl('');
             const message = error instanceof Error ? error.message : '';
@@ -2801,7 +2938,14 @@ function App() {
         }
     };
 
-    const handleNewChatDialog = () => {
+    const handleNewChatDialog = async () => {
+        await archiveMediaMessagesToHistory({
+            messages: chatMessages,
+            model: textModel,
+            sessionId: chatSessionId,
+            getResponse: (message) => (message?.role === 'assistant' ? message?.content : ''),
+        });
+        clearMediaSession('chat');
         handleStopChatGeneration();
         startNewChatSession();
         setChatMessages([]);
@@ -3586,74 +3730,100 @@ function App() {
                     </div>
                 ) : null}
 
-                <MediaModelOptionsBar
-                    capabilities={getImageModelCapabilities(imageModel)}
-                    values={{
-                        aspectRatio: imageAspectRatio,
-                        resolution: imageResolution,
-                        quality: imageQuality,
-                        outputFormat: imageOutputFormat,
-                    }}
-                    onChange={handleImageOptionChange}
-                    labels={{
-                        group: text.mediaOptionsGroup,
-                        aspectRatio: text.mediaOptionAspectRatio,
-                        resolution: text.mediaOptionResolution,
-                        quality: text.mediaOptionQuality,
-                        outputFormat: text.mediaOptionOutputFormat,
-                        toggleOn: text.mediaToggleOn,
-                        toggleOff: text.mediaToggleOff,
-                        qualityValues: {
-                            low: text.mediaQualityLow,
-                            medium: text.mediaQualityMedium,
-                            high: text.mediaQualityHigh,
-                        },
-                    }}
-                    disabled={isGeneratingImage}
-                    idPrefix="image"
-                />
+                <div className="ai-video__main">
+                    <MediaModelOptionsBar
+                        capabilities={getImageModelCapabilities(imageModel)}
+                        values={{
+                            aspectRatio: imageAspectRatio,
+                            resolution: imageResolution,
+                            quality: imageQuality,
+                            outputFormat: imageOutputFormat,
+                        }}
+                        onChange={handleImageOptionChange}
+                        labels={{
+                            group: text.mediaOptionsGroup,
+                            aspectRatio: text.mediaOptionAspectRatio,
+                            resolution: text.mediaOptionResolution,
+                            quality: text.mediaOptionQuality,
+                            outputFormat: text.mediaOptionOutputFormat,
+                            toggleOn: text.mediaToggleOn,
+                            toggleOff: text.mediaToggleOff,
+                            qualityValues: {
+                                low: text.mediaQualityLow,
+                                medium: text.mediaQualityMedium,
+                                high: text.mediaQualityHigh,
+                            },
+                        }}
+                        disabled={isGeneratingImage}
+                        idPrefix="image"
+                        collapsed
+                    />
 
-                <div className="ai-image__content">
-                    {isGeneratingImage ? (
-                        <p className="ai-chat__empty">{text.imageGenerating}</p>
-                    ) : generatedImageUrl ? (
-                        <section className="ai-image__result" aria-label={text.imageResultTitle}>
-                            <p className="ai-image__result-label">{text.imageResultTitle}</p>
-                            {generatedImageUrls.length > 1 ? (
-                                <div className="ai-image__gallery">
-                                    {generatedImageUrls.map((url, index) => (
-                                        <img
-                                            key={`${url}-${index}`}
-                                            className="ai-image__preview"
-                                            src={url}
-                                            alt={`${text.imageGenerateTitle} ${index + 1}`}
-                                        />
-                                    ))}
+                    {usesSessionEdit ? (
+                        <p className="ai-image__edit-hint">{text.imageEditHint}</p>
+                    ) : null}
+
+                    {hasAttachedImage ? (
+                        <p className="ai-image__edit-hint">{text.imageAttachmentHint}</p>
+                    ) : null}
+
+                    <div className="ai-image__content ai-image__content--in-main">
+                        {isGeneratingImage ? (
+                            <p className="ai-chat__empty">{text.imageGenerating}</p>
+                        ) : generatedImageUrl ? (
+                            <section className="ai-image__result" aria-label={text.imageResultTitle}>
+                                <div className="ai-image__result-header">
+                                    <p className="ai-image__result-label">{text.imageResultTitle}</p>
+                                    {generatedImageUrls.length <= 1 ? (
+                                        <button
+                                            type="button"
+                                            className="ai-media__download"
+                                            onClick={() => handleMediaDownload('image', generatedImageUrl, 'image.png')}
+                                            disabled={mediaDownloadBusy === 'image'}
+                                        >
+                                            <Download size={14} aria-hidden="true" />
+                                            {mediaDownloadBusy === 'image' ? text.mediaDownloading : text.mediaDownloadButton}
+                                        </button>
+                                    ) : null}
                                 </div>
-                            ) : (
-                                <img
-                                    className="ai-image__preview"
-                                    src={generatedImageUrl}
-                                    alt={imagePrompt || text.imageGenerateTitle}
-                                />
-                            )}
-                        </section>
-                    ) : (
-                        <p className="ai-chat__empty">{text.imagePromptPlaceholder}</p>
-                    )}
+                                {generatedImageUrls.length > 1 ? (
+                                    <div className="ai-image__gallery">
+                                        {generatedImageUrls.map((url, index) => (
+                                            <div key={`${url}-${index}`} className="ai-image__gallery-item">
+                                                <img
+                                                    className="ai-image__preview"
+                                                    src={url}
+                                                    alt={`${text.imageGenerateTitle} ${index + 1}`}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="ai-media__download"
+                                                    onClick={() => handleMediaDownload(`image-${index}`, url, `image-${index + 1}.png`)}
+                                                    disabled={mediaDownloadBusy === `image-${index}`}
+                                                >
+                                                    <Download size={14} aria-hidden="true" />
+                                                    {mediaDownloadBusy === `image-${index}` ? text.mediaDownloading : text.mediaDownloadButton}
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <img
+                                        className="ai-image__preview"
+                                        src={generatedImageUrl}
+                                        alt={imagePrompt || text.imageGenerateTitle}
+                                    />
+                                )}
+                            </section>
+                        ) : (
+                            <p className="ai-chat__empty">{text.imagePromptPlaceholder}</p>
+                        )}
+                    </div>
+
+                    {imageError ? (
+                        <p className="ai-chat__inline-error" role="alert">{imageError}</p>
+                    ) : null}
                 </div>
-
-                {usesSessionEdit ? (
-                    <p className="ai-image__edit-hint">{text.imageEditHint}</p>
-                ) : null}
-
-                {hasAttachedImage ? (
-                    <p className="ai-image__edit-hint">{text.imageAttachmentHint}</p>
-                ) : null}
-
-                {imageError ? (
-                    <p className="ai-chat__inline-error" role="alert">{imageError}</p>
-                ) : null}
 
                 <footer className={`ai-chat__composer ${supportsSourceUpload ? '' : 'ai-chat__composer--no-attach'}`}>
                     {supportsSourceUpload ? (
@@ -3828,7 +3998,6 @@ function App() {
                         aspectRatio: videoAspectRatio,
                         duration: videoDuration,
                         resolution: videoResolution,
-                        qualityTier: videoQualityTier,
                         negativePrompt: videoNegativePrompt,
                         cameraMovement: videoCameraMovement,
                         cameraHorizontal: videoCameraHorizontal,
@@ -3848,11 +4017,6 @@ function App() {
                         aspectRatio: text.mediaOptionAspectRatio,
                         resolution: text.mediaOptionResolution,
                         duration: text.mediaOptionDuration,
-                        qualityTier: text.mediaOptionQualityTier,
-                        qualityTierValues: {
-                            std: text.mediaQualityTierStd,
-                            pro: text.mediaQualityTierPro,
-                        },
                         negativePrompt: text.mediaOptionNegativePrompt,
                         negativePromptPlaceholder: text.mediaNegativePromptPlaceholder,
                         cameraMovement: text.mediaOptionCameraMovement,
@@ -3884,6 +4048,7 @@ function App() {
                     }}
                     disabled={isGeneratingVideo}
                     idPrefix="video"
+                    collapsed
                 />
 
                 {isUnifiedEdit ? (
@@ -3928,7 +4093,18 @@ function App() {
 
                     {generatedVideoUrl ? (
                         <section className="ai-image__result ai-video__result" aria-label={text.videoResultTitle}>
-                            <p className="ai-image__result-label">{text.videoResultTitle}</p>
+                            <div className="ai-image__result-header">
+                                <p className="ai-image__result-label">{text.videoResultTitle}</p>
+                                <button
+                                    type="button"
+                                    className="ai-media__download"
+                                    onClick={() => handleMediaDownload('video', generatedVideoUrl, 'video.mp4')}
+                                    disabled={mediaDownloadBusy === 'video'}
+                                >
+                                    <Download size={14} aria-hidden="true" />
+                                    {mediaDownloadBusy === 'video' ? text.mediaDownloading : text.mediaDownloadButton}
+                                </button>
+                            </div>
                             <video
                                 className="ai-image__preview"
                                 src={generatedVideoUrl}
@@ -4041,53 +4217,67 @@ function App() {
                     })}
                 </div>
 
-                <MediaModelOptionsBar
-                    capabilities={getAudioModelCapabilities(audioModel)}
-                    values={{
-                        language: audioLanguage,
-                        voice: audioVoice,
-                        styleInstruction: audioStyleInstruction,
-                        referenceText: audioReferenceText,
-                    }}
-                    onChange={handleAudioOptionChange}
-                    labels={{
-                        group: text.mediaOptionsGroup,
-                        language: text.mediaOptionLanguage,
-                        voice: text.mediaOptionVoice,
-                        styleInstruction: text.mediaOptionStyleInstruction,
-                        referenceText: text.mediaOptionReferenceText,
-                        styleInstructionPlaceholder: text.mediaStyleInstructionPlaceholder,
-                        referenceTextPlaceholder: text.mediaReferenceTextPlaceholder,
-                    }}
-                    disabled={isGeneratingAudio}
-                    idPrefix="audio"
-                    cloneMode={isCloneMode}
-                />
+                <div className="ai-video__main">
+                    <MediaModelOptionsBar
+                        capabilities={getAudioModelCapabilities(audioModel)}
+                        values={{
+                            language: audioLanguage,
+                            voice: audioVoice,
+                            styleInstruction: audioStyleInstruction,
+                            referenceText: audioReferenceText,
+                        }}
+                        onChange={handleAudioOptionChange}
+                        labels={{
+                            group: text.mediaOptionsGroup,
+                            language: text.mediaOptionLanguage,
+                            voice: text.mediaOptionVoice,
+                            styleInstruction: text.mediaOptionStyleInstruction,
+                            referenceText: text.mediaOptionReferenceText,
+                            styleInstructionPlaceholder: text.mediaStyleInstructionPlaceholder,
+                            referenceTextPlaceholder: text.mediaReferenceTextPlaceholder,
+                        }}
+                        disabled={isGeneratingAudio}
+                        idPrefix="audio"
+                        cloneMode={isCloneMode}
+                        collapsed
+                    />
 
-                <div className="ai-image__content">
-                    {isGeneratingAudio ? (
-                        <p className="ai-chat__empty">{text.voiceGenerating}</p>
-                    ) : generatedAudioUrl ? (
-                        <section className="ai-image__result" aria-label={text.voiceResultTitle}>
-                            <p className="ai-image__result-label">{text.voiceResultTitle}</p>
-                            <audio
-                                className="ai-image__preview"
-                                src={generatedAudioUrl}
-                                controls
-                            />
-                        </section>
-                    ) : (
-                        <p className="ai-chat__empty">{text.voicePromptPlaceholder}</p>
-                    )}
+                    {supportsClone && isCloneMode ? (
+                        <p className="ai-image__edit-hint">{text.voiceCloneHint}</p>
+                    ) : null}
+
+                    <div className="ai-image__content ai-image__content--in-main">
+                        {isGeneratingAudio ? (
+                            <p className="ai-chat__empty">{text.voiceGenerating}</p>
+                        ) : generatedAudioUrl ? (
+                            <section className="ai-image__result" aria-label={text.voiceResultTitle}>
+                                <div className="ai-image__result-header">
+                                    <p className="ai-image__result-label">{text.voiceResultTitle}</p>
+                                    <button
+                                        type="button"
+                                        className="ai-media__download"
+                                        onClick={() => handleMediaDownload('audio', generatedAudioUrl, 'audio.mp3')}
+                                        disabled={mediaDownloadBusy === 'audio'}
+                                    >
+                                        <Download size={14} aria-hidden="true" />
+                                        {mediaDownloadBusy === 'audio' ? text.mediaDownloading : text.mediaDownloadButton}
+                                    </button>
+                                </div>
+                                <audio
+                                    className="ai-image__preview"
+                                    src={generatedAudioUrl}
+                                    controls
+                                />
+                            </section>
+                        ) : (
+                            <p className="ai-chat__empty">{text.voicePromptPlaceholder}</p>
+                        )}
+                    </div>
+
+                    {audioError ? (
+                        <p className="ai-chat__inline-error" role="alert">{audioError}</p>
+                    ) : null}
                 </div>
-
-                {supportsClone && isCloneMode ? (
-                    <p className="ai-image__edit-hint">{text.voiceCloneHint}</p>
-                ) : null}
-
-                {audioError ? (
-                    <p className="ai-chat__inline-error" role="alert">{audioError}</p>
-                ) : null}
 
                 <footer className={`ai-chat__composer ${supportsClone ? '' : 'ai-chat__composer--no-attach'}`}>
                     {supportsClone ? (
@@ -4523,17 +4713,28 @@ function App() {
                     <p className="history-concept__group-label">{group.label}</p>
                     <div className="history-concept__list">
                         {group.topics.map((topic) => {
-                            const visual = getHistoryVisual(topic.model);
+                            const resolvedModelId = resolveHistoryTopicModel(topic);
+                            const visual = getHistoryVisual(resolvedModelId);
                             const ThumbIcon = visual.icon;
                             const mediaPreview = getHistoryTopicMediaPreview(topic, {
                                 imageModelIds: IMAGE_MODEL_IDS,
                                 videoModelIds: VIDEO_MODEL_IDS,
                             });
-                            const toolName = getModelLabel(
+                            const toolName = getHistoryTopicLabel({
+                                topic,
                                 effectiveTextModels,
-                                resolveTextModelId(topic.model, effectiveTextModels),
                                 textModelSelectorItems,
-                            ) || visual.toolName;
+                                imageModelSelectorItems,
+                                videoModelSelectorItems,
+                                audioModelSelectorItems,
+                                imageDefinitions: IMAGE_MODEL_DEFINITIONS,
+                                videoDefinitions: VIDEO_MODEL_DEFINITIONS,
+                                audioDefinitions: AUDIO_MODEL_DEFINITIONS,
+                                text,
+                                getImageSelectorChipLabel,
+                                getVideoSelectorChipLabel,
+                                getAudioSelectorChipLabel,
+                            }) || visual.toolName;
 
                             return (
                                 <article
@@ -4698,6 +4899,17 @@ function App() {
 
         const currentScreen = screenConfig[currentPage];
 
+        if (!currentScreen) {
+            return (
+                <section className="home-screen home-screen--concept" aria-label={text.navHome}>
+                    <p className="ai-chat__empty">{text.homeGreetingSub}</p>
+                    <button type="button" className="ai-media__download" onClick={() => setCurrentPage('home')}>
+                        {text.back}
+                    </button>
+                </section>
+            );
+        }
+
         return (
             <section className="info-screen">
                 <div className="info-card-shell">
@@ -4720,6 +4932,12 @@ function App() {
 
     return (
         <div className="app-shell" data-page={currentPage}>
+            {isLoading ? (
+                <div className="app-boot" role="status" aria-live="polite">
+                    <span className="app-boot__spinner" aria-hidden="true" />
+                    <span>{language === 'ru' ? 'Загрузка…' : 'Loading…'}</span>
+                </div>
+            ) : null}
             <div className="app-shell__orbs" aria-hidden="true">
                 <span className="app-shell__orb app-shell__orb--1" />
                 <span className="app-shell__orb app-shell__orb--2" />
