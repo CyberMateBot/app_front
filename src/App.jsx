@@ -91,6 +91,12 @@ import { compressImageFile } from './lib/compressImage.js';
 import { createChatSessionId } from './lib/chatSession.js';
 import { downloadMediaUrl, guessMediaFilename } from './lib/downloadMedia.js';
 import { clearMediaSession, loadMediaSession, saveMediaSession } from './lib/mediaSessions.js';
+import {
+    resolveAudioSessionState,
+    resolveChatSessionState,
+    resolveImageSessionState,
+    resolveVideoSessionState,
+} from './lib/sessionRestore.js';
 import { getModelSessionScope } from './lib/sessionScope.js';
 import {
     setBackgroundTypingListener,
@@ -1311,6 +1317,98 @@ function App() {
         syncBackgroundTyping(chatMessages);
     }, [chatMessages]);
 
+    useEffect(() => {
+        if (currentPage !== 'ai-image' || generatedImageUrl || isGeneratingImage) {
+            return;
+        }
+
+        const fromMessages = getLastSessionImageUrl(imageSessionMessages);
+        if (fromMessages) {
+            setGeneratedImageUrl(fromMessages);
+            setGeneratedImageUrls((prev) => (prev.length ? prev : [fromMessages]));
+            return;
+        }
+
+        const stored = loadMediaSession('image', imageSessionScope);
+        if (!stored) {
+            return;
+        }
+
+        const restored = resolveImageSessionState({
+            memory: {
+                sessionId: imageSessionId,
+                messages: imageSessionMessages,
+                generatedImageUrl: '',
+                generatedImageUrls: [],
+                isGenerating: isGeneratingImage,
+            },
+            stored,
+        });
+
+        if (restored?.generatedImageUrl) {
+            setGeneratedImageUrl(restored.generatedImageUrl);
+            setGeneratedImageUrls(restored.generatedImageUrls);
+            if (!restored.isGenerating) {
+                setIsGeneratingImage(false);
+            }
+        }
+    }, [
+        currentPage,
+        generatedImageUrl,
+        imageSessionMessages,
+        imageSessionScope,
+        imageSessionId,
+        isGeneratingImage,
+    ]);
+
+    useEffect(() => {
+        if (currentPage !== 'ai-video' || generatedVideoUrl || isGeneratingVideo) {
+            return;
+        }
+
+        const fromMessages = getLastSessionVideoUrl(videoSessionMessages);
+        if (fromMessages) {
+            setGeneratedVideoUrl(fromMessages);
+            setIsGeneratingVideo(false);
+            return;
+        }
+
+        const stored = loadMediaSession('video', videoSessionScope);
+        if (!stored) {
+            return;
+        }
+
+        const restored = resolveVideoSessionState({
+            memory: {
+                sessionId: videoSessionId,
+                messages: videoSessionMessages,
+                generatedVideoUrl: '',
+                videoPrompt,
+                videoSourceImageUrl,
+                videoSourceVideoUrl,
+                isGenerating: isGeneratingVideo,
+            },
+            stored,
+        });
+
+        if (restored?.generatedVideoUrl) {
+            setGeneratedVideoUrl(restored.generatedVideoUrl);
+            if (!restored.isGenerating) {
+                setIsGeneratingVideo(false);
+            }
+        }
+    }, [
+        currentPage,
+        generatedVideoUrl,
+        videoSessionMessages,
+        videoSessionScope,
+        videoSessionId,
+        videoPrompt,
+        videoSourceImageUrl,
+        videoSourceVideoUrl,
+        isGeneratingVideo,
+    ]);
+
     const showAppNotice = useCallback((message, variant = 'error') => {
         if (!message) {
             setAppNotice(null);
@@ -2142,12 +2240,8 @@ function App() {
             ? resolveTextModelId(modelId, effectiveTextModels)
             : resolveTextModelId(textModel, effectiveTextModels);
         const scope = getModelSessionScope(targetModelId, textModelSelectorItems);
-        const hasInMemorySession = !fromHistory
-            && scope === chatSessionScope
-            && (chatMessages.length > 0 || isGeneratingText || Boolean(chatTopicTitle));
-        const stored = !fromHistory && !hasInMemorySession
-            ? loadMediaSession('chat', scope)
-            : null;
+        const stored = !fromHistory ? loadMediaSession('chat', scope) : null;
+        const memoryActive = !fromHistory && scope === chatSessionScope;
 
         setTextModel(targetModelId);
         setStoredTextModelId(targetModelId);
@@ -2158,16 +2252,31 @@ function App() {
             }
             setChatMessages(options.messages ?? []);
             setChatTopicTitle(options.topicTitle ?? '');
-        } else if (hasInMemorySession) {
-            // Keep in-memory session (typing/generation may have progressed while away).
-        } else if (stored) {
-            setChatSessionId(stored.sessionId || createChatSessionId());
-            setChatMessages(stored.messages ?? []);
-            setChatTopicTitle(stored.topicTitle ?? '');
+            setIsGeneratingText(false);
         } else {
-            startNewChatSession();
-            setChatMessages([]);
-            setChatTopicTitle('');
+            const restored = resolveChatSessionState({
+                memory: memoryActive
+                    ? {
+                        sessionId: chatSessionId,
+                        messages: chatMessages,
+                        topicTitle: chatTopicTitle,
+                        isGenerating: isGeneratingText,
+                    }
+                    : null,
+                stored,
+            });
+
+            if (restored) {
+                setChatSessionId(restored.sessionId || createChatSessionId());
+                setChatMessages(restored.messages);
+                setChatTopicTitle(restored.topicTitle);
+                setIsGeneratingText(false);
+            } else {
+                startNewChatSession();
+                setChatMessages([]);
+                setChatTopicTitle('');
+                setIsGeneratingText(false);
+            }
         }
 
         setTextPrompt('');
@@ -2532,12 +2641,8 @@ function App() {
         const fromHistory = Boolean(options.messages?.length);
         const targetModelId = modelId || imageModel;
         const scope = getModelSessionScope(targetModelId, imageModelSelectorItems);
-        const hasInMemorySession = !fromHistory
-            && scope === imageSessionScope
-            && (imageSessionMessages.length > 0 || isGeneratingImage || Boolean(generatedImageUrl));
-        const stored = !fromHistory && !hasInMemorySession
-            ? loadMediaSession('image', scope)
-            : null;
+        const stored = !fromHistory ? loadMediaSession('image', scope) : null;
+        const memoryActive = !fromHistory && scope === imageSessionScope;
 
         setImageModel(targetModelId);
         applyImageModelOptions(targetModelId);
@@ -2553,22 +2658,34 @@ function App() {
             setImageSessionMessages(restoredMessages);
             setGeneratedImageUrl(restoredImageUrl);
             setGeneratedImageUrls(restoredImageUrl ? [restoredImageUrl] : []);
-        } else if (hasInMemorySession) {
-            // Keep in-memory session while generation may still be running.
-        } else if (stored) {
-            setImageSessionId(stored.sessionId || createChatSessionId());
-            setImageSessionMessages(stored.messages ?? []);
-            setGeneratedImageUrl(stored.generatedImageUrl ?? getLastSessionImageUrl(stored.messages) ?? '');
-            setGeneratedImageUrls(
-                Array.isArray(stored.generatedImageUrls) && stored.generatedImageUrls.length
-                    ? stored.generatedImageUrls
-                    : (stored.generatedImageUrl ? [stored.generatedImageUrl] : []),
-            );
+            setIsGeneratingImage(false);
         } else {
-            startNewImageSession();
-            setImageSessionMessages([]);
-            setGeneratedImageUrl('');
-            setGeneratedImageUrls([]);
+            const restored = resolveImageSessionState({
+                memory: memoryActive
+                    ? {
+                        sessionId: imageSessionId,
+                        messages: imageSessionMessages,
+                        generatedImageUrl,
+                        generatedImageUrls,
+                        isGenerating: isGeneratingImage,
+                    }
+                    : null,
+                stored,
+            });
+
+            if (restored) {
+                setImageSessionId(restored.sessionId || createChatSessionId());
+                setImageSessionMessages(restored.messages);
+                setGeneratedImageUrl(restored.generatedImageUrl);
+                setGeneratedImageUrls(restored.generatedImageUrls);
+                setIsGeneratingImage(restored.isGenerating);
+            } else {
+                startNewImageSession();
+                setImageSessionMessages([]);
+                setGeneratedImageUrl('');
+                setGeneratedImageUrls([]);
+                setIsGeneratingImage(false);
+            }
         }
 
         setImagePrompt('');
@@ -2740,12 +2857,8 @@ function App() {
         const fromHistory = Boolean(options.prompt || options.audioUrl);
         const targetModelId = modelId || audioModel;
         const scope = getModelSessionScope(targetModelId, audioModelSelectorItems);
-        const hasInMemorySession = !fromHistory
-            && scope === audioSessionScope
-            && (Boolean(audioPrompt) || Boolean(generatedAudioUrl) || isGeneratingAudio);
-        const stored = !fromHistory && !hasInMemorySession
-            ? loadMediaSession('audio', scope)
-            : null;
+        const stored = !fromHistory ? loadMediaSession('audio', scope) : null;
+        const memoryActive = !fromHistory && scope === audioSessionScope;
 
         setAudioModel(targetModelId);
         applyAudioModelOptions(targetModelId);
@@ -2756,16 +2869,31 @@ function App() {
             }
             setAudioPrompt(options.prompt ?? '');
             setGeneratedAudioUrl(options.audioUrl ?? '');
-        } else if (hasInMemorySession) {
-            // Keep in-memory session while generation may still be running.
-        } else if (stored) {
-            setAudioSessionId(stored.sessionId || createChatSessionId());
-            setAudioPrompt(stored.audioPrompt ?? '');
-            setGeneratedAudioUrl(stored.generatedAudioUrl ?? '');
+            setIsGeneratingAudio(false);
         } else {
-            startNewAudioSession();
-            setAudioPrompt('');
-            setGeneratedAudioUrl('');
+            const restored = resolveAudioSessionState({
+                memory: memoryActive
+                    ? {
+                        sessionId: audioSessionId,
+                        audioPrompt,
+                        generatedAudioUrl,
+                        isGenerating: isGeneratingAudio,
+                    }
+                    : null,
+                stored,
+            });
+
+            if (restored) {
+                setAudioSessionId(restored.sessionId || createChatSessionId());
+                setAudioPrompt(restored.audioPrompt);
+                setGeneratedAudioUrl(restored.generatedAudioUrl);
+                setIsGeneratingAudio(restored.isGenerating);
+            } else {
+                startNewAudioSession();
+                setAudioPrompt('');
+                setGeneratedAudioUrl('');
+                setIsGeneratingAudio(false);
+            }
         }
 
         setAudioAttachment(null);
@@ -2778,12 +2906,8 @@ function App() {
         const fromHistory = Boolean(options.messages?.length);
         const targetModelId = modelId || videoModel;
         const scope = getModelSessionScope(targetModelId, videoModelSelectorItems);
-        const hasInMemorySession = !fromHistory
-            && scope === videoSessionScope
-            && (videoSessionMessages.length > 0 || isGeneratingVideo || Boolean(generatedVideoUrl));
-        const stored = !fromHistory && !hasInMemorySession
-            ? loadMediaSession('video', scope)
-            : null;
+        const stored = !fromHistory ? loadMediaSession('video', scope) : null;
+        const memoryActive = !fromHistory && scope === videoSessionScope;
 
         setVideoModel(targetModelId);
         applyVideoModelOptions(targetModelId);
@@ -2802,22 +2926,40 @@ function App() {
             setVideoSourceVideoUrl('');
             setVideoPrompt('');
             setGeneratedVideoUrl(restoredVideoUrl);
-        } else if (hasInMemorySession) {
-            // Keep in-memory session while generation may still be running.
-        } else if (stored) {
-            setVideoSessionId(stored.sessionId || createChatSessionId());
-            setVideoSessionMessages(stored.messages ?? []);
-            setVideoSourceImageUrl(stored.videoSourceImageUrl ?? getLastSessionSourceImageUrl(stored.messages) ?? '');
-            setVideoSourceVideoUrl(stored.videoSourceVideoUrl ?? '');
-            setVideoPrompt(stored.videoPrompt ?? '');
-            setGeneratedVideoUrl(stored.generatedVideoUrl ?? getLastSessionVideoUrl(stored.messages) ?? '');
+            setIsGeneratingVideo(false);
         } else {
-            startNewVideoSession();
-            setVideoSessionMessages([]);
-            setVideoSourceImageUrl('');
-            setVideoSourceVideoUrl('');
-            setVideoPrompt('');
-            setGeneratedVideoUrl('');
+            const restored = resolveVideoSessionState({
+                memory: memoryActive
+                    ? {
+                        sessionId: videoSessionId,
+                        messages: videoSessionMessages,
+                        generatedVideoUrl,
+                        videoPrompt,
+                        videoSourceImageUrl,
+                        videoSourceVideoUrl,
+                        isGenerating: isGeneratingVideo,
+                    }
+                    : null,
+                stored,
+            });
+
+            if (restored) {
+                setVideoSessionId(restored.sessionId || createChatSessionId());
+                setVideoSessionMessages(restored.messages);
+                setVideoSourceImageUrl(restored.videoSourceImageUrl);
+                setVideoSourceVideoUrl(restored.videoSourceVideoUrl);
+                setVideoPrompt(restored.videoPrompt);
+                setGeneratedVideoUrl(restored.generatedVideoUrl);
+                setIsGeneratingVideo(restored.isGenerating);
+            } else {
+                startNewVideoSession();
+                setVideoSessionMessages([]);
+                setVideoSourceImageUrl('');
+                setVideoSourceVideoUrl('');
+                setVideoPrompt('');
+                setGeneratedVideoUrl('');
+                setIsGeneratingVideo(false);
+            }
         }
 
         setVideoReturnPage(returnPage);
@@ -3419,21 +3561,28 @@ function App() {
 
     const handleToolCardClick = (card) => {
         if (card.id === 'images') {
-            openAiImage('nano-banana', 'home');
+            openAiImage(imageModel, 'home');
             return;
         }
 
         if (card.id === 'video') {
-            openAiVideo('kling-v3-std', 'home');
+            openAiVideo(videoModel, 'home');
             return;
         }
 
         if (card.id === 'voice' || card.page === 'ai-voice') {
-            openAiVoice('qwen3-tts', 'home');
+            openAiVoice(audioModel, 'home');
             return;
         }
 
-        if (card.page === 'ai-chat' || card.id === 'chat') {
+        if (card.id === 'music') {
+            showAppNotice(language === 'en'
+                ? 'Music generation is coming soon.'
+                : 'Генерация музыки скоро будет доступна.');
+            return;
+        }
+
+        if (card.page === 'ai-chat' || card.id === 'chat' || card.id === 'text') {
             openAiChat(textModel, 'home');
         }
     };
@@ -3846,6 +3995,7 @@ function App() {
                                     </div>
                                 ) : (
                                     <img
+                                        key={generatedImageUrl}
                                         className="ai-image__preview"
                                         src={generatedImageUrl}
                                         alt={imagePrompt || text.imageGenerateTitle}
@@ -4073,6 +4223,7 @@ function App() {
                                 </button>
                             </div>
                             <video
+                                key={generatedVideoUrl}
                                 className="ai-image__preview ai-image__preview--video"
                                 src={generatedVideoUrl}
                                 controls
