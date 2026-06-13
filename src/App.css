@@ -4295,6 +4295,30 @@
   background: #000;
 }
 
+.ai-image__preview--inline {
+  margin-top: 8px;
+}
+
+.ai-chat__messages--media {
+  padding: 0 1rem 12px;
+}
+
+.ai-media-message {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-media-message__note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--cm-text-muted);
+}
+
+.ai-media-message__download {
+  align-self: flex-start;
+}
+
 :root[data-theme='light'] .ai-image__preview {
   box-shadow: 0 1px 3px rgba(20, 24, 36, 0.06);
 }

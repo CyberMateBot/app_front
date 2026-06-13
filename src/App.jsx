@@ -120,6 +120,7 @@ import AppNotice from './Components/AppNotice.jsx';
 import AppPageHeader from './Components/AppPageHeader.jsx';
 import AiVariantSelect from './Components/AiVariantSelect.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
+import MediaMessageBubble from './Components/MediaMessageBubble.jsx';
 import MediaModelOptionsBar from './Components/MediaModelOptionsBar.jsx';
 import {
     IMAGE_MODEL_DEFINITIONS,
@@ -1166,6 +1167,16 @@ function App() {
         (topic) => resolveHistoryTopicModelId(topic, effectiveTextModels),
         [effectiveTextModels],
     );
+
+    const pushPromptHistoryItem = useCallback((item) => {
+        if (!item) {
+            return;
+        }
+
+        setPromptHistoryData((prev) => ({
+            items: [item, ...(Array.isArray(prev?.items) ? prev.items : [])],
+        }));
+    }, []);
 
     const archiveMediaMessagesToHistory = useCallback(async ({
         messages,
@@ -2638,7 +2649,7 @@ function App() {
     };
 
     const openAiImage = (modelId, returnPage = currentPage, options = {}) => {
-        const fromHistory = Boolean(options.messages?.length);
+        const fromHistory = returnPage === 'history' || Boolean(options.messages?.length);
         const targetModelId = modelId || imageModel;
         const scope = getModelSessionScope(targetModelId, imageModelSelectorItems);
         const stored = !fromHistory ? loadMediaSession('image', scope) : null;
@@ -2903,7 +2914,7 @@ function App() {
     };
 
     const openAiVideo = (modelId, returnPage = currentPage, options = {}) => {
-        const fromHistory = Boolean(options.messages?.length);
+        const fromHistory = returnPage === 'history' || Boolean(options.messages?.length);
         const targetModelId = modelId || videoModel;
         const scope = getModelSessionScope(targetModelId, videoModelSelectorItems);
         const stored = !fromHistory ? loadMediaSession('video', scope) : null;
@@ -3052,6 +3063,9 @@ function App() {
             setImageAttachment(null);
             setGeneratedImageUrl(imageUrl);
             setGeneratedImageUrls(imageUrls);
+            if (response?.item) {
+                pushPromptHistoryItem(response.item);
+            }
         } catch (error) {
             setGeneratedImageUrl('');
             const message = error instanceof Error ? error.message : '';
@@ -3184,6 +3198,9 @@ function App() {
             }
             setVideoPrompt('');
             setGeneratedVideoUrl(videoUrl);
+            if (response?.item) {
+                pushPromptHistoryItem(response.item);
+            }
         } catch (error) {
             setGeneratedVideoUrl('');
             const message = error instanceof Error ? error.message : '';
@@ -3954,7 +3971,20 @@ function App() {
                     ) : null}
 
                     <div className="ai-image__content ai-image__content--in-main">
-                        {isGeneratingImage ? (
+                        {imageSessionMessages.length > 0 ? (
+                            <div className="ai-chat__messages ai-chat__messages--media" aria-live="polite">
+                                {imageSessionMessages.map((message) => (
+                                    <MediaMessageBubble
+                                        key={message.id}
+                                        message={message}
+                                        onDownload={handleMediaDownload}
+                                        downloadBusy={mediaDownloadBusy}
+                                        downloadLabel={text.mediaDownloadButton}
+                                        downloadingLabel={text.mediaDownloading}
+                                    />
+                                ))}
+                            </div>
+                        ) : isGeneratingImage ? (
                             <p className="ai-chat__empty">{text.imageGenerating}</p>
                         ) : generatedImageUrl ? (
                             <section className="ai-image__result" aria-label={text.imageResultTitle}>
@@ -4208,7 +4238,23 @@ function App() {
                     </p>
                 ) : null}
 
-                    {generatedVideoUrl ? (
+                <div className="ai-image__content ai-image__content--in-main">
+                    {videoSessionMessages.length > 0 ? (
+                        <div className="ai-chat__messages ai-chat__messages--media" aria-live="polite">
+                            {videoSessionMessages.map((message) => (
+                                <MediaMessageBubble
+                                    key={message.id}
+                                    message={message}
+                                    onDownload={handleMediaDownload}
+                                    downloadBusy={mediaDownloadBusy}
+                                    downloadLabel={text.mediaDownloadButton}
+                                    downloadingLabel={text.mediaDownloading}
+                                />
+                            ))}
+                        </div>
+                    ) : isGeneratingVideo ? (
+                        <p className="ai-chat__empty">{text.videoGenerating}</p>
+                    ) : generatedVideoUrl ? (
                         <section className="ai-image__result ai-video__result" aria-label={text.videoResultTitle}>
                             <div className="ai-image__result-header">
                                 <p className="ai-image__result-label">{text.videoResultTitle}</p>
@@ -4230,7 +4276,10 @@ function App() {
                                 playsInline
                             />
                         </section>
-                    ) : null}
+                    ) : (
+                        <p className="ai-chat__empty">{text.videoPromptPlaceholder}</p>
+                    )}
+                </div>
                 </div>
 
                 <footer className="ai-video__composer">

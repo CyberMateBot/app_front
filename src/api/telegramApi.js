@@ -429,6 +429,7 @@ export async function generateImage({
         imageUrls: imageUrls.length ? imageUrls : (imageUrl ? [imageUrl] : []),
         model: data?.model ?? normalizedModel,
         tokensUsed: data?.tokensUsed ?? data?.tokens ?? null,
+        item: data?.item ?? null,
     };
 }
 
@@ -560,6 +561,7 @@ export async function generateVideo({
     return {
         videoUrl: data?.videoUrl ?? data?.video_url ?? '',
         model: data?.model ?? normalizedModel,
+        item: data?.item ?? null,
     };
 }
 

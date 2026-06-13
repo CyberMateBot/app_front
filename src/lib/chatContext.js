@@ -172,7 +172,10 @@ export function groupHistoryIntoTopics(items) {
  */
 export function isLikelyMediaUrl(text) {
     const value = String(text ?? '').trim().toLowerCase();
-    return value.startsWith('http://') || value.startsWith('https://');
+    return value.startsWith('http://')
+        || value.startsWith('https://')
+        || value.startsWith('data:image/')
+        || value.startsWith('data:video/');
 }
 
 function historyTopicItems(topic) {
