@@ -1,8 +1,39 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const buildId = (
+    process.env.RAILWAY_GIT_COMMIT_SHA
+    || process.env.GITHUB_SHA
+    || process.env.VERCEL_GIT_COMMIT_SHA
+    || String(Date.now())
+).slice(0, 12);
+
+function cybermateBuildMetaPlugin() {
+    return {
+        name: 'cybermate-build-meta',
+        transformIndexHtml(html) {
+            return html.replace(
+                '</head>',
+                `    <meta name="cm-build-id" content="${buildId}" />\n  </head>`,
+            );
+        },
+        closeBundle() {
+            const outDir = resolve(process.cwd(), 'dist');
+            writeFileSync(
+                resolve(outDir, 'build-meta.json'),
+                `${JSON.stringify({
+                    buildId,
+                    builtAt: new Date().toISOString(),
+                })}\n`,
+            );
+        },
+    };
+}
 
 export default defineConfig({
-    plugins: [react()],
+    plugins: [react(), cybermateBuildMetaPlugin()],
     server: {
         host: '0.0.0.0',
         port: Number(process.env.PORT) || 5173,

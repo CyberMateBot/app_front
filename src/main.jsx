@@ -10,6 +10,7 @@ import {
 } from './config/env.js';
 import './index.css';
 import { initUiScale } from './lib/uiScale.js';
+import { initAppUpdateWatcher } from './lib/appUpdate.js';
 import { initTelegramMiniApp } from './lib/telegramWebApp.js';
 
 function showFatalBootError(message) {
@@ -44,6 +45,7 @@ if (typeof window !== 'undefined') {
 
 initTelegramMiniApp();
 initUiScale();
+initAppUpdateWatcher();
 
 if (import.meta.env.DEV) {
     console.info('[CyberMate] API_BASE_URL:', API_BASE_URL || '(proxy → localhost:8090)');
