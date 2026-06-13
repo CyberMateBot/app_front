@@ -2,7 +2,7 @@
 
 :root {
   --ui-density: 0.88;
-  --nav-bar-height: 52px;
+  --nav-bar-height: 56px;
   --page-pad-x: clamp(10px, 3.2vw, 16px);
 }
 
@@ -21,17 +21,7 @@ body {
 
 /* Bottom nav */
 .bottom-nav__inner {
-  padding: 5px var(--page-pad-x, 10px) calc(8px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
-}
-
-:root:not([data-theme='light']) .bottom-nav__inner,
-:root[data-theme='light'] .bottom-nav__inner {
-  margin-inline: auto;
-  width: 100%;
-  max-width: 100%;
-  padding: 5px;
-  padding-bottom: calc(5px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
-  border-radius: 18px;
+  padding: 6px 4px;
 }
 
 .nav-button {
@@ -348,8 +338,7 @@ body {
   }
 
   .bottom-nav__inner {
-    padding: 5px;
-    padding-bottom: calc(5px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+    padding: 6px 4px;
   }
 
   .nav-button svg {

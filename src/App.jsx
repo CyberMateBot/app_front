@@ -369,6 +369,7 @@ const translations = {
         mediaDownloading: 'Скачивание...',
         mediaDownloadFailed: 'Не удалось скачать файл.',
         mediaDownloadTelegramHint: 'Подтвердите сохранение в окне Telegram.',
+        mediaDownloadGalleryHint: 'Выберите «Сохранить в Фото» или «Сохранить видео».',
         imageGenerateEmpty: 'Изображение не получено. Попробуйте другой промт.',
         imageGeneratedNote: 'Изображение создано.',
         imageContentPolicy: 'Модель отклонила запрос. Попробуйте другую формулировку без запрещённых тем.',
@@ -721,6 +722,7 @@ const translations = {
         mediaDownloading: 'Downloading...',
         mediaDownloadFailed: 'Failed to download file.',
         mediaDownloadTelegramHint: 'Confirm save in the Telegram popup.',
+        mediaDownloadGalleryHint: 'Choose "Save to Photos" or "Save Video".',
         imageGenerateEmpty: 'No image returned. Try a different prompt.',
         imageGeneratedNote: 'Image created.',
         imageContentPolicy: 'The model rejected this prompt. Try a different wording.',
@@ -1326,9 +1328,15 @@ function App() {
 
         setMediaDownloadBusy(kind);
         try {
-            const result = await downloadMediaUrl(trimmed, guessMediaFilename(trimmed, fallbackName));
+            const result = await downloadMediaUrl(
+                trimmed,
+                guessMediaFilename(trimmed, fallbackName),
+                { kind },
+            );
 
-            if (result?.method === 'telegram') {
+            if (result?.method === 'gallery') {
+                showAppNotice(text.mediaDownloadGalleryHint, 'success');
+            } else if (result?.method === 'telegram') {
                 showAppNotice(text.mediaDownloadTelegramHint, 'success');
             }
         } catch (error) {
@@ -1336,7 +1344,7 @@ function App() {
         } finally {
             setMediaDownloadBusy(null);
         }
-    }, [showAppNotice, text.mediaDownloadFailed, text.mediaDownloadTelegramHint]);
+    }, [showAppNotice, text.mediaDownloadFailed, text.mediaDownloadTelegramHint, text.mediaDownloadGalleryHint]);
 
     useEffect(() => {
         if (appNotice?.variant !== 'success') {

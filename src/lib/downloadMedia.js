@@ -1,6 +1,28 @@
 import { apiFetch, resolveApiUrl } from '../api/httpClient.js';
 import { getTelegramWebApp } from './telegramWebApp.js';
 
+const GALLERY_MIME_BY_EXT = {
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    heic: 'image/heic',
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    mov: 'video/quicktime',
+};
+
+const GALLERY_EXT_BY_MIME = {
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+    'image/webp': '.webp',
+    'image/gif': '.gif',
+    'video/mp4': '.mp4',
+    'video/webm': '.webm',
+    'video/quicktime': '.mov',
+};
+
 function isMobileDevice() {
     if (typeof navigator === 'undefined') {
         return false;
@@ -10,13 +32,17 @@ function isMobileDevice() {
         || (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
 }
 
+function isGalleryKind(kind) {
+    return kind === 'image' || kind === 'video';
+}
+
+function shouldSaveToGallery(kind) {
+    return isMobileDevice() && isGalleryKind(kind);
+}
+
 function supportsTelegramDownload() {
     const tg = getTelegramWebApp();
     return typeof tg?.downloadFile === 'function';
-}
-
-function prefersNativeDownload() {
-    return supportsTelegramDownload() || isMobileDevice();
 }
 
 function buildProxyDownloadUrl(mediaUrl, filename) {
@@ -93,21 +119,79 @@ function blobToBase64(blob) {
     });
 }
 
-async function tryShareFile(blob, filename) {
+function getFileExtension(filename) {
+    const match = String(filename || '').split('?')[0].match(/\.([a-z0-9]{2,5})$/i);
+    return match ? match[1].toLowerCase() : '';
+}
+
+function ensureGalleryFilename(filename, mimeType) {
+    const safeName = String(filename || 'cybermate-media').trim() || 'cybermate-media';
+    const extension = getFileExtension(safeName);
+
+    if (extension) {
+        return safeName;
+    }
+
+    const suffix = GALLERY_EXT_BY_MIME[mimeType] || '';
+    return `${safeName}${suffix}`;
+}
+
+function normalizeGalleryBlob(blob, filename, kind) {
+    const extension = getFileExtension(filename);
+    let mimeType = String(blob?.type || '').trim();
+
+    if (!mimeType || mimeType === 'application/octet-stream') {
+        mimeType = GALLERY_MIME_BY_EXT[extension] || '';
+    }
+
+    if (kind === 'image' && !mimeType.startsWith('image/')) {
+        mimeType = 'image/png';
+    }
+
+    if (kind === 'video' && !mimeType.startsWith('video/')) {
+        mimeType = 'video/mp4';
+    }
+
+    const normalizedFilename = ensureGalleryFilename(filename, mimeType);
+    const normalizedBlob = mimeType && mimeType !== blob.type
+        ? new Blob([blob], { type: mimeType })
+        : blob;
+
+    return {
+        blob: normalizedBlob,
+        filename: normalizedFilename,
+        mimeType,
+    };
+}
+
+async function tryShareToGallery(blob, filename, kind) {
     if (typeof navigator.share !== 'function') {
         return false;
     }
 
+    const { blob: galleryBlob, filename: galleryFilename } = normalizeGalleryBlob(blob, filename, kind);
+
     try {
-        const file = new File([blob], filename, {
-            type: blob.type || 'application/octet-stream',
+        const file = new File([galleryBlob], galleryFilename, {
+            type: galleryBlob.type || normalizeGalleryBlob(galleryBlob, galleryFilename, kind).mimeType,
         });
 
-        if (typeof navigator.canShare === 'function' && !navigator.canShare({ files: [file] })) {
+        const shareData = { files: [file] };
+        let canAttemptShare = true;
+
+        if (typeof navigator.canShare === 'function') {
+            try {
+                canAttemptShare = navigator.canShare(shareData);
+            } catch {
+                canAttemptShare = true;
+            }
+        }
+
+        if (!canAttemptShare && !isMobileDevice()) {
             return false;
         }
 
-        await navigator.share({ files: [file], title: filename });
+        await navigator.share(shareData);
         return true;
     } catch (error) {
         if (error?.name === 'AbortError') {
@@ -208,7 +292,21 @@ async function prepareDataDownloadUrl(blob, filename) {
     return downloadUrl;
 }
 
-async function downloadBlobOnDevice(blob, filename) {
+async function downloadGalleryBlob(blob, filename, kind) {
+    const shared = await tryShareToGallery(blob, filename, kind);
+
+    if (shared) {
+        return { method: 'gallery' };
+    }
+
+    throw new Error('Gallery save is not available on this device.');
+}
+
+async function downloadBlobOnDevice(blob, filename, kind) {
+    if (shouldSaveToGallery(kind)) {
+        return downloadGalleryBlob(blob, filename, kind);
+    }
+
     if (supportsTelegramDownload()) {
         const preparedUrl = await prepareDataDownloadUrl(blob, filename);
         await tryTelegramDownload(preparedUrl, filename);
@@ -216,10 +314,10 @@ async function downloadBlobOnDevice(blob, filename) {
     }
 
     if (isMobileDevice()) {
-        const shared = await tryShareFile(blob, filename);
+        const shared = await tryShareToGallery(blob, filename, kind);
 
         if (shared) {
-            return { method: 'share' };
+            return { method: 'gallery' };
         }
     }
 
@@ -227,10 +325,15 @@ async function downloadBlobOnDevice(blob, filename) {
     return { method: 'blob' };
 }
 
-async function downloadRemoteUrl(trimmed, safeFilename) {
+async function downloadRemoteUrl(trimmed, safeFilename, kind) {
+    if (shouldSaveToGallery(kind)) {
+        const blob = await fetchViaProxy(trimmed, safeFilename);
+        return downloadGalleryBlob(blob, safeFilename, kind);
+    }
+
     const proxyUrl = buildProxyDownloadUrl(trimmed, safeFilename);
 
-    if (prefersNativeDownload() && proxyUrl) {
+    if (supportsTelegramDownload() && proxyUrl) {
         await tryTelegramDownload(proxyUrl, safeFilename);
         return { method: 'telegram' };
     }
@@ -238,10 +341,10 @@ async function downloadRemoteUrl(trimmed, safeFilename) {
     const blob = await fetchViaProxy(trimmed, safeFilename);
 
     if (isMobileDevice()) {
-        const shared = await tryShareFile(blob, safeFilename);
+        const shared = await tryShareToGallery(blob, safeFilename, kind);
 
         if (shared) {
-            return { method: 'share' };
+            return { method: 'gallery' };
         }
     }
 
@@ -249,7 +352,7 @@ async function downloadRemoteUrl(trimmed, safeFilename) {
     return { method: 'blob' };
 }
 
-export async function downloadMediaUrl(url, filename = 'cybermate-media') {
+export async function downloadMediaUrl(url, filename = 'cybermate-media', options = {}) {
     const trimmed = String(url || '').trim();
 
     if (!trimmed) {
@@ -257,6 +360,7 @@ export async function downloadMediaUrl(url, filename = 'cybermate-media') {
     }
 
     const safeFilename = String(filename || 'cybermate-media').trim() || 'cybermate-media';
+    const kind = String(options.kind || '').trim();
 
     if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
         const blob = trimmed.startsWith('data:')
@@ -269,14 +373,14 @@ export async function downloadMediaUrl(url, filename = 'cybermate-media') {
                 return response.blob();
             });
 
-        return downloadBlobOnDevice(blob, safeFilename);
+        return downloadBlobOnDevice(blob, safeFilename, kind);
     }
 
     if (!/^https?:\/\//i.test(trimmed)) {
         throw new Error('Unsupported media URL.');
     }
 
-    return downloadRemoteUrl(trimmed, safeFilename);
+    return downloadRemoteUrl(trimmed, safeFilename, kind);
 }
 
 export function guessMediaFilename(url, fallbackBase = 'cybermate') {

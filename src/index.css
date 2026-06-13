@@ -1,7 +1,7 @@
 :root {
   --app-height: 100dvh;
   --page-pad-x: clamp(10px, 3.2vw, 16px);
-  --nav-bar-height: 52px;
+  --nav-bar-height: 56px;
   --page-pad-top: max(0px, env(safe-area-inset-top, 0px));
   --page-pad-bottom: max(0px, env(safe-area-inset-bottom, 0px));
   --layout-ref-width: 390;
