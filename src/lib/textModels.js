@@ -1,4 +1,4 @@
-import { Bot, Brain, Sparkles, Zap } from 'lucide-react';
+import { Bot, Brain, Code2, Feather, Hexagon, Sparkles, Zap } from 'lucide-react';
 import {
     buildGroupedSelectorItems,
     formatGroupIdLabel,
@@ -60,25 +60,26 @@ const MODEL_ACCENTS = {
 
 const MODEL_ICONS = {
     yandexgpt: Bot,
-    deepseek: Brain,
+    deepseek: Code2,
     'gpt-oss-20b': Zap,
     'gpt-oss-120b': Zap,
     'qwen3.6-35b': Brain,
     'qwen3-235b': Brain,
-    'claude-haiku-4.5': Sparkles,
-    'claude-sonnet-4.5': Sparkles,
-    'claude-opus-4.7': Sparkles,
-    'claude-opus-4.8': Sparkles,
-    'gemini-2.5-flash': Sparkles,
-    'gemini-2.5-pro': Sparkles,
+    'claude-haiku-4.5': Feather,
+    'claude-sonnet-4.5': Feather,
+    'claude-opus-4.7': Feather,
+    'claude-opus-4.8': Feather,
+    'gemini-2.5-flash': Hexagon,
+    'gemini-2.5-pro': Hexagon,
 };
 
 const GROUP_ICONS = {
     Yandex: Bot,
+    DeepSeek: Code2,
     'Open-weight GPT': Zap,
     Qwen: Brain,
-    Claude: Sparkles,
-    Gemini: Sparkles,
+    Claude: Feather,
+    Gemini: Hexagon,
 };
 
 const CATALOG_DESCRIPTIONS = {
@@ -260,7 +261,13 @@ export function sortModelsByDisplayTier(models) {
  */
 export function buildTextModelSelectorItems(models) {
     return buildGroupedSelectorItems(models, {
-        getGroupKey: (model) => model.group || 'Other',
+        getGroupKey: (model) => {
+            if (model.id === 'yandexgpt' || model.id === 'deepseek') {
+                return model.id;
+            }
+
+            return model.group || model.id;
+        },
         getGroupLabel: (group) => MERGED_GROUPS[group]?.displayName ?? formatGroupIdLabel(group),
         getDefaultItemId: (group, groupModels) => (
             MERGED_GROUPS[group]?.defaultModelId ?? groupModels[0]?.id

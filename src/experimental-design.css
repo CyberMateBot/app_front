@@ -542,9 +542,13 @@
 
 :root:not([data-theme='light']) .profile-concept__header-title,
 :root:not([data-theme='light']) .concept-page__title,
-:root:not([data-theme='light']) .catalog-concept__title,
-:root:not([data-theme='light']) .home-concept__greeting h2 {
-  color: rgba(255, 255, 255, 0.9);
+:root:not([data-theme='light']) .catalog-concept__title {
+  background-image: var(--cm-heading-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: var(--cm-heading-glow);
 }
 
 :root:not([data-theme='light']) .profile-concept__more {

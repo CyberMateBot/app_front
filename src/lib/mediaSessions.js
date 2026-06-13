@@ -1,20 +1,39 @@
 const STORAGE_PREFIX = 'cybermate:media-session:';
 
-function storageKey(kind) {
-    return `${STORAGE_PREFIX}${kind}`;
+function storageKey(kind, scope) {
+    const base = String(kind || '').trim();
+
+    if (!base) {
+        return STORAGE_PREFIX;
+    }
+
+    const normalizedScope = String(scope || '').trim();
+
+    if (!normalizedScope) {
+        return `${STORAGE_PREFIX}${base}`;
+    }
+
+    return `${STORAGE_PREFIX}${base}:${normalizedScope}`;
 }
 
-export function loadMediaSession(kind) {
+export function loadMediaSession(kind, scope) {
     if (typeof window === 'undefined') {
         return null;
     }
 
     try {
-        const raw = window.localStorage.getItem(storageKey(kind));
-        if (!raw) {
-            return null;
+        const scopedRaw = scope ? window.localStorage.getItem(storageKey(kind, scope)) : null;
+
+        if (scopedRaw) {
+            return JSON.parse(scopedRaw);
         }
-        return JSON.parse(raw);
+
+        if (!scope) {
+            const raw = window.localStorage.getItem(storageKey(kind));
+            return raw ? JSON.parse(raw) : null;
+        }
+
+        return null;
     } catch {
         return null;
     }
@@ -54,6 +73,10 @@ function sanitizeMediaSessionPayload(payload) {
                 scenePrompt: trimStoredValue(message.scenePrompt),
                 imageUrl: trimStoredValue(message.imageUrl ?? message.image_url),
                 videoUrl: trimStoredValue(message.videoUrl ?? message.video_url),
+                typingProgress: typeof message.typingProgress === 'number'
+                    ? message.typingProgress
+                    : undefined,
+                isTyping: Boolean(message.isTyping),
             };
         });
     }
@@ -87,26 +110,26 @@ function sanitizeMediaSessionPayload(payload) {
     return next;
 }
 
-export function saveMediaSession(kind, payload) {
+export function saveMediaSession(kind, payload, scope) {
     if (typeof window === 'undefined') {
         return;
     }
 
     try {
         if (!payload) {
-            window.localStorage.removeItem(storageKey(kind));
+            window.localStorage.removeItem(storageKey(kind, scope));
             return;
         }
-        window.localStorage.setItem(storageKey(kind), JSON.stringify(sanitizeMediaSessionPayload(payload)));
+        window.localStorage.setItem(storageKey(kind, scope), JSON.stringify(sanitizeMediaSessionPayload(payload)));
     } catch {
         try {
-            window.localStorage.removeItem(storageKey(kind));
+            window.localStorage.removeItem(storageKey(kind, scope));
         } catch {
             // Storage may be full or blocked.
         }
     }
 }
 
-export function clearMediaSession(kind) {
-    saveMediaSession(kind, null);
+export function clearMediaSession(kind, scope) {
+    saveMediaSession(kind, null, scope);
 }

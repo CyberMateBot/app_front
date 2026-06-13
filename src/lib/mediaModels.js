@@ -1,3 +1,4 @@
+import { Bot, Image as ImageIcon } from 'lucide-react';
 import {
     buildGroupedSelectorItems,
     formatGroupIdLabel,
@@ -13,11 +14,13 @@ export const IMAGE_GROUP_OVERRIDES = {
         nameKey: 'modelNanoBananaName',
         subKey: 'modelNanoBananaSub',
         defaultModelId: 'nano-banana',
+        icon: ImageIcon,
     },
     'gpt-image': {
         nameKey: 'modelGptImageGroupName',
         subKey: 'modelGptImageGroupSub',
         defaultModelId: 'gpt-image-2',
+        icon: Bot,
     },
 };
 
@@ -132,8 +135,8 @@ function buildCatalogMediaTools(definitions, selectorItems, groupOverrides, page
                 page,
                 tab: defaultVariant.tab,
                 categories: defaultVariant.categories,
-                accent: defaultVariant.accent,
-                icon: defaultVariant.icon,
+                accent: override?.accent ?? defaultVariant.accent,
+                icon: override?.icon ?? defaultVariant.icon,
                 tiered: true,
                 variants: item.variants,
             };

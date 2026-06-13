@@ -91,7 +91,14 @@ import { compressImageFile } from './lib/compressImage.js';
 import { createChatSessionId } from './lib/chatSession.js';
 import { downloadMediaUrl, guessMediaFilename } from './lib/downloadMedia.js';
 import { clearMediaSession, loadMediaSession, saveMediaSession } from './lib/mediaSessions.js';
+import { getModelSessionScope } from './lib/sessionScope.js';
+import {
+    setBackgroundTypingListener,
+    stopAllBackgroundTyping,
+    syncBackgroundTyping,
+} from './lib/backgroundTyping.js';
 import { getHistoryTopicLabel, resolveHistoryTopicModel as resolveHistoryTopicModelId } from './lib/historyLabels.js';
+import { getAiGroupTitle, getAiVariantOptions } from './lib/aiVariantOptions.js';
 import { openSupport, resolveSupportUrl } from './lib/openSupport.js';
 import {
     applyTheme,
@@ -104,11 +111,12 @@ import {
     resolveBootstrapTheme,
 } from './lib/theme.js';
 import AppNotice from './Components/AppNotice.jsx';
+import AppPageHeader from './Components/AppPageHeader.jsx';
+import AiVariantSelect from './Components/AiVariantSelect.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
 import MediaModelOptionsBar from './Components/MediaModelOptionsBar.jsx';
 import {
     IMAGE_MODEL_DEFINITIONS,
-    getImageModelDefinition,
 } from './config/aiModels.js';
 import {
     getImageModelCapabilities,
@@ -122,11 +130,9 @@ import {
 } from './config/mediaModelOptions.js';
 import {
     VIDEO_MODEL_DEFINITIONS,
-    getVideoModelDefinition,
 } from './config/videoModels.js';
 import {
     AUDIO_MODEL_DEFINITIONS,
-    getAudioModelDefinition,
 } from './config/audioModels.js';
 import {
     buildCatalogTextTools,
@@ -135,12 +141,9 @@ import {
     resolveEffectiveTextModels,
     findTextModel,
     getCatalogModelDescription,
-    getModelLabel,
-    getModelDisplayTier,
     getSelectorItemForModelId,
     getStoredTextModelId,
     getTextModelVisual,
-    getTierLabelForModel,
     isKnownTextModelId,
     resolveTextModelId,
     setStoredTextModelId,
@@ -155,12 +158,9 @@ import {
     buildImageModelSelectorItems,
     buildVideoModelSelectorItems,
     getAudioSelectorChipLabel,
-    getAudioSelectorChipVisual,
     getImageSelectorChipLabel,
-    getImageSelectorChipVisual,
     getMediaSelectorItemForModelId,
     getVideoSelectorChipLabel,
-    getVideoSelectorChipVisual,
 } from './lib/mediaModels.js';
 import './App.css';
 import './experimental-design.css';
@@ -371,6 +371,7 @@ const translations = {
         imageGeneratedNote: 'Изображение создано.',
         imageContentPolicy: 'Модель отклонила запрос. Попробуйте другую формулировку без запрещённых тем.',
         mediaOptionsGroup: 'Параметры генерации',
+        mediaModelVariantLabel: 'Модель',
         mediaOptionAspectRatio: 'Формат',
         mediaOptionResolution: 'Разрешение',
         mediaOptionQuality: 'Качество',
@@ -720,6 +721,7 @@ const translations = {
         imageGeneratedNote: 'Image created.',
         imageContentPolicy: 'The model rejected this prompt. Try a different wording.',
         mediaOptionsGroup: 'Generation settings',
+        mediaModelVariantLabel: 'Model',
         mediaOptionAspectRatio: 'Aspect ratio',
         mediaOptionResolution: 'Resolution',
         mediaOptionQuality: 'Quality',
@@ -1104,6 +1106,46 @@ function App() {
         [textModels],
     );
 
+    const textModelSelectorItems = useMemo(
+        () => buildTextModelSelectorItems(effectiveTextModels),
+        [effectiveTextModels],
+    );
+
+    const imageModelSelectorItems = useMemo(
+        () => buildImageModelSelectorItems(IMAGE_MODEL_DEFINITIONS),
+        [],
+    );
+
+    const videoModelSelectorItems = useMemo(
+        () => buildVideoModelSelectorItems(VIDEO_MODEL_DEFINITIONS),
+        [],
+    );
+
+    const audioModelSelectorItems = useMemo(
+        () => buildAudioModelSelectorItems(AUDIO_MODEL_DEFINITIONS),
+        [],
+    );
+
+    const chatSessionScope = useMemo(
+        () => getModelSessionScope(textModel, textModelSelectorItems),
+        [textModel, textModelSelectorItems],
+    );
+
+    const imageSessionScope = useMemo(
+        () => getModelSessionScope(imageModel, imageModelSelectorItems),
+        [imageModel, imageModelSelectorItems],
+    );
+
+    const videoSessionScope = useMemo(
+        () => getModelSessionScope(videoModel, videoModelSelectorItems),
+        [videoModel, videoModelSelectorItems],
+    );
+
+    const audioSessionScope = useMemo(
+        () => getModelSessionScope(audioModel, audioModelSelectorItems),
+        [audioModel, audioModelSelectorItems],
+    );
+
     const clearAppNotice = useCallback(() => {
         setAppNotice(null);
     }, []);
@@ -1193,8 +1235,8 @@ function App() {
             generatedImageUrl,
             generatedImageUrls,
             isGenerating: isGeneratingImage,
-        });
-    }, [imageModel, imageSessionId, imageSessionMessages, generatedImageUrl, generatedImageUrls, isGeneratingImage]);
+        }, imageSessionScope);
+    }, [imageModel, imageSessionId, imageSessionMessages, generatedImageUrl, generatedImageUrls, isGeneratingImage, imageSessionScope]);
 
     useEffect(() => {
         saveMediaSession('video', {
@@ -1206,7 +1248,7 @@ function App() {
             videoSourceImageUrl,
             videoSourceVideoUrl,
             isGenerating: isGeneratingVideo,
-        });
+        }, videoSessionScope);
     }, [
         videoModel,
         videoSessionId,
@@ -1216,6 +1258,7 @@ function App() {
         videoSourceImageUrl,
         videoSourceVideoUrl,
         isGeneratingVideo,
+        videoSessionScope,
     ]);
 
     useEffect(() => {
@@ -1225,8 +1268,8 @@ function App() {
             audioPrompt,
             generatedAudioUrl,
             isGenerating: isGeneratingAudio,
-        });
-    }, [audioModel, audioSessionId, audioPrompt, generatedAudioUrl, isGeneratingAudio]);
+        }, audioSessionScope);
+    }, [audioModel, audioSessionId, audioPrompt, generatedAudioUrl, isGeneratingAudio, audioSessionScope]);
 
     useEffect(() => {
         saveMediaSession('chat', {
@@ -1235,8 +1278,32 @@ function App() {
             messages: chatMessages,
             topicTitle: chatTopicTitle,
             isGenerating: isGeneratingText,
+        }, chatSessionScope);
+    }, [textModel, chatSessionId, chatMessages, chatTopicTitle, isGeneratingText, chatSessionScope]);
+
+    useEffect(() => {
+        setBackgroundTypingListener((messageId, progress, done) => {
+            setChatMessages((prev) => prev.map((message) => {
+                if (message.id !== messageId) {
+                    return message;
+                }
+
+                if (done) {
+                    return { ...message, isTyping: false, typingProgress: undefined };
+                }
+
+                return { ...message, typingProgress: progress };
+            }));
         });
-    }, [textModel, chatSessionId, chatMessages, chatTopicTitle, isGeneratingText]);
+
+        return () => {
+            setBackgroundTypingListener(null);
+        };
+    }, []);
+
+    useEffect(() => {
+        syncBackgroundTyping(chatMessages);
+    }, [chatMessages]);
 
     const showAppNotice = useCallback((message, variant = 'error') => {
         if (!message) {
@@ -1784,26 +1851,6 @@ function App() {
         };
     }, [activeNavIndex, showBottomNav]);
 
-    const textModelSelectorItems = useMemo(
-        () => buildTextModelSelectorItems(effectiveTextModels),
-        [effectiveTextModels],
-    );
-
-    const imageModelSelectorItems = useMemo(
-        () => buildImageModelSelectorItems(IMAGE_MODEL_DEFINITIONS),
-        [],
-    );
-
-    const videoModelSelectorItems = useMemo(
-        () => buildVideoModelSelectorItems(VIDEO_MODEL_DEFINITIONS),
-        [],
-    );
-
-    const audioModelSelectorItems = useMemo(
-        () => buildAudioModelSelectorItems(AUDIO_MODEL_DEFINITIONS),
-        [],
-    );
-
     const catalogSections = useMemo(() => [
         {
             id: 'text-models',
@@ -2075,27 +2122,38 @@ function App() {
 
     const openAiChat = (modelId, returnPage = currentPage, options = {}) => {
         const fromHistory = Boolean(options.messages?.length);
-        const stored = !fromHistory ? loadMediaSession('chat') : null;
+        const targetModelId = modelId
+            ? resolveTextModelId(modelId, effectiveTextModels)
+            : resolveTextModelId(textModel, effectiveTextModels);
+        const scope = getModelSessionScope(targetModelId, textModelSelectorItems);
+        const hasInMemorySession = !fromHistory
+            && scope === chatSessionScope
+            && (chatMessages.length > 0 || isGeneratingText || Boolean(chatTopicTitle));
+        const stored = !fromHistory && !hasInMemorySession
+            ? loadMediaSession('chat', scope)
+            : null;
 
-        if (modelId) {
-            const resolvedModelId = resolveTextModelId(modelId, effectiveTextModels);
+        setTextModel(targetModelId);
+        setStoredTextModelId(targetModelId);
 
-            setTextModel(resolvedModelId);
-            setStoredTextModelId(resolvedModelId);
-        } else if (stored?.model) {
-            const resolvedModelId = resolveTextModelId(stored.model, effectiveTextModels);
-            setTextModel(resolvedModelId);
-            setStoredTextModelId(resolvedModelId);
-        }
-        if (options.sessionId) {
-            setChatSessionId(options.sessionId);
-        } else if (stored?.sessionId && !fromHistory) {
-            setChatSessionId(stored.sessionId);
-        } else if (!fromHistory) {
+        if (fromHistory) {
+            if (options.sessionId) {
+                setChatSessionId(options.sessionId);
+            }
+            setChatMessages(options.messages ?? []);
+            setChatTopicTitle(options.topicTitle ?? '');
+        } else if (hasInMemorySession) {
+            // Keep in-memory session (typing/generation may have progressed while away).
+        } else if (stored) {
+            setChatSessionId(stored.sessionId || createChatSessionId());
+            setChatMessages(stored.messages ?? []);
+            setChatTopicTitle(stored.topicTitle ?? '');
+        } else {
             startNewChatSession();
+            setChatMessages([]);
+            setChatTopicTitle('');
         }
-        setChatMessages(fromHistory ? (options.messages ?? []) : (stored?.messages ?? []));
-        setChatTopicTitle(fromHistory ? (options.topicTitle ?? '') : (stored?.topicTitle ?? ''));
+
         setTextPrompt('');
         setChatAttachment(null);
         setChatReturnPage(returnPage);
@@ -2159,15 +2217,39 @@ function App() {
     };
 
     const handleTextModelChange = (modelId) => {
-        handleStopChatGeneration();
         const resolvedModelId = resolveTextModelId(modelId, effectiveTextModels);
+
+        if (resolvedModelId === textModel) {
+            return;
+        }
+
+        saveMediaSession('chat', {
+            model: textModel,
+            sessionId: chatSessionId,
+            messages: chatMessages,
+            topicTitle: chatTopicTitle,
+            isGenerating: isGeneratingText,
+        }, chatSessionScope);
+
+        handleStopChatGeneration();
+
+        const nextScope = getModelSessionScope(resolvedModelId, textModelSelectorItems);
+        const stored = loadMediaSession('chat', nextScope);
         const nextModel = findTextModel(effectiveTextModels, resolvedModelId);
 
         setTextModel(resolvedModelId);
         setStoredTextModelId(resolvedModelId);
-        startNewChatSession();
-        setChatMessages([]);
-        setChatTopicTitle('');
+
+        if (stored) {
+            setChatSessionId(stored.sessionId || createChatSessionId());
+            setChatMessages(stored.messages ?? []);
+            setChatTopicTitle(stored.topicTitle ?? '');
+        } else {
+            startNewChatSession();
+            setChatMessages([]);
+            setChatTopicTitle('');
+        }
+
         setTextPrompt('');
         if (!textModelSupportsImage(nextModel)) {
             setChatAttachment(null);
@@ -2175,42 +2257,41 @@ function App() {
         setChatError('');
     };
 
-    const handleTextModelGroupSelect = (item) => {
-        if (item.type === 'single') {
-            handleTextModelChange(item.model.id);
+    const handleImageModelChange = (modelId) => {
+        if (modelId === imageModel) {
             return;
         }
 
-        const activeVariant = item.variants.find((variant) => variant.id === textModel);
-        const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
-            ?? item.variants[0];
+        saveMediaSession('image', {
+            model: imageModel,
+            sessionId: imageSessionId,
+            messages: imageSessionMessages,
+            generatedImageUrl,
+            generatedImageUrls,
+            isGenerating: isGeneratingImage,
+        }, imageSessionScope);
 
-        handleTextModelChange(activeVariant?.id ?? defaultVariant.id);
-    };
+        const nextScope = getModelSessionScope(modelId, imageModelSelectorItems);
+        const stored = loadMediaSession('image', nextScope);
 
-    const handleImageModelChange = (modelId) => {
         setImageModel(modelId);
         applyImageModelOptions(modelId);
-        startNewImageSession();
-        setImageSessionMessages([]);
-        setImagePrompt('');
-        setImageAttachment(null);
-        setGeneratedImageUrl('');
-        setGeneratedImageUrls([]);
-        setImageError('');
-    };
 
-    const handleImageModelGroupSelect = (item) => {
-        if (item.type === 'single') {
-            handleImageModelChange(item.model.id);
-            return;
+        if (stored) {
+            setImageSessionId(stored.sessionId || createChatSessionId());
+            setImageSessionMessages(stored.messages ?? []);
+            setGeneratedImageUrl(stored.generatedImageUrl ?? '');
+            setGeneratedImageUrls(Array.isArray(stored.generatedImageUrls) ? stored.generatedImageUrls : []);
+        } else {
+            startNewImageSession();
+            setImageSessionMessages([]);
+            setGeneratedImageUrl('');
+            setGeneratedImageUrls([]);
         }
 
-        const activeVariant = item.variants.find((variant) => variant.id === imageModel);
-        const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
-            ?? item.variants[0];
-
-        handleImageModelChange(activeVariant?.id ?? defaultVariant.id);
+        setImagePrompt('');
+        setImageAttachment(null);
+        setImageError('');
     };
 
     const handleNewImageDialog = async () => {
@@ -2220,7 +2301,7 @@ function App() {
             sessionId: imageSessionId,
             getResponse: (message) => message?.imageUrl ?? message?.image_url ?? '',
         });
-        clearMediaSession('image');
+        clearMediaSession('image', imageSessionScope);
         startNewImageSession();
         setImageSessionMessages([]);
         setImagePrompt('');
@@ -2433,40 +2514,49 @@ function App() {
 
     const openAiImage = (modelId, returnPage = currentPage, options = {}) => {
         const fromHistory = Boolean(options.messages?.length);
-        const stored = !fromHistory ? loadMediaSession('image') : null;
+        const targetModelId = modelId || imageModel;
+        const scope = getModelSessionScope(targetModelId, imageModelSelectorItems);
+        const hasInMemorySession = !fromHistory
+            && scope === imageSessionScope
+            && (imageSessionMessages.length > 0 || isGeneratingImage || Boolean(generatedImageUrl));
+        const stored = !fromHistory && !hasInMemorySession
+            ? loadMediaSession('image', scope)
+            : null;
 
-        if (modelId) {
-            setImageModel(modelId);
-            applyImageModelOptions(modelId);
-        } else if (stored?.model) {
-            setImageModel(stored.model);
-            applyImageModelOptions(stored.model);
-        }
-        if (options.sessionId) {
-            setImageSessionId(options.sessionId);
-        } else if (stored?.sessionId && !fromHistory) {
-            setImageSessionId(stored.sessionId);
-        } else if (!fromHistory) {
+        setImageModel(targetModelId);
+        applyImageModelOptions(targetModelId);
+
+        if (fromHistory) {
+            if (options.sessionId) {
+                setImageSessionId(options.sessionId);
+            }
+
+            const restoredMessages = options.messages ?? [];
+            const restoredImageUrl = getLastSessionImageUrl(restoredMessages) ?? '';
+
+            setImageSessionMessages(restoredMessages);
+            setGeneratedImageUrl(restoredImageUrl);
+            setGeneratedImageUrls(restoredImageUrl ? [restoredImageUrl] : []);
+        } else if (hasInMemorySession) {
+            // Keep in-memory session while generation may still be running.
+        } else if (stored) {
+            setImageSessionId(stored.sessionId || createChatSessionId());
+            setImageSessionMessages(stored.messages ?? []);
+            setGeneratedImageUrl(stored.generatedImageUrl ?? getLastSessionImageUrl(stored.messages) ?? '');
+            setGeneratedImageUrls(
+                Array.isArray(stored.generatedImageUrls) && stored.generatedImageUrls.length
+                    ? stored.generatedImageUrls
+                    : (stored.generatedImageUrl ? [stored.generatedImageUrl] : []),
+            );
+        } else {
             startNewImageSession();
+            setImageSessionMessages([]);
+            setGeneratedImageUrl('');
+            setGeneratedImageUrls([]);
         }
 
-        const restoredMessages = fromHistory
-            ? (options.messages ?? [])
-            : (stored?.messages ?? []);
-        const restoredImageUrl = fromHistory
-            ? (getLastSessionImageUrl(restoredMessages) ?? '')
-            : (stored?.generatedImageUrl ?? getLastSessionImageUrl(restoredMessages) ?? '');
-        const restoredImageUrls = fromHistory
-            ? (restoredImageUrl ? [restoredImageUrl] : [])
-            : (Array.isArray(stored?.generatedImageUrls) && stored.generatedImageUrls.length
-                ? stored.generatedImageUrls
-                : (restoredImageUrl ? [restoredImageUrl] : []));
-
-        setImageSessionMessages(restoredMessages);
         setImagePrompt('');
         setImageAttachment(null);
-        setGeneratedImageUrl(restoredImageUrl);
-        setGeneratedImageUrls(restoredImageUrls);
         setImageReturnPage(returnPage);
         setImageError('');
         setCurrentPage('ai-image');
@@ -2477,28 +2567,44 @@ function App() {
     }, []);
 
     const handleVideoModelChange = (modelId) => {
-        setVideoModel(modelId);
-        applyVideoModelOptions(modelId);
-        startNewVideoSession();
-        setVideoSessionMessages([]);
-        setVideoSourceImageUrl('');
-        setVideoSourceVideoUrl('');
-        setVideoPrompt('');
-        setGeneratedVideoUrl('');
-        setVideoError('');
-    };
-
-    const handleVideoModelGroupSelect = (item) => {
-        if (item.type === 'single') {
-            handleVideoModelChange(item.model.id);
+        if (modelId === videoModel) {
             return;
         }
 
-        const activeVariant = item.variants.find((variant) => variant.id === videoModel);
-        const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
-            ?? item.variants[0];
+        saveMediaSession('video', {
+            model: videoModel,
+            sessionId: videoSessionId,
+            messages: videoSessionMessages,
+            generatedVideoUrl,
+            videoPrompt,
+            videoSourceImageUrl,
+            videoSourceVideoUrl,
+            isGenerating: isGeneratingVideo,
+        }, videoSessionScope);
 
-        handleVideoModelChange(activeVariant?.id ?? defaultVariant.id);
+        const nextScope = getModelSessionScope(modelId, videoModelSelectorItems);
+        const stored = loadMediaSession('video', nextScope);
+
+        setVideoModel(modelId);
+        applyVideoModelOptions(modelId);
+
+        if (stored) {
+            setVideoSessionId(stored.sessionId || createChatSessionId());
+            setVideoSessionMessages(stored.messages ?? []);
+            setVideoSourceImageUrl(stored.videoSourceImageUrl ?? getLastSessionSourceImageUrl(stored.messages) ?? '');
+            setVideoSourceVideoUrl(stored.videoSourceVideoUrl ?? '');
+            setVideoPrompt(stored.videoPrompt ?? '');
+            setGeneratedVideoUrl(stored.generatedVideoUrl ?? getLastSessionVideoUrl(stored.messages) ?? '');
+        } else {
+            startNewVideoSession();
+            setVideoSessionMessages([]);
+            setVideoSourceImageUrl('');
+            setVideoSourceVideoUrl('');
+            setVideoPrompt('');
+            setGeneratedVideoUrl('');
+        }
+
+        setVideoError('');
     };
 
     const handleNewVideoDialog = async () => {
@@ -2514,7 +2620,7 @@ function App() {
                 ? [{ prompt: videoPrompt.trim(), response: generatedVideoUrl.trim() }]
                 : [],
         });
-        clearMediaSession('video');
+        clearMediaSession('video', videoSessionScope);
         startNewVideoSession();
         setVideoSessionMessages([]);
         setVideoSourceImageUrl('');
@@ -2529,26 +2635,36 @@ function App() {
     }, []);
 
     const handleAudioModelChange = (modelId) => {
-        setAudioModel(modelId);
-        applyAudioModelOptions(modelId);
-        startNewAudioSession();
-        setAudioPrompt('');
-        setAudioAttachment(null);
-        setGeneratedAudioUrl('');
-        setAudioError('');
-    };
-
-    const handleAudioModelGroupSelect = (item) => {
-        if (item.type === 'single') {
-            handleAudioModelChange(item.model.id);
+        if (modelId === audioModel) {
             return;
         }
 
-        const activeVariant = item.variants.find((variant) => variant.id === audioModel);
-        const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
-            ?? item.variants[0];
+        saveMediaSession('audio', {
+            model: audioModel,
+            sessionId: audioSessionId,
+            audioPrompt,
+            generatedAudioUrl,
+            isGenerating: isGeneratingAudio,
+        }, audioSessionScope);
 
-        handleAudioModelChange(activeVariant?.id ?? defaultVariant.id);
+        const nextScope = getModelSessionScope(modelId, audioModelSelectorItems);
+        const stored = loadMediaSession('audio', nextScope);
+
+        setAudioModel(modelId);
+        applyAudioModelOptions(modelId);
+
+        if (stored) {
+            setAudioSessionId(stored.sessionId || createChatSessionId());
+            setAudioPrompt(stored.audioPrompt ?? '');
+            setGeneratedAudioUrl(stored.generatedAudioUrl ?? '');
+        } else {
+            startNewAudioSession();
+            setAudioPrompt('');
+            setGeneratedAudioUrl('');
+        }
+
+        setAudioAttachment(null);
+        setAudioError('');
     };
 
     const handleNewAudioDialog = async () => {
@@ -2560,7 +2676,7 @@ function App() {
                 ? [{ prompt: audioPrompt.trim(), response: generatedAudioUrl.trim() }]
                 : [],
         });
-        clearMediaSession('audio');
+        clearMediaSession('audio', audioSessionScope);
         startNewAudioSession();
         setAudioPrompt('');
         setAudioAttachment(null);
@@ -2606,25 +2722,37 @@ function App() {
 
     const openAiVoice = (modelId, returnPage = currentPage, options = {}) => {
         const fromHistory = Boolean(options.prompt || options.audioUrl);
-        const stored = !fromHistory ? loadMediaSession('audio') : null;
+        const targetModelId = modelId || audioModel;
+        const scope = getModelSessionScope(targetModelId, audioModelSelectorItems);
+        const hasInMemorySession = !fromHistory
+            && scope === audioSessionScope
+            && (Boolean(audioPrompt) || Boolean(generatedAudioUrl) || isGeneratingAudio);
+        const stored = !fromHistory && !hasInMemorySession
+            ? loadMediaSession('audio', scope)
+            : null;
 
-        if (modelId) {
-            setAudioModel(modelId);
-            applyAudioModelOptions(modelId);
-        } else if (stored?.model) {
-            setAudioModel(stored.model);
-            applyAudioModelOptions(stored.model);
-        }
-        if (options.sessionId) {
-            setAudioSessionId(options.sessionId);
-        } else if (stored?.sessionId && !fromHistory) {
-            setAudioSessionId(stored.sessionId);
-        } else if (!fromHistory) {
+        setAudioModel(targetModelId);
+        applyAudioModelOptions(targetModelId);
+
+        if (fromHistory) {
+            if (options.sessionId) {
+                setAudioSessionId(options.sessionId);
+            }
+            setAudioPrompt(options.prompt ?? '');
+            setGeneratedAudioUrl(options.audioUrl ?? '');
+        } else if (hasInMemorySession) {
+            // Keep in-memory session while generation may still be running.
+        } else if (stored) {
+            setAudioSessionId(stored.sessionId || createChatSessionId());
+            setAudioPrompt(stored.audioPrompt ?? '');
+            setGeneratedAudioUrl(stored.generatedAudioUrl ?? '');
+        } else {
             startNewAudioSession();
+            setAudioPrompt('');
+            setGeneratedAudioUrl('');
         }
-        setAudioPrompt(fromHistory ? (options.prompt ?? '') : (stored?.audioPrompt ?? ''));
+
         setAudioAttachment(null);
-        setGeneratedAudioUrl(fromHistory ? (options.audioUrl ?? '') : (stored?.generatedAudioUrl ?? ''));
         setAudioReturnPage(returnPage);
         setAudioError('');
         setCurrentPage('ai-voice');
@@ -2632,38 +2760,50 @@ function App() {
 
     const openAiVideo = (modelId, returnPage = currentPage, options = {}) => {
         const fromHistory = Boolean(options.messages?.length);
-        const stored = !fromHistory ? loadMediaSession('video') : null;
+        const targetModelId = modelId || videoModel;
+        const scope = getModelSessionScope(targetModelId, videoModelSelectorItems);
+        const hasInMemorySession = !fromHistory
+            && scope === videoSessionScope
+            && (videoSessionMessages.length > 0 || isGeneratingVideo || Boolean(generatedVideoUrl));
+        const stored = !fromHistory && !hasInMemorySession
+            ? loadMediaSession('video', scope)
+            : null;
 
-        if (modelId) {
-            setVideoModel(modelId);
-            applyVideoModelOptions(modelId);
-        } else if (stored?.model) {
-            setVideoModel(stored.model);
-            applyVideoModelOptions(stored.model);
-        }
-        if (options.sessionId) {
-            setVideoSessionId(options.sessionId);
-        } else if (stored?.sessionId && !fromHistory) {
-            setVideoSessionId(stored.sessionId);
-        } else if (!fromHistory) {
+        setVideoModel(targetModelId);
+        applyVideoModelOptions(targetModelId);
+
+        if (fromHistory) {
+            if (options.sessionId) {
+                setVideoSessionId(options.sessionId);
+            }
+
+            const restoredMessages = options.messages ?? [];
+            const restoredVideoUrl = getLastSessionVideoUrl(restoredMessages) ?? '';
+            const restoredSourceImageUrl = getLastSessionSourceImageUrl(restoredMessages) ?? '';
+
+            setVideoSessionMessages(restoredMessages);
+            setVideoSourceImageUrl(restoredSourceImageUrl);
+            setVideoSourceVideoUrl('');
+            setVideoPrompt('');
+            setGeneratedVideoUrl(restoredVideoUrl);
+        } else if (hasInMemorySession) {
+            // Keep in-memory session while generation may still be running.
+        } else if (stored) {
+            setVideoSessionId(stored.sessionId || createChatSessionId());
+            setVideoSessionMessages(stored.messages ?? []);
+            setVideoSourceImageUrl(stored.videoSourceImageUrl ?? getLastSessionSourceImageUrl(stored.messages) ?? '');
+            setVideoSourceVideoUrl(stored.videoSourceVideoUrl ?? '');
+            setVideoPrompt(stored.videoPrompt ?? '');
+            setGeneratedVideoUrl(stored.generatedVideoUrl ?? getLastSessionVideoUrl(stored.messages) ?? '');
+        } else {
             startNewVideoSession();
+            setVideoSessionMessages([]);
+            setVideoSourceImageUrl('');
+            setVideoSourceVideoUrl('');
+            setVideoPrompt('');
+            setGeneratedVideoUrl('');
         }
 
-        const restoredMessages = fromHistory
-            ? (options.messages ?? [])
-            : (stored?.messages ?? []);
-        const restoredVideoUrl = fromHistory
-            ? (getLastSessionVideoUrl(restoredMessages) ?? '')
-            : (stored?.generatedVideoUrl ?? getLastSessionVideoUrl(restoredMessages) ?? '');
-        const restoredSourceImageUrl = fromHistory
-            ? (getLastSessionSourceImageUrl(restoredMessages) ?? '')
-            : (stored?.videoSourceImageUrl ?? getLastSessionSourceImageUrl(restoredMessages) ?? '');
-
-        setVideoSessionMessages(restoredMessages);
-        setVideoSourceImageUrl(restoredSourceImageUrl);
-        setVideoSourceVideoUrl(stored?.videoSourceVideoUrl ?? '');
-        setVideoPrompt(stored?.videoPrompt ?? '');
-        setGeneratedVideoUrl(restoredVideoUrl);
         setVideoReturnPage(returnPage);
         setVideoError('');
         setCurrentPage('ai-video');
@@ -2945,7 +3085,7 @@ function App() {
             sessionId: chatSessionId,
             getResponse: (message) => (message?.role === 'assistant' ? message?.content : ''),
         });
-        clearMediaSession('chat');
+        clearMediaSession('chat', chatSessionScope);
         handleStopChatGeneration();
         startNewChatSession();
         setChatMessages([]);
@@ -2972,14 +3112,36 @@ function App() {
     };
 
     const renderConceptPageHeader = (title, onBack) => (
-        <header className="concept-page__header">
-            <button type="button" className="concept-page__back" onClick={onBack}>
-                <ChevronLeft size={16} aria-hidden="true" />
-                {text.back}
-            </button>
-            <h1 className="concept-page__title">{title}</h1>
-            <span className="concept-page__spacer" aria-hidden="true" />
-        </header>
+        <AppPageHeader
+            title={title}
+            onBack={onBack}
+            backLabel={text.back}
+        />
+    );
+
+    const renderAiScreenHeader = ({
+        title,
+        subtitle,
+        onBack,
+        onNewDialog,
+        newDialogDisabled = false,
+    }) => (
+        <AppPageHeader
+            title={title}
+            subtitle={subtitle}
+            onBack={onBack}
+            backLabel={text.back}
+            trailing={(
+                <button
+                    type="button"
+                    className="app-page-header__action app-page-header__action--text"
+                    onClick={onNewDialog}
+                    disabled={newDialogDisabled}
+                >
+                    {text.chatNewDialog}
+                </button>
+            )}
+        />
     );
 
     const renderSubscriptionPlanCards = (currentPlanId = 'pro') => (
@@ -3039,20 +3201,13 @@ function App() {
     const handleStopChatGeneration = useCallback(() => {
         textGenerationAbortRef.current?.abort();
         textGenerationAbortRef.current = null;
+        stopAllBackgroundTyping();
         setIsGeneratingText(false);
         const pendingId = pendingAssistantIdRef.current;
         if (pendingId) {
             setChatMessages((prev) => prev.filter((message) => message.id !== pendingId));
             pendingAssistantIdRef.current = null;
         }
-    }, []);
-
-    const handleChatTypingComplete = useCallback((messageId) => {
-        setChatMessages((prev) => prev.map((message) => (
-            message.id === messageId
-                ? { ...message, isTyping: false }
-                : message
-        )));
     }, []);
 
     const handleChatPhotoSelect = (event) => {
@@ -3239,6 +3394,8 @@ function App() {
 
     const homeGreetingName = userData.displayName.split(' ')[0] || userData.displayName;
     const homeGreetingText = text.homeGreeting.replace('{name}', homeGreetingName);
+    const homeGreetingEmojiMatch = homeGreetingText.match(/👋/);
+    const homeGreetingLabel = homeGreetingText.replace(/\s*👋\s*/, '').trim();
 
     const visibleToolCards = homeToolCards.filter((card) => (
         homeCategoryChip === 'all' || card.categories.includes(homeCategoryChip)
@@ -3266,33 +3423,40 @@ function App() {
     };
 
     const renderHomeScreen = () => (
-        <section className="home-screen home-screen--concept" aria-label="Главная">
-            <header className="home-concept__header">
-                <div className="home-concept__logo-area">
+        <section className="home-screen home-screen--concept" aria-label={text.navHome}>
+            <AppPageHeader
+                title={text.navHome}
+                leading={(
                     <img
-                        className="home-concept__logo-image"
+                        className="home-concept__logo-image home-concept__logo-image--header"
                         src="/logo_white.png"
                         alt=""
                     />
-                    <span className="home-concept__logo-name">{APP_NAME}</span>
-                </div>
-                <div className="home-concept__header-actions">
-                    <button type="button" className="home-concept__icon-btn" aria-label="Уведомления">
-                        <Bell size={18} />
-                    </button>
-                    <button
-                        type="button"
-                        className="home-concept__icon-btn"
-                        aria-label={text.settingsTitle}
-                        onClick={() => setCurrentPage('settings')}
-                    >
-                        <Settings size={18} />
-                    </button>
-                </div>
-            </header>
+                )}
+                trailing={(
+                    <div className="home-concept__header-actions">
+                        <button type="button" className="home-concept__icon-btn" aria-label="Уведомления">
+                            <Bell size={18} />
+                        </button>
+                        <button
+                            type="button"
+                            className="home-concept__icon-btn"
+                            aria-label={text.settingsTitle}
+                            onClick={() => setCurrentPage('settings')}
+                        >
+                            <Settings size={18} />
+                        </button>
+                    </div>
+                )}
+            />
 
             <div className="home-concept__greeting">
-                <h2>{homeGreetingText}</h2>
+                <h2>
+                    <span className="home-concept__greeting-text">{homeGreetingLabel}</span>
+                    {homeGreetingEmojiMatch ? (
+                        <span className="home-concept__greeting-emoji" aria-hidden="true"> 👋</span>
+                    ) : null}
+                </h2>
                 <p>{text.homeGreetingSub}</p>
             </div>
 
@@ -3358,12 +3522,14 @@ function App() {
 
     const renderCatalogScreen = () => (
         <section className="catalog-screen catalog-screen--concept">
-            <header className="catalog-concept__header">
-                <h1 className="catalog-concept__title">{text.catalogTitle}</h1>
-                <button type="button" className="catalog-concept__filter" aria-label={text.catalogTitle}>
-                    <SlidersHorizontal size={17} aria-hidden="true" />
-                </button>
-            </header>
+            <AppPageHeader
+                title={text.catalogTitle}
+                trailing={(
+                    <button type="button" className="catalog-concept__filter" aria-label={text.catalogTitle}>
+                        <SlidersHorizontal size={17} aria-hidden="true" />
+                    </button>
+                )}
+            />
 
             <label className="catalog-concept__search">
                 <Search size={14} aria-hidden="true" />
@@ -3440,107 +3606,33 @@ function App() {
 
     const renderAiChatScreen = () => {
         const activeModel = findTextModel(effectiveTextModels, textModel);
-        const activeVisual = getTextModelVisual(activeModel);
-        const ActiveIcon = activeVisual.icon;
         const activeSelectorItem = getSelectorItemForModelId(textModelSelectorItems, textModel);
-        const headerTitle = activeSelectorItem?.type === 'tiered'
-            ? activeSelectorItem.label
-            : (activeModel?.label ?? getModelLabel(effectiveTextModels, textModel, textModelSelectorItems));
+        const headerTitle = getAiGroupTitle(activeSelectorItem, text, (item) => item.label);
         const headerSubtitle = activeSelectorItem?.type === 'tiered' && activeModel
-            ? [
-                getTierLabelForModel(activeModel, text),
-                activeModel.label,
-            ].filter(Boolean).join(' · ')
+            ? text.chatTitle
             : (activeModel?.description ?? text.chatTitle);
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'text');
         const supportsChatImage = textModelSupportsImage(activeModel);
 
         return (
             <section className="ai-chat-screen ai-chat-screen--concept" aria-label={text.chatTitle}>
-                <header className="ai-chat__header">
-                    <button
-                        type="button"
-                        className="ai-chat__back"
-                        aria-label={text.back}
-                        onClick={() => setCurrentPage(chatReturnPage)}
-                    >
-                        <ArrowLeft size={20} aria-hidden="true" />
-                    </button>
-                    <div className="ai-chat__header-main">
-                        <span className={`ai-chat__model-icon ai-chat__model-icon--${activeVisual.accent}`}>
-                            <ActiveIcon size={16} aria-hidden="true" />
-                        </span>
-                        <div>
-                            <h1 className="ai-chat__title">{headerTitle}</h1>
-                            <p className="ai-chat__subtitle">{headerSubtitle}</p>
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        className="ai-chat__new"
-                        onClick={handleNewChatDialog}
+                {renderAiScreenHeader({
+                    title: headerTitle,
+                    subtitle: headerSubtitle,
+                    onBack: () => setCurrentPage(chatReturnPage),
+                    onNewDialog: handleNewChatDialog,
+                    newDialogDisabled: isGeneratingText,
+                })}
+
+                {variantOptions.length > 1 ? (
+                    <AiVariantSelect
+                        id="ai-chat-variant"
+                        label={text.mediaModelVariantLabel}
+                        value={textModel}
+                        options={variantOptions}
+                        onChange={handleTextModelChange}
                         disabled={isGeneratingText}
-                    >
-                        {text.chatNewDialog}
-                    </button>
-                </header>
-
-                <div className="ai-chat__models" role="tablist" aria-label={text.textModelLabel}>
-                    {textModelSelectorItems.map((item) => {
-                        const isActive = item.type === 'single'
-                            ? textModel === item.model.id
-                            : item.variants.some((variant) => variant.id === textModel);
-                        const chipModel = item.type === 'single' ? item.model : item.variants[0];
-                        const chipVisual = getTextModelVisual(chipModel);
-                        const ModelIcon = chipVisual.icon;
-                        const chipLabel = item.type === 'single' ? item.model.label : item.label;
-                        const chipKey = item.type === 'single' ? item.model.id : item.id;
-
-                        return (
-                            <button
-                                key={chipKey}
-                                type="button"
-                                role="tab"
-                                aria-selected={isActive}
-                                className={`ai-chat__model-chip ai-chat__model-chip--${chipVisual.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
-                                onClick={() => handleTextModelGroupSelect(item)}
-                                disabled={isGeneratingText}
-                            >
-                                <ModelIcon size={14} aria-hidden="true" />
-                                <span>{chipLabel}</span>
-                                {item.type === 'single' && getTierLabelForModel(item.model, text) ? (
-                                    <span className={`ai-chat__model-tier ai-chat__model-tier--${getModelDisplayTier(item.model)}`}>
-                                        {getTierLabelForModel(item.model, text)}
-                                    </span>
-                                ) : null}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {activeSelectorItem?.type === 'tiered' ? (
-                    <div className="ai-chat__tiers" role="tablist" aria-label={text.textModelLabel}>
-                        {activeSelectorItem.variants.map((variant) => {
-                            const isTierActive = textModel === variant.id;
-                            const tierVisual = getTextModelVisual(variant);
-
-                            return (
-                                <button
-                                    key={variant.id}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={isTierActive}
-                                    className={`ai-chat__tier-chip ai-chat__tier-chip--${tierVisual.accent} ${isTierActive ? 'ai-chat__tier-chip--active' : ''}`}
-                                    onClick={() => handleTextModelChange(variant.id)}
-                                    disabled={isGeneratingText}
-                                >
-                                    <span className={`ai-chat__model-tier ai-chat__model-tier--${getModelDisplayTier(variant)}`}>
-                                        {getTierLabelForModel(variant, text)}
-                                    </span>
-                                    <span>{variant.label}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                    />
                 ) : null}
 
                 <div className="ai-chat__messages" aria-live="polite">
@@ -3551,7 +3643,6 @@ function App() {
                         <ChatMessageBubble
                             key={message.id}
                             message={message}
-                            onTypingComplete={handleChatTypingComplete}
                             generatingLabel={text.chatGenerating}
                         />
                     ))}
@@ -3626,13 +3717,10 @@ function App() {
     };
 
     const renderAiImageScreen = () => {
-        const activeModel = getImageModelDefinition(imageModel);
-        const ActiveIcon = activeModel.icon;
         const activeSelectorItem = getMediaSelectorItemForModelId(imageModelSelectorItems, imageModel);
-        const headerTitle = activeSelectorItem?.type === 'tiered'
-            ? getImageSelectorChipLabel(activeSelectorItem, text)
-            : text[activeModel.nameKey];
-        const headerSubtitle = text[activeModel.subKey];
+        const headerTitle = getAiGroupTitle(activeSelectorItem, text, getImageSelectorChipLabel);
+        const headerSubtitle = text.imageGenerateTitle;
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media');
         const canEdit = imageModelSupportsEdit(imageModel);
         const supportsSourceUpload = imageModelSupportsSourceUpload(imageModel);
         const hasAttachedImage = Boolean(imageAttachment);
@@ -3646,89 +3734,22 @@ function App() {
 
         return (
             <section className="ai-image-screen ai-image-screen--concept" aria-label={text.imageGenerateTitle}>
-                <header className="ai-chat__header">
-                    <button
-                        type="button"
-                        className="ai-chat__back"
-                        aria-label={text.back}
-                        onClick={() => setCurrentPage(imageReturnPage)}
-                    >
-                        <ArrowLeft size={20} aria-hidden="true" />
-                    </button>
-                    <div className="ai-chat__header-main">
-                        <span className={`ai-chat__model-icon ai-chat__model-icon--${activeModel.accent}`}>
-                            <ActiveIcon size={16} aria-hidden="true" />
-                        </span>
-                        <div>
-                            <h1 className="ai-chat__title">{headerTitle}</h1>
-                            <p className="ai-chat__subtitle">{headerSubtitle}</p>
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        className="ai-chat__new"
-                        onClick={handleNewImageDialog}
-                        disabled={isGeneratingImage}
-                    >
-                        {text.chatNewDialog}
-                    </button>
-                </header>
+                {renderAiScreenHeader({
+                    title: headerTitle,
+                    subtitle: headerSubtitle,
+                    onBack: () => setCurrentPage(imageReturnPage),
+                    onNewDialog: handleNewImageDialog,
+                    newDialogDisabled: isGeneratingImage,
+                })}
 
-                <div className="ai-chat__models" role="tablist" aria-label={text.imageGenerateTitle}>
-                    {imageModelSelectorItems.map((item) => {
-                        const isActive = item.type === 'single'
-                            ? imageModel === item.model.id
-                            : item.variants.some((variant) => variant.id === imageModel);
-                        const chipVisual = getImageSelectorChipVisual(item);
-                        const ModelIcon = chipVisual.icon;
-                        const chipLabel = getImageSelectorChipLabel(item, text);
-                        const chipKey = item.type === 'single' ? item.model.id : item.id;
-
-                        return (
-                            <button
-                                key={chipKey}
-                                type="button"
-                                role="tab"
-                                aria-selected={isActive}
-                                className={`ai-chat__model-chip ai-chat__model-chip--${chipVisual.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
-                                onClick={() => handleImageModelGroupSelect(item)}
-                                disabled={isGeneratingImage}
-                            >
-                                <ModelIcon size={14} aria-hidden="true" />
-                                <span>{chipLabel}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {activeSelectorItem?.type === 'tiered' ? (
-                    <div className="ai-chat__tiers" role="tablist" aria-label={text.imageGenerateTitle}>
-                        {activeSelectorItem.variants.map((variant) => {
-                            const isTierActive = imageModel === variant.id;
-                            const VariantIcon = variant.icon;
-
-                            return (
-                                <button
-                                    key={variant.id}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={isTierActive}
-                                    className={`ai-chat__tier-chip ai-chat__tier-chip--${variant.accent} ${isTierActive ? 'ai-chat__tier-chip--active' : ''}`}
-                                    onClick={() => handleImageModelChange(variant.id)}
-                                    disabled={isGeneratingImage}
-                                >
-                                    {variant.badge ? (
-                                        <span className={`ai-chat__model-tier ai-chat__model-tier--${variant.badge}`}>
-                                            {getCatalogBadgeLabel(variant.badge)}
-                                        </span>
-                                    ) : null}
-                                    <VariantIcon size={12} aria-hidden="true" />
-                                    <span>{text[variant.nameKey]}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                ) : null}
+                <AiVariantSelect
+                    id="ai-image-variant"
+                    label={text.mediaModelVariantLabel}
+                    value={imageModel}
+                    options={variantOptions}
+                    onChange={handleImageModelChange}
+                    disabled={isGeneratingImage}
+                />
 
                 <div className="ai-video__main">
                     <MediaModelOptionsBar
@@ -3888,13 +3909,10 @@ function App() {
     };
 
     const renderAiVideoScreen = () => {
-        const activeModel = getVideoModelDefinition(videoModel);
-        const ActiveIcon = activeModel.icon;
         const activeSelectorItem = getMediaSelectorItemForModelId(videoModelSelectorItems, videoModel);
-        const headerTitle = activeSelectorItem?.type === 'tiered'
-            ? getVideoSelectorChipLabel(activeSelectorItem, text)
-            : text[activeModel.nameKey];
-        const headerSubtitle = text[activeModel.subKey];
+        const headerTitle = getAiGroupTitle(activeSelectorItem, text, getVideoSelectorChipLabel);
+        const headerSubtitle = text.videoGenerateTitle;
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media');
         const requiresImage = videoModelRequiresImage(videoModel);
         const requiresVideo = videoModelRequiresVideo(videoModel);
         const isExtend = videoModel === 'seedance-v2-video-extend';
@@ -3907,89 +3925,22 @@ function App() {
 
         return (
             <section className="ai-image-screen ai-image-screen--concept" aria-label={text.videoGenerateTitle}>
-                <header className="ai-chat__header">
-                    <button
-                        type="button"
-                        className="ai-chat__back"
-                        aria-label={text.back}
-                        onClick={() => setCurrentPage(videoReturnPage)}
-                    >
-                        <ArrowLeft size={20} aria-hidden="true" />
-                    </button>
-                    <div className="ai-chat__header-main">
-                        <span className={`ai-chat__model-icon ai-chat__model-icon--${activeModel.accent}`}>
-                            <ActiveIcon size={16} aria-hidden="true" />
-                        </span>
-                        <div>
-                            <h1 className="ai-chat__title">{headerTitle}</h1>
-                            <p className="ai-chat__subtitle">{headerSubtitle}</p>
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        className="ai-chat__new"
-                        onClick={handleNewVideoDialog}
-                        disabled={isGeneratingVideo}
-                    >
-                        {text.chatNewDialog}
-                    </button>
-                </header>
+                {renderAiScreenHeader({
+                    title: headerTitle,
+                    subtitle: headerSubtitle,
+                    onBack: () => setCurrentPage(videoReturnPage),
+                    onNewDialog: handleNewVideoDialog,
+                    newDialogDisabled: isGeneratingVideo,
+                })}
 
-                <div className="ai-chat__models" role="tablist" aria-label={text.videoGenerateTitle}>
-                    {videoModelSelectorItems.map((item) => {
-                        const isActive = item.type === 'single'
-                            ? videoModel === item.model.id
-                            : item.variants.some((variant) => variant.id === videoModel);
-                        const chipVisual = getVideoSelectorChipVisual(item);
-                        const ModelIcon = chipVisual.icon;
-                        const chipLabel = getVideoSelectorChipLabel(item, text);
-                        const chipKey = item.type === 'single' ? item.model.id : item.id;
-
-                        return (
-                            <button
-                                key={chipKey}
-                                type="button"
-                                role="tab"
-                                aria-selected={isActive}
-                                className={`ai-chat__model-chip ai-chat__model-chip--${chipVisual.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
-                                onClick={() => handleVideoModelGroupSelect(item)}
-                                disabled={isGeneratingVideo}
-                            >
-                                <ModelIcon size={14} aria-hidden="true" />
-                                <span>{chipLabel}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {activeSelectorItem?.type === 'tiered' ? (
-                    <div className="ai-chat__tiers" role="tablist" aria-label={text.videoGenerateTitle}>
-                        {activeSelectorItem.variants.map((variant) => {
-                            const isTierActive = videoModel === variant.id;
-                            const VariantIcon = variant.icon;
-
-                            return (
-                                <button
-                                    key={variant.id}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={isTierActive}
-                                    className={`ai-chat__tier-chip ai-chat__tier-chip--${variant.accent} ${isTierActive ? 'ai-chat__tier-chip--active' : ''}`}
-                                    onClick={() => handleVideoModelChange(variant.id)}
-                                    disabled={isGeneratingVideo}
-                                >
-                                    {variant.badge ? (
-                                        <span className={`ai-chat__model-tier ai-chat__model-tier--${variant.badge}`}>
-                                            {getCatalogBadgeLabel(variant.badge)}
-                                        </span>
-                                    ) : null}
-                                    <VariantIcon size={12} aria-hidden="true" />
-                                    <span>{text[variant.nameKey]}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                ) : null}
+                <AiVariantSelect
+                    id="ai-video-variant"
+                    label={text.mediaModelVariantLabel}
+                    value={videoModel}
+                    options={variantOptions}
+                    onChange={handleVideoModelChange}
+                    disabled={isGeneratingVideo}
+                />
 
                 <div className="ai-video__main">
                 <MediaModelOptionsBar
@@ -4147,13 +4098,10 @@ function App() {
     };
 
     const renderAiVoiceScreen = () => {
-        const activeModel = getAudioModelDefinition(audioModel);
-        const ActiveIcon = activeModel?.icon ?? Mic;
         const activeSelectorItem = getMediaSelectorItemForModelId(audioModelSelectorItems, audioModel);
-        const headerTitle = activeSelectorItem?.type === 'tiered'
-            ? getAudioSelectorChipLabel(activeSelectorItem, text)
-            : text[activeModel?.nameKey ?? 'modelQwen3TtsName'];
-        const headerSubtitle = text[activeModel?.subKey ?? 'modelQwen3TtsSub'];
+        const headerTitle = getAiGroupTitle(activeSelectorItem, text, getAudioSelectorChipLabel);
+        const headerSubtitle = text.voiceGenerateTitle;
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media');
         const supportsClone = audioModelSupportsClone(audioModel);
         const isCloneMode = Boolean(audioAttachment) && supportsClone;
         const promptPlaceholder = isCloneMode
@@ -4162,60 +4110,22 @@ function App() {
 
         return (
             <section className="ai-image-screen ai-image-screen--concept" aria-label={text.voiceGenerateTitle}>
-                <header className="ai-chat__header">
-                    <button
-                        type="button"
-                        className="ai-chat__back"
-                        aria-label={text.back}
-                        onClick={() => setCurrentPage(audioReturnPage)}
-                    >
-                        <ArrowLeft size={20} aria-hidden="true" />
-                    </button>
-                    <div className="ai-chat__header-main">
-                        <span className={`ai-chat__model-icon ai-chat__model-icon--${activeModel?.accent ?? 'violet'}`}>
-                            <ActiveIcon size={16} aria-hidden="true" />
-                        </span>
-                        <div>
-                            <h1 className="ai-chat__title">{headerTitle}</h1>
-                            <p className="ai-chat__subtitle">{headerSubtitle}</p>
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        className="ai-chat__new"
-                        onClick={handleNewAudioDialog}
-                        disabled={isGeneratingAudio}
-                    >
-                        {text.chatNewDialog}
-                    </button>
-                </header>
+                {renderAiScreenHeader({
+                    title: headerTitle,
+                    subtitle: headerSubtitle,
+                    onBack: () => setCurrentPage(audioReturnPage),
+                    onNewDialog: handleNewAudioDialog,
+                    newDialogDisabled: isGeneratingAudio,
+                })}
 
-                <div className="ai-chat__models" role="tablist" aria-label={text.voiceGenerateTitle}>
-                    {audioModelSelectorItems.map((item) => {
-                        const isActive = item.type === 'single'
-                            ? audioModel === item.model.id
-                            : item.variants.some((variant) => variant.id === audioModel);
-                        const chipVisual = getAudioSelectorChipVisual(item);
-                        const ModelIcon = chipVisual.icon;
-                        const chipLabel = getAudioSelectorChipLabel(item, text);
-                        const chipKey = item.type === 'single' ? item.model.id : item.id;
-
-                        return (
-                            <button
-                                key={chipKey}
-                                type="button"
-                                role="tab"
-                                aria-selected={isActive}
-                                className={`ai-chat__model-chip ai-chat__model-chip--${chipVisual.accent} ${isActive ? 'ai-chat__model-chip--active' : ''}`}
-                                onClick={() => handleAudioModelGroupSelect(item)}
-                                disabled={isGeneratingAudio}
-                            >
-                                <ModelIcon size={14} aria-hidden="true" />
-                                <span>{chipLabel}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+                <AiVariantSelect
+                    id="ai-voice-variant"
+                    label={text.mediaModelVariantLabel}
+                    value={audioModel}
+                    options={variantOptions}
+                    onChange={handleAudioModelChange}
+                    disabled={isGeneratingAudio}
+                />
 
                 <div className="ai-video__main">
                     <MediaModelOptionsBar
@@ -4366,21 +4276,21 @@ function App() {
 
         return (
             <section className="profile-screen profile-screen--concept" aria-label={text.profileTitle}>
-                <header className="profile-concept__header">
-                    <button type="button" className="profile-concept__back" onClick={() => setCurrentPage('home')}>
-                        <ChevronLeft size={16} aria-hidden="true" />
-                        {text.back}
-                    </button>
-                    <h2 className="profile-concept__header-title">{text.profileTitle}</h2>
-                    <button
-                        type="button"
-                        className="profile-concept__more"
-                        aria-label={text.settingsTitle}
-                        onClick={() => setCurrentPage('settings')}
-                    >
-                        <MoreHorizontal size={18} aria-hidden="true" />
-                    </button>
-                </header>
+                <AppPageHeader
+                    title={text.profileTitle}
+                    onBack={() => setCurrentPage('home')}
+                    backLabel={text.back}
+                    trailing={(
+                        <button
+                            type="button"
+                            className="app-page-header__action"
+                            aria-label={text.settingsTitle}
+                            onClick={() => setCurrentPage('settings')}
+                        >
+                            <MoreHorizontal size={18} aria-hidden="true" />
+                        </button>
+                    )}
+                />
 
                 <div className="profile-concept__avatar-section">
                     <div className="profile-concept__avatar-outer">
@@ -4660,30 +4570,26 @@ function App() {
 
     const renderHistoryScreen = () => (
         <section className="history-screen history-screen--concept">
-            <header className="concept-page__header">
-                <button
-                    type="button"
-                    className="concept-page__back"
-                    onClick={() => setCurrentPage(historyReturnPage)}
-                >
-                    <ChevronLeft size={16} aria-hidden="true" />
-                    {text.back}
-                </button>
-                <h1 className="concept-page__title">{text.historyTitle}</h1>
-                <div className="history-concept__actions">
-                    <button type="button" className="history-concept__action" aria-label="Download">
-                        <Download size={17} aria-hidden="true" />
-                    </button>
-                    <button
-                        type="button"
-                        className="history-concept__action"
-                        aria-label="Delete"
-                        onClick={handleClearHistoryRequest}
-                    >
-                        <Trash2 size={17} aria-hidden="true" />
-                    </button>
-                </div>
-            </header>
+            <AppPageHeader
+                title={text.historyTitle}
+                onBack={() => setCurrentPage(historyReturnPage)}
+                backLabel={text.back}
+                trailing={(
+                    <div className="history-concept__actions">
+                        <button type="button" className="history-concept__action" aria-label="Download">
+                            <Download size={17} aria-hidden="true" />
+                        </button>
+                        <button
+                            type="button"
+                            className="history-concept__action"
+                            aria-label="Delete"
+                            onClick={handleClearHistoryRequest}
+                        >
+                            <Trash2 size={17} aria-hidden="true" />
+                        </button>
+                    </div>
+                )}
+            />
 
             <div className="history-concept__filters" role="tablist" aria-label={text.historyTitle}>
                 {historyFilterTabs.map(({ id, labelKey }) => (

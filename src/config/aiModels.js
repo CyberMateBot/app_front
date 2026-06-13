@@ -1,4 +1,4 @@
-import { Image as ImageIcon, Palette, Sparkles } from 'lucide-react';
+import { Bot, Image as ImageIcon, Layers, Palette, Sparkles, Wand2 } from 'lucide-react';
 import { IMAGE_MODEL_IDS } from '../api/telegramApi.js';
 
 export const IMAGE_MODEL_DEFINITIONS = [
@@ -22,7 +22,7 @@ export const IMAGE_MODEL_DEFINITIONS = [
         tab: 'photo',
         categories: ['photo'],
         accent: 'orange',
-        icon: Sparkles,
+        icon: Wand2,
         badge: 'pro',
         page: 'ai-image',
         backendModel: 'nano-banana-pro',
@@ -48,10 +48,7 @@ export const IMAGE_MODEL_DEFINITIONS = [
         tab: 'photo',
         categories: ['photo'],
         accent: 'green',
-        icon: Sparkles,
-        badge: 'new',
-        page: 'ai-image',
-        backendModel: 'gpt-image-2',
+        icon: Bot,
         group: 'gpt-image',
     },
     {
@@ -74,10 +71,7 @@ export const IMAGE_MODEL_DEFINITIONS = [
         tab: 'photo',
         categories: ['photo'],
         accent: 'blue',
-        icon: Sparkles,
-        badge: 'new',
-        page: 'ai-image',
-        backendModel: 'flux-dev',
+        icon: Layers,
     },
     {
         id: 'alice-ai-art',
