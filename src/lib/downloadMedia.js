@@ -1,5 +1,33 @@
-import { apiFetch } from '../api/httpClient.js';
+import { apiFetch, resolveApiUrl } from '../api/httpClient.js';
 import { getTelegramWebApp } from './telegramWebApp.js';
+
+function isMobileDevice() {
+    if (typeof navigator === 'undefined') {
+        return false;
+    }
+
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+        || (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
+}
+
+function supportsTelegramDownload() {
+    const tg = getTelegramWebApp();
+    return typeof tg?.downloadFile === 'function';
+}
+
+function prefersNativeDownload() {
+    return supportsTelegramDownload() || isMobileDevice();
+}
+
+function buildProxyDownloadUrl(mediaUrl, filename) {
+    const query = new URLSearchParams({
+        url: mediaUrl,
+        filename,
+    });
+    const absolute = resolveApiUrl(`/v1/media/download?${query.toString()}`);
+
+    return /^https?:\/\//i.test(absolute) ? absolute : null;
+}
 
 function triggerBlobDownload(blob, filename) {
     const objectUrl = URL.createObjectURL(blob);
@@ -39,6 +67,55 @@ function dataUrlToBlob(dataUrl) {
     }
 
     return new Blob([bytes], { type: mime });
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            const result = typeof reader.result === 'string' ? reader.result : '';
+            const commaIndex = result.indexOf(',');
+
+            if (commaIndex < 0) {
+                reject(new Error('Failed to encode file.'));
+                return;
+            }
+
+            resolve(result.slice(commaIndex + 1));
+        };
+
+        reader.onerror = () => {
+            reject(new Error('Failed to read file.'));
+        };
+
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function tryShareFile(blob, filename) {
+    if (typeof navigator.share !== 'function') {
+        return false;
+    }
+
+    try {
+        const file = new File([blob], filename, {
+            type: blob.type || 'application/octet-stream',
+        });
+
+        if (typeof navigator.canShare === 'function' && !navigator.canShare({ files: [file] })) {
+            return false;
+        }
+
+        await navigator.share({ files: [file], title: filename });
+        return true;
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            return true;
+        }
+
+        return false;
+    }
 }
 
 function tryTelegramDownload(url, filename) {
@@ -90,14 +167,86 @@ async function fetchViaProxy(url, filename) {
     return response.blob();
 }
 
-async function fetchDirect(url) {
-    const response = await fetch(url);
+async function prepareDataDownloadUrl(blob, filename) {
+    const dataBase64 = await blobToBase64(blob);
+    const response = await apiFetch('/v1/media/download/prepare', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+        },
+        body: JSON.stringify({
+            dataBase64,
+            mimeType: blob.type || 'application/octet-stream',
+            filename,
+        }),
+    });
 
     if (!response.ok) {
-        throw new Error('Download failed.');
+        let message = 'Download failed.';
+
+        try {
+            const payload = await response.json();
+            message = payload?.error || payload?.message || message;
+        } catch {
+            const text = await response.text().catch(() => '');
+            if (text) {
+                message = text;
+            }
+        }
+
+        throw new Error(message);
     }
 
-    return response.blob();
+    const payload = await response.json();
+    const downloadUrl = String(payload?.downloadUrl || payload?.url || '').trim();
+
+    if (!/^https?:\/\//i.test(downloadUrl)) {
+        throw new Error('Download URL is not available.');
+    }
+
+    return downloadUrl;
+}
+
+async function downloadBlobOnDevice(blob, filename) {
+    if (supportsTelegramDownload()) {
+        const preparedUrl = await prepareDataDownloadUrl(blob, filename);
+        await tryTelegramDownload(preparedUrl, filename);
+        return { method: 'telegram' };
+    }
+
+    if (isMobileDevice()) {
+        const shared = await tryShareFile(blob, filename);
+
+        if (shared) {
+            return { method: 'share' };
+        }
+    }
+
+    triggerBlobDownload(blob, filename);
+    return { method: 'blob' };
+}
+
+async function downloadRemoteUrl(trimmed, safeFilename) {
+    const proxyUrl = buildProxyDownloadUrl(trimmed, safeFilename);
+
+    if (prefersNativeDownload() && proxyUrl) {
+        await tryTelegramDownload(proxyUrl, safeFilename);
+        return { method: 'telegram' };
+    }
+
+    const blob = await fetchViaProxy(trimmed, safeFilename);
+
+    if (isMobileDevice()) {
+        const shared = await tryShareFile(blob, safeFilename);
+
+        if (shared) {
+            return { method: 'share' };
+        }
+    }
+
+    triggerBlobDownload(blob, safeFilename);
+    return { method: 'blob' };
 }
 
 export async function downloadMediaUrl(url, filename = 'cybermate-media') {
@@ -109,47 +258,25 @@ export async function downloadMediaUrl(url, filename = 'cybermate-media') {
 
     const safeFilename = String(filename || 'cybermate-media').trim() || 'cybermate-media';
 
-    if (trimmed.startsWith('data:')) {
-        triggerBlobDownload(dataUrlToBlob(trimmed), safeFilename);
-        return;
-    }
+    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+        const blob = trimmed.startsWith('data:')
+            ? dataUrlToBlob(trimmed)
+            : await fetch(trimmed).then((response) => {
+                if (!response.ok) {
+                    throw new Error('Download failed.');
+                }
 
-    if (trimmed.startsWith('blob:')) {
-        triggerBlobDownload(await fetchDirect(trimmed), safeFilename);
-        return;
+                return response.blob();
+            });
+
+        return downloadBlobOnDevice(blob, safeFilename);
     }
 
     if (!/^https?:\/\//i.test(trimmed)) {
         throw new Error('Unsupported media URL.');
     }
 
-    const errors = [];
-
-    try {
-        const blob = await fetchViaProxy(trimmed, safeFilename);
-        triggerBlobDownload(blob, safeFilename);
-        return;
-    } catch (error) {
-        errors.push(error);
-    }
-
-    try {
-        await tryTelegramDownload(trimmed, safeFilename);
-        return;
-    } catch (error) {
-        errors.push(error);
-    }
-
-    try {
-        const blob = await fetchDirect(trimmed);
-        triggerBlobDownload(blob, safeFilename);
-        return;
-    } catch (error) {
-        errors.push(error);
-    }
-
-    const lastError = errors[errors.length - 1];
-    throw lastError instanceof Error ? lastError : new Error('Download failed.');
+    return downloadRemoteUrl(trimmed, safeFilename);
 }
 
 export function guessMediaFilename(url, fallbackBase = 'cybermate') {

@@ -368,6 +368,7 @@ const translations = {
         mediaDownloadButton: 'Скачать',
         mediaDownloading: 'Скачивание...',
         mediaDownloadFailed: 'Не удалось скачать файл.',
+        mediaDownloadTelegramHint: 'Подтвердите сохранение в окне Telegram.',
         imageGenerateEmpty: 'Изображение не получено. Попробуйте другой промт.',
         imageGeneratedNote: 'Изображение создано.',
         imageContentPolicy: 'Модель отклонила запрос. Попробуйте другую формулировку без запрещённых тем.',
@@ -719,6 +720,7 @@ const translations = {
         mediaDownloadButton: 'Download',
         mediaDownloading: 'Downloading...',
         mediaDownloadFailed: 'Failed to download file.',
+        mediaDownloadTelegramHint: 'Confirm save in the Telegram popup.',
         imageGenerateEmpty: 'No image returned. Try a different prompt.',
         imageGeneratedNote: 'Image created.',
         imageContentPolicy: 'The model rejected this prompt. Try a different wording.',
@@ -1324,13 +1326,17 @@ function App() {
 
         setMediaDownloadBusy(kind);
         try {
-            await downloadMediaUrl(trimmed, guessMediaFilename(trimmed, fallbackName));
+            const result = await downloadMediaUrl(trimmed, guessMediaFilename(trimmed, fallbackName));
+
+            if (result?.method === 'telegram') {
+                showAppNotice(text.mediaDownloadTelegramHint, 'success');
+            }
         } catch (error) {
             showAppNotice(error instanceof Error ? error.message : text.mediaDownloadFailed, 'error');
         } finally {
             setMediaDownloadBusy(null);
         }
-    }, [showAppNotice, text.mediaDownloadFailed]);
+    }, [showAppNotice, text.mediaDownloadFailed, text.mediaDownloadTelegramHint]);
 
     useEffect(() => {
         if (appNotice?.variant !== 'success') {
