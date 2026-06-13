@@ -367,6 +367,7 @@ const translations = {
         imageResultTitle: 'Результат',
         mediaDownloadButton: 'Скачать',
         mediaDownloading: 'Скачивание...',
+        mediaDownloadFailed: 'Не удалось скачать файл.',
         imageGenerateEmpty: 'Изображение не получено. Попробуйте другой промт.',
         imageGeneratedNote: 'Изображение создано.',
         imageContentPolicy: 'Модель отклонила запрос. Попробуйте другую формулировку без запрещённых тем.',
@@ -717,6 +718,7 @@ const translations = {
         imageResultTitle: 'Result',
         mediaDownloadButton: 'Download',
         mediaDownloading: 'Downloading...',
+        mediaDownloadFailed: 'Failed to download file.',
         imageGenerateEmpty: 'No image returned. Try a different prompt.',
         imageGeneratedNote: 'Image created.',
         imageContentPolicy: 'The model rejected this prompt. Try a different wording.',
@@ -1324,11 +1326,11 @@ function App() {
         try {
             await downloadMediaUrl(trimmed, guessMediaFilename(trimmed, fallbackName));
         } catch (error) {
-            showAppNotice(error instanceof Error ? error.message : text.mediaDownloading, 'error');
+            showAppNotice(error instanceof Error ? error.message : text.mediaDownloadFailed, 'error');
         } finally {
             setMediaDownloadBusy(null);
         }
-    }, [showAppNotice, text.mediaDownloading]);
+    }, [showAppNotice, text.mediaDownloadFailed]);
 
     useEffect(() => {
         if (appNotice?.variant !== 'success') {
