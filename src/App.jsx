@@ -4057,7 +4057,7 @@ function App() {
                                 </button>
                             </div>
                             <video
-                                className="ai-image__preview"
+                                className="ai-image__preview ai-image__preview--video"
                                 src={generatedVideoUrl}
                                 controls
                                 playsInline

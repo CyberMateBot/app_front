@@ -269,7 +269,9 @@
 }
 
 :root:not([data-theme='light']) .bottom-nav__inner {
-  margin: 0 10px;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 100%;
   padding: 5px;
   padding-bottom: calc(5px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
   border-radius: 18px;
@@ -307,7 +309,9 @@
 }
 
 :root[data-theme='light'] .bottom-nav__inner {
-  margin: 0 10px;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 100%;
   padding: 5px;
   padding-bottom: calc(5px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
   border-radius: 18px;

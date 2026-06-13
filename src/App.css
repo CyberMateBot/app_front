@@ -3883,6 +3883,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
+  align-items: center;
 }
 
 .ai-image__result-header {
@@ -3891,6 +3895,7 @@
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+  width: 100%;
   margin-bottom: 8px;
 }
 
@@ -3909,10 +3914,23 @@
   padding-bottom: 4px;
 }
 
+.ai-image__gallery {
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+}
+
 .ai-image__gallery-item {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  align-items: center;
+}
+
+.ai-image__edit-hint {
+  margin: 0 1rem 0.5rem;
+  font-size: 0.8rem;
+  color: var(--cm-text-muted);
 }
 
 .media-options {
@@ -4156,7 +4174,10 @@
 }
 
 .ai-video__result {
+  width: 100%;
   padding: 0 16px;
+  box-sizing: border-box;
+  align-items: center;
 }
 
 .ai-video__composer {
@@ -4257,23 +4278,21 @@
   color: var(--cm-text-muted);
 }
 
-.ai-image__gallery {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.ai-image__edit-hint {
-  margin: 0 1rem 0.5rem;
-  font-size: 0.8rem;
-  color: var(--cm-text-muted);
-}
-
 .ai-image__preview {
+  display: block;
   width: 100%;
+  max-width: min(100%, 360px);
+  max-height: min(40vh, 300px);
+  height: auto;
+  margin-inline: auto;
+  object-fit: contain;
   border-radius: 14px;
   border: 0.5px solid var(--cm-border);
   background: var(--cm-surface);
-  display: block;
+}
+
+.ai-image__preview--video {
+  background: #000;
 }
 
 :root[data-theme='light'] .ai-image__preview {
@@ -4288,6 +4307,12 @@
 }
 
 .bottom-nav--concept {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: max(var(--page-pad-x, 12px), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-pad-x, 12px), env(safe-area-inset-right, 0px));
   background: transparent;
   border-top: none;
   border-bottom: 0.5px solid var(--cm-border);
@@ -4504,10 +4529,8 @@
   }
 
   .bottom-nav.bottom-nav--concept {
-    display: flex;
-    justify-content: center;
-    padding-inline: var(--page-pad-x, 16px);
-    box-sizing: border-box;
+    padding-left: max(var(--page-pad-x, 16px), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--page-pad-x, 16px), env(safe-area-inset-right, 0px));
   }
 
   .bottom-nav.bottom-nav--concept .bottom-nav__inner {
@@ -4809,6 +4832,11 @@
 
   .home-concept__greeting p {
     font-size: calc(13px * var(--home-ui-scale, 1));
+  }
+
+  .ai-image__preview {
+    max-width: min(100%, 440px);
+    max-height: min(44vh, 360px);
   }
 
   .app-page-header__title {
