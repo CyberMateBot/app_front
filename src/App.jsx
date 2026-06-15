@@ -3,6 +3,7 @@ import {
     ArrowLeft,
     Bell,
     Bot,
+    Box,
     Check,
     ChevronDown,
     ChevronLeft,
@@ -54,6 +55,7 @@ import {
     generateText,
     generateVideo,
     generateAudio,
+    generate3D,
     patchUserTheme,
     registerTelegramUser,
     savePromptHistory,
@@ -61,6 +63,7 @@ import {
     IMAGE_MODEL_IDS,
     VIDEO_MODEL_IDS,
     AUDIO_MODEL_IDS,
+    THREE_D_MODEL_IDS,
 } from './api/telegramApi.js';
 import { resolveReferralAvatarUrl } from './api/referrals.js';
 import ReferralFriendAvatar from './Components/ReferralFriendAvatar.jsx';
@@ -134,6 +137,8 @@ import {
     getAudioModelDefaults,
     audioModelSupportsClone,
     audioModelIsMusic,
+    getThreeDModelCapabilities,
+    getThreeDModelDefaults,
     videoModelIsKling,
 } from './config/mediaModelOptions.js';
 import {
@@ -142,6 +147,14 @@ import {
 import {
     AUDIO_MODEL_DEFINITIONS,
 } from './config/audioModels.js';
+import {
+    THREE_D_MODEL_DEFINITIONS,
+} from './config/threeDModels.js';
+import {
+    threeDModelRequiresImage,
+    threeDModelRequiresMultiImage,
+    threeDModelRequiresPrompt,
+} from './lib/threeDModels.js';
 import {
     buildCatalogTextTools,
     buildTextModelGroupOptions,
@@ -164,12 +177,15 @@ import {
     buildCatalogAudioTools,
     buildCatalogImageTools,
     buildCatalogVideoTools,
+    buildCatalogThreeDTools,
     buildAudioModelSelectorItems,
     buildImageModelSelectorItems,
     buildVideoModelSelectorItems,
+    buildThreeDModelSelectorItems,
     getAudioSelectorChipLabel,
     getImageSelectorChipLabel,
     getMediaSelectorItemForModelId,
+    getThreeDSelectorChipLabel,
     getVideoSelectorChipLabel,
 } from './lib/mediaModels.js';
 import './App.css';
@@ -206,6 +222,7 @@ const homeCategoryChips = [
     { id: 'video', labelKey: 'chipVideo', icon: Video },
     { id: 'music', labelKey: 'chipMusic', icon: Music2 },
     { id: 'voice', labelKey: 'chipVoice', icon: Mic },
+    { id: '3d', labelKey: 'chip3d', icon: Box },
 ];
 
 const homeToolCards = [
@@ -214,6 +231,7 @@ const homeToolCards = [
     { id: 'video', categories: ['video'], titleKey: 'toolVideoTitle', subKey: 'toolVideoSub', icon: Video, accent: 'c3' },
     { id: 'music', categories: ['music'], titleKey: 'toolMusicTitle', subKey: 'toolMusicSub', icon: Music2, accent: 'c4' },
     { id: 'voice', categories: ['voice'], titleKey: 'toolVoiceTitle', subKey: 'toolVoiceSub', icon: Mic, accent: 'c5', page: 'ai-voice' },
+    { id: '3d', categories: ['3d'], titleKey: 'tool3dTitle', subKey: 'tool3dSub', icon: Box, accent: 'c7', badge: 'new', page: 'ai-3d' },
     { id: 'text', categories: ['chats'], titleKey: 'toolTextTitle', subKey: 'toolTextSub', icon: FileText, accent: 'c6', page: 'ai-chat' },
 ];
 
@@ -265,6 +283,7 @@ const translations = {
         chipVideo: 'Видео',
         chipMusic: 'Музыка',
         chipVoice: 'Голос',
+        chip3d: '3D',
         promoTitle: 'Генерация видео',
         promoSub: 'Создай ролик из текста за 60 сек',
         promoButton: 'Попробовать',
@@ -282,6 +301,8 @@ const translations = {
         toolMusicSub: 'Mureka V9, ACE-Step',
         toolVoiceTitle: 'Озвучка',
         toolVoiceSub: 'Qwen3, OmniVoice, ElevenLabs',
+        tool3dTitle: '3D-модели',
+        tool3dSub: 'Tripo3D, Hunyuan3D, Meshy, Rodin',
         modelQwen3TtsName: 'Qwen3 TTS',
         modelQwen3TtsSub: 'Озвучка и клонирование голоса',
         modelOmniVoiceName: 'OmniVoice',
@@ -294,6 +315,54 @@ const translations = {
         modelMurekaV9Sub: 'Генерация песен',
         modelAceStepName: 'ACE-Step 1.5',
         modelAceStepSub: 'Музыка до 4 минут',
+        modelTripo3dGroupName: 'Tripo3D',
+        modelTripo3dGroupSub: 'Text и image-to-3D',
+        modelTripoV25I2dName: 'Tripo3D V2.5 Image',
+        modelTripoV25I2dSub: '3D из одного фото',
+        modelTripoV25MultiviewName: 'Tripo3D V2.5 Multiview',
+        modelTripoV25MultiviewSub: '3D из 2–4 ракурсов',
+        modelTripoH31T2dName: 'Tripo3D H3.1 Text',
+        modelTripoH31T2dSub: '3D по описанию',
+        modelTripoH31I2dName: 'Tripo3D H3.1 Image',
+        modelTripoH31I2dSub: 'Детальная 3D из фото',
+        modelHunyuan3dGroupName: 'Hunyuan3D',
+        modelHunyuan3dGroupSub: 'Tencent text-to-3D',
+        modelHunyuan3dV3Name: 'Hunyuan3D V3',
+        modelHunyuan3dV3Sub: 'PBR-текстуры и геометрия',
+        modelHunyuan3dRapidName: 'Hunyuan3D V3.1 Rapid',
+        modelHunyuan3dRapidSub: 'Быстрая генерация',
+        modelMeshyGroupName: 'Meshy 6',
+        modelMeshyGroupSub: 'Лучшая геометрия и текстуры',
+        modelMeshy6Name: 'Meshy 6',
+        modelMeshy6Sub: 'Text-to-3D премиум качества',
+        modelRodinGroupName: 'Hyper3D Rodin',
+        modelRodinGroupSub: 'Rodin V2 и V2.5',
+        modelRodinV2Name: 'Rodin V2',
+        modelRodinV2Sub: 'Image-to-3D, 10B параметров',
+        modelRodinV25Name: 'Rodin V2.5',
+        modelRodinV25Sub: 'Расширенные настройки mesh',
+        threeDGenerateTitle: 'Генерация 3D',
+        threeDPromptLabel: 'Описание модели',
+        threeDPromptPlaceholder: 'Опишите объект для 3D-генерации...',
+        threeDNegativePromptPlaceholder: 'Что исключить (опционально)',
+        threeDGenerateButton: 'Сгенерировать 3D',
+        threeDGenerating: 'Генерация 3D-модели...',
+        threeDResultTitle: 'Результат',
+        threeDGenerateEmpty: '3D-модель не получена. Попробуйте другой промпт.',
+        threeDSourceImageRequired: 'Прикрепите исходное изображение.',
+        threeDMultiImageRequired: 'Прикрепите минимум 2 изображения (разные ракурсы).',
+        threeDAttachImage: 'Прикрепить фото',
+        threeDAttachImages: 'Прикрепить ракурсы',
+        catalogSection3d: '3D-генерация',
+        mediaOptionTextureQuality: 'Качество текстур',
+        mediaOptionGeometryQuality: 'Качество геометрии',
+        mediaOptionArtStyle: 'Стиль',
+        mediaOptionTopology: 'Топология',
+        mediaOptionTier: 'Уровень',
+        mediaOptionMaterial: 'Материал',
+        mediaOptionGeometryFileFormat: 'Формат файла',
+        mediaOptionTextureMode: 'Режим текстур',
+        mediaOptionMode: 'Режим',
         voiceGenerateTitle: 'Озвучка текста',
         musicGenerateTitle: 'Генерация музыки',
         voicePromptLabel: 'Текст для озвучки',
@@ -722,6 +791,7 @@ const translations = {
         chipVideo: 'Video',
         chipMusic: 'Music',
         chipVoice: 'Voice',
+        chip3d: '3D',
         promoTitle: 'Video generation',
         promoSub: 'Create a clip from text in 60 sec',
         promoButton: 'Try it',
@@ -739,6 +809,8 @@ const translations = {
         toolMusicSub: 'Mureka V9, ACE-Step',
         toolVoiceTitle: 'Voiceover',
         toolVoiceSub: 'Qwen3, OmniVoice, ElevenLabs',
+        tool3dTitle: '3D models',
+        tool3dSub: 'Tripo3D, Hunyuan3D, Meshy, Rodin',
         modelQwen3TtsName: 'Qwen3 TTS',
         modelQwen3TtsSub: 'Text-to-speech and voice cloning',
         modelOmniVoiceName: 'OmniVoice',
@@ -751,6 +823,54 @@ const translations = {
         modelMurekaV9Sub: 'Song generation from lyrics',
         modelAceStepName: 'ACE-Step 1.5',
         modelAceStepSub: 'Music up to 4 minutes',
+        modelTripo3dGroupName: 'Tripo3D',
+        modelTripo3dGroupSub: 'Text and image-to-3D',
+        modelTripoV25I2dName: 'Tripo3D V2.5 Image',
+        modelTripoV25I2dSub: '3D from a single photo',
+        modelTripoV25MultiviewName: 'Tripo3D V2.5 Multiview',
+        modelTripoV25MultiviewSub: '3D from 2–4 views',
+        modelTripoH31T2dName: 'Tripo3D H3.1 Text',
+        modelTripoH31T2dSub: '3D from description',
+        modelTripoH31I2dName: 'Tripo3D H3.1 Image',
+        modelTripoH31I2dSub: 'Detailed 3D from photo',
+        modelHunyuan3dGroupName: 'Hunyuan3D',
+        modelHunyuan3dGroupSub: 'Tencent text-to-3D',
+        modelHunyuan3dV3Name: 'Hunyuan3D V3',
+        modelHunyuan3dV3Sub: 'PBR textures and geometry',
+        modelHunyuan3dRapidName: 'Hunyuan3D V3.1 Rapid',
+        modelHunyuan3dRapidSub: 'Fast generation',
+        modelMeshyGroupName: 'Meshy 6',
+        modelMeshyGroupSub: 'Best geometry and textures',
+        modelMeshy6Name: 'Meshy 6',
+        modelMeshy6Sub: 'Premium text-to-3D',
+        modelRodinGroupName: 'Hyper3D Rodin',
+        modelRodinGroupSub: 'Rodin V2 and V2.5',
+        modelRodinV2Name: 'Rodin V2',
+        modelRodinV2Sub: 'Image-to-3D, 10B params',
+        modelRodinV25Name: 'Rodin V2.5',
+        modelRodinV25Sub: 'Advanced mesh settings',
+        threeDGenerateTitle: '3D generation',
+        threeDPromptLabel: 'Model description',
+        threeDPromptPlaceholder: 'Describe the object to generate in 3D...',
+        threeDNegativePromptPlaceholder: 'What to exclude (optional)',
+        threeDGenerateButton: 'Generate 3D',
+        threeDGenerating: 'Generating 3D model...',
+        threeDResultTitle: 'Result',
+        threeDGenerateEmpty: 'No 3D model returned. Try a different prompt.',
+        threeDSourceImageRequired: 'Attach a source image.',
+        threeDMultiImageRequired: 'Attach at least 2 images (different views).',
+        threeDAttachImage: 'Attach photo',
+        threeDAttachImages: 'Attach views',
+        catalogSection3d: '3D generation',
+        mediaOptionTextureQuality: 'Texture quality',
+        mediaOptionGeometryQuality: 'Geometry quality',
+        mediaOptionArtStyle: 'Art style',
+        mediaOptionTopology: 'Topology',
+        mediaOptionTier: 'Tier',
+        mediaOptionMaterial: 'Material',
+        mediaOptionGeometryFileFormat: 'File format',
+        mediaOptionTextureMode: 'Texture mode',
+        mediaOptionMode: 'Mode',
         voiceGenerateTitle: 'Text-to-speech',
         musicGenerateTitle: 'Music generation',
         voicePromptLabel: 'Text to speak',
@@ -1239,6 +1359,7 @@ function App() {
     const [imageError, setImageError] = useState('');
     const [videoError, setVideoError] = useState('');
     const [audioError, setAudioError] = useState('');
+    const [threeDError, setThreeDError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [walletData, setWalletData] = useState(null);
     const [referralData, setReferralData] = useState(null);
@@ -1258,6 +1379,7 @@ function App() {
     const initialImageDefaults = getImageModelDefaults('nano-banana');
     const initialVideoDefaults = getVideoModelDefaults('kling-v3-std');
     const initialAudioDefaults = getAudioModelDefaults('qwen3-tts');
+    const initialThreeDDefaults = getThreeDModelDefaults('hunyuan3d-v3.1-rapid');
     const [imageModel, setImageModel] = useState('nano-banana');
     const [imagePrompt, setImagePrompt] = useState('');
     const [imageAttachment, setImageAttachment] = useState(null);
@@ -1305,6 +1427,23 @@ function App() {
     const [audioAttachment, setAudioAttachment] = useState(null);
     const [generatedAudioUrl, setGeneratedAudioUrl] = useState('');
     const [audioSessionId, setAudioSessionId] = useState(() => createChatSessionId());
+    const [threeDModel, setThreeDModel] = useState('hunyuan3d-v3.1-rapid');
+    const [threeDPrompt, setThreeDPrompt] = useState('');
+    const [threeDNegativePrompt, setThreeDNegativePrompt] = useState(initialThreeDDefaults.negativePrompt ?? '');
+    const [threeDTextureQuality, setThreeDTextureQuality] = useState(initialThreeDDefaults.textureQuality ?? 'detailed');
+    const [threeDOutputFormat, setThreeDOutputFormat] = useState(initialThreeDDefaults.outputFormat ?? 'glb');
+    const [threeDGeometryQuality, setThreeDGeometryQuality] = useState(initialThreeDDefaults.geometryQuality ?? 'detailed');
+    const [threeDMode, setThreeDMode] = useState(initialThreeDDefaults.mode ?? 'full');
+    const [threeDArtStyle, setThreeDArtStyle] = useState(initialThreeDDefaults.artStyle ?? 'realistic');
+    const [threeDTopology, setThreeDTopology] = useState(initialThreeDDefaults.topology ?? 'quad');
+    const [threeDTier, setThreeDTier] = useState(initialThreeDDefaults.tier ?? 'Gen-2.5-Medium');
+    const [threeDMaterial, setThreeDMaterial] = useState(initialThreeDDefaults.material ?? 'PBR');
+    const [threeDGeometryFileFormat, setThreeDGeometryFileFormat] = useState(initialThreeDDefaults.geometryFileFormat ?? 'glb');
+    const [threeDTextureMode, setThreeDTextureMode] = useState(initialThreeDDefaults.textureMode ?? 'medium');
+    const [threeDAttachment, setThreeDAttachment] = useState(null);
+    const [threeDAttachments, setThreeDAttachments] = useState([]);
+    const [generatedThreeDUrl, setGeneratedThreeDUrl] = useState('');
+    const [threeDSessionId, setThreeDSessionId] = useState(() => createChatSessionId());
     const [chatMessages, setChatMessages] = useState([]);
     const [chatTopicTitle, setChatTopicTitle] = useState('');
     const [chatSessionId, setChatSessionId] = useState(() => createChatSessionId());
@@ -1312,6 +1451,7 @@ function App() {
     const [imageReturnPage, setImageReturnPage] = useState('catalog');
     const [videoReturnPage, setVideoReturnPage] = useState('catalog');
     const [audioReturnPage, setAudioReturnPage] = useState('catalog');
+    const [threeDReturnPage, setThreeDReturnPage] = useState('catalog');
     const [historyReturnPage, setHistoryReturnPage] = useState('home');
     const [isGeneratingText, setIsGeneratingText] = useState(false);
     const [chatAttachment, setChatAttachment] = useState(null);
@@ -1320,10 +1460,12 @@ function App() {
     const chatPhotoInputRef = useRef(null);
     const imagePhotoInputRef = useRef(null);
     const audioFileInputRef = useRef(null);
+    const threeDFileInputRef = useRef(null);
     const pendingAssistantIdRef = useRef(null);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
     const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
     const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+    const [isGeneratingThreeD, setIsGeneratingThreeD] = useState(false);
     const [mediaDownloadBusy, setMediaDownloadBusy] = useState(null);
     const [homeCategoryChip, setHomeCategoryChip] = useState('all');
     const [catalogTab, setCatalogTab] = useState('all');
@@ -1352,6 +1494,11 @@ function App() {
 
     const audioModelSelectorItems = useMemo(
         () => buildAudioModelSelectorItems(AUDIO_MODEL_DEFINITIONS),
+        [],
+    );
+
+    const threeDModelSelectorItems = useMemo(
+        () => buildThreeDModelSelectorItems(THREE_D_MODEL_DEFINITIONS),
         [],
     );
 
@@ -2145,7 +2292,7 @@ function App() {
                 ? currentPage
                 : 'home';
 
-    const showBottomNav = !['ai-chat', 'ai-image', 'ai-video', 'ai-voice', 'settings', 'wallet', 'referrals'].includes(currentPage);
+    const showBottomNav = !['ai-chat', 'ai-image', 'ai-video', 'ai-voice', 'ai-3d', 'settings', 'wallet', 'referrals'].includes(currentPage);
 
     const navInnerRef = useRef(null);
     const navButtonRefs = useRef([]);
@@ -2216,6 +2363,11 @@ function App() {
             id: 'audio-models',
             labelKey: 'catalogSectionVoice',
             tools: buildCatalogAudioTools(AUDIO_MODEL_DEFINITIONS),
+        },
+        {
+            id: '3d-models',
+            labelKey: 'catalogSection3d',
+            tools: buildCatalogThreeDTools(THREE_D_MODEL_DEFINITIONS),
         },
     ], [effectiveTextModels]);
 
@@ -2888,6 +3040,61 @@ function App() {
         }
     };
 
+    const applyThreeDModelOptions = useCallback((modelId) => {
+        const defaults = getThreeDModelDefaults(modelId);
+        setThreeDNegativePrompt(defaults.negativePrompt ?? '');
+        setThreeDTextureQuality(defaults.textureQuality ?? 'detailed');
+        setThreeDOutputFormat(defaults.outputFormat ?? 'glb');
+        setThreeDGeometryQuality(defaults.geometryQuality ?? 'detailed');
+        setThreeDMode(defaults.mode ?? 'full');
+        setThreeDArtStyle(defaults.artStyle ?? 'realistic');
+        setThreeDTopology(defaults.topology ?? 'quad');
+        setThreeDTier(defaults.tier ?? 'Gen-2.5-Medium');
+        setThreeDMaterial(defaults.material ?? 'PBR');
+        setThreeDGeometryFileFormat(defaults.geometryFileFormat ?? 'glb');
+        setThreeDTextureMode(defaults.textureMode ?? 'medium');
+    }, []);
+
+    const handleThreeDOptionChange = (key, value) => {
+        switch (key) {
+            case 'negativePrompt':
+                setThreeDNegativePrompt(value);
+                break;
+            case 'textureQuality':
+                setThreeDTextureQuality(value);
+                break;
+            case 'outputFormat':
+                setThreeDOutputFormat(value);
+                break;
+            case 'geometryQuality':
+                setThreeDGeometryQuality(value);
+                break;
+            case 'mode':
+                setThreeDMode(value);
+                break;
+            case 'artStyle':
+                setThreeDArtStyle(value);
+                break;
+            case 'topology':
+                setThreeDTopology(value);
+                break;
+            case 'tier':
+                setThreeDTier(value);
+                break;
+            case 'material':
+                setThreeDMaterial(value);
+                break;
+            case 'geometryFileFormat':
+                setThreeDGeometryFileFormat(value);
+                break;
+            case 'textureMode':
+                setThreeDTextureMode(value);
+                break;
+            default:
+                break;
+        }
+    };
+
     const openAiImage = (modelId, returnPage = currentPage, options = {}) => {
         const fromHistory = returnPage === 'history' || Boolean(options.messages?.length);
         const targetModelId = modelId || imageModel;
@@ -3238,6 +3445,11 @@ function App() {
             return;
         }
 
+        if (tool.page === 'ai-3d') {
+            openAi3D(tool.id, 'catalog');
+            return;
+        }
+
         if (tool.page === 'ai-chat') {
             openAiChat(tool.id, 'catalog');
         }
@@ -3501,6 +3713,153 @@ function App() {
             setAudioError(message || (language === 'ru' ? 'Не удалось сгенерировать аудио.' : 'Failed to generate audio.'));
         } finally {
             setIsGeneratingAudio(false);
+        }
+    };
+
+    const startNewThreeDSession = useCallback(() => {
+        setThreeDSessionId(createChatSessionId());
+    }, []);
+
+    const handleThreeDModelChange = (modelId) => {
+        if (modelId === threeDModel) {
+            return;
+        }
+
+        setThreeDModel(modelId);
+        applyThreeDModelOptions(modelId);
+        setThreeDAttachment(null);
+        setThreeDAttachments([]);
+        setThreeDError('');
+    };
+
+    const handleThreeDAttachmentSelect = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) {
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            setThreeDError(language === 'ru' ? 'Можно прикрепить только изображение.' : 'Only images are supported.');
+            return;
+        }
+        if (file.size > 12 * 1024 * 1024) {
+            setThreeDError(language === 'ru' ? 'Изображение слишком большое (макс. 12 МБ).' : 'Image is too large (max 12 MB).');
+            return;
+        }
+
+        try {
+            const compressed = await compressImageFile(file);
+            setThreeDAttachment(compressed);
+            setThreeDError('');
+        } catch {
+            setThreeDError(language === 'ru' ? 'Не удалось обработать изображение.' : 'Failed to process image.');
+        }
+    };
+
+    const handleThreeDMultiAttachmentSelect = async (event) => {
+        const files = Array.from(event.target.files ?? []);
+        event.target.value = '';
+        if (!files.length) {
+            return;
+        }
+
+        try {
+            const compressedList = [];
+            for (const file of files.slice(0, 4)) {
+                if (!file.type.startsWith('image/')) {
+                    continue;
+                }
+                compressedList.push(await compressImageFile(file));
+            }
+            if (!compressedList.length) {
+                setThreeDError(language === 'ru' ? 'Можно прикрепить только изображения.' : 'Only images are supported.');
+                return;
+            }
+            setThreeDAttachments(compressedList);
+            setThreeDError('');
+        } catch {
+            setThreeDError(language === 'ru' ? 'Не удалось обработать изображения.' : 'Failed to process images.');
+        }
+    };
+
+    const openAi3D = (modelId, returnPage = currentPage) => {
+        const targetModelId = modelId || threeDModel;
+        setThreeDModel(targetModelId);
+        applyThreeDModelOptions(targetModelId);
+        setThreeDPrompt('');
+        setThreeDAttachment(null);
+        setThreeDAttachments([]);
+        setGeneratedThreeDUrl('');
+        setIsGeneratingThreeD(false);
+        startNewThreeDSession();
+        setThreeDReturnPage(returnPage);
+        setThreeDError('');
+        setCurrentPage('ai-3d');
+    };
+
+    const handleGenerateThreeD = async () => {
+        const trimmedPrompt = threeDPrompt.trim();
+        const requiresImage = threeDModelRequiresImage(threeDModel);
+        const requiresMultiImage = threeDModelRequiresMultiImage(threeDModel);
+        const requiresPrompt = threeDModelRequiresPrompt(threeDModel);
+
+        if (requiresPrompt && !trimmedPrompt) {
+            setThreeDError(text.textPromptEmpty);
+            return;
+        }
+
+        if (requiresMultiImage && threeDAttachments.length < 2) {
+            setThreeDError(text.threeDMultiImageRequired);
+            return;
+        }
+
+        if (requiresImage && !threeDModelRequiresMultiImage(threeDModel) && !threeDAttachment) {
+            setThreeDError(text.threeDSourceImageRequired);
+            return;
+        }
+
+        try {
+            setIsGeneratingThreeD(true);
+            setThreeDError('');
+            setGeneratedThreeDUrl('');
+
+            const response = await generate3D({
+                prompt: trimmedPrompt,
+                model: threeDModel,
+                sessionId: threeDSessionId,
+                negativePrompt: threeDNegativePrompt || undefined,
+                textureQuality: threeDTextureQuality || undefined,
+                outputFormat: threeDOutputFormat || undefined,
+                geometryQuality: threeDGeometryQuality || undefined,
+                mode: threeDMode || undefined,
+                artStyle: threeDArtStyle || undefined,
+                topology: threeDTopology || undefined,
+                tier: threeDTier || undefined,
+                material: threeDMaterial || undefined,
+                geometryFileFormat: threeDGeometryFileFormat || undefined,
+                textureMode: threeDTextureMode || undefined,
+                imageBase64: threeDAttachment?.base64,
+                imageMimeType: threeDAttachment?.mimeType,
+                imageBase64List: threeDAttachments.map((item) => item.base64),
+                imageMimeTypes: threeDAttachments.map((item) => item.mimeType),
+            });
+
+            const modelUrl = response?.modelUrl?.trim() ?? '';
+            if (!modelUrl) {
+                setThreeDError(text.threeDGenerateEmpty);
+                return;
+            }
+
+            setGeneratedThreeDUrl(modelUrl);
+            if (response?.item) {
+                pushPromptHistoryItem(response.item);
+            }
+        } catch (error) {
+            setGeneratedThreeDUrl('');
+            const message = error instanceof Error ? error.message : '';
+            setThreeDError(message || (language === 'ru' ? 'Не удалось сгенерировать 3D.' : 'Failed to generate 3D model.'));
+        } finally {
+            setIsGeneratingThreeD(false);
         }
     };
 
@@ -3845,6 +4204,11 @@ function App() {
 
         if (card.id === 'music') {
             openAiVoice('mureka-v9', 'home');
+            return;
+        }
+
+        if (card.id === '3d' || card.page === 'ai-3d') {
+            openAi3D(threeDModel, 'home');
             return;
         }
 
@@ -4765,6 +5129,190 @@ function App() {
         );
     };
 
+    const renderAiThreeDScreen = () => {
+        const activeSelectorItem = getMediaSelectorItemForModelId(threeDModelSelectorItems, threeDModel);
+        const headerTitle = getAiGroupTitle(activeSelectorItem, text, getThreeDSelectorChipLabel);
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media');
+        const requiresImage = threeDModelRequiresImage(threeDModel);
+        const requiresMultiImage = threeDModelRequiresMultiImage(threeDModel);
+        const requiresPrompt = threeDModelRequiresPrompt(threeDModel);
+        const promptOptional = !requiresPrompt;
+
+        return (
+            <section className="ai-image-screen ai-image-screen--concept" aria-label={text.threeDGenerateTitle}>
+                {renderAiScreenHeader({
+                    title: headerTitle,
+                    subtitle: text.threeDGenerateTitle,
+                    onBack: () => setCurrentPage(threeDReturnPage),
+                    onNewDialog: () => {
+                        startNewThreeDSession();
+                        setThreeDPrompt('');
+                        setThreeDAttachment(null);
+                        setThreeDAttachments([]);
+                        setGeneratedThreeDUrl('');
+                        setThreeDError('');
+                    },
+                    newDialogDisabled: isGeneratingThreeD,
+                })}
+
+                <AiVariantSelect
+                    id="ai-3d-variant"
+                    label={text.mediaModelVariantLabel}
+                    value={threeDModel}
+                    options={variantOptions}
+                    onChange={handleThreeDModelChange}
+                    disabled={isGeneratingThreeD}
+                />
+
+                <div className="ai-video__main">
+                    <MediaModelOptionsBar
+                        capabilities={getThreeDModelCapabilities(threeDModel)}
+                        values={{
+                            negativePrompt: threeDNegativePrompt,
+                            textureQuality: threeDTextureQuality,
+                            outputFormat: threeDOutputFormat,
+                            geometryQuality: threeDGeometryQuality,
+                            mode: threeDMode,
+                            artStyle: threeDArtStyle,
+                            topology: threeDTopology,
+                            tier: threeDTier,
+                            material: threeDMaterial,
+                            geometryFileFormat: threeDGeometryFileFormat,
+                            textureMode: threeDTextureMode,
+                        }}
+                        onChange={handleThreeDOptionChange}
+                        labels={{
+                            group: text.mediaOptionsGroup,
+                            negativePrompt: text.mediaOptionNegativePrompt,
+                            negativePromptPlaceholder: text.threeDNegativePromptPlaceholder,
+                            textureQuality: text.mediaOptionTextureQuality,
+                            geometryQuality: text.mediaOptionGeometryQuality,
+                            outputFormat: text.mediaOptionOutputFormat,
+                            mode: text.mediaOptionMode,
+                            artStyle: text.mediaOptionArtStyle,
+                            topology: text.mediaOptionTopology,
+                            tier: text.mediaOptionTier,
+                            material: text.mediaOptionMaterial,
+                            geometryFileFormat: text.mediaOptionGeometryFileFormat,
+                            textureMode: text.mediaOptionTextureMode,
+                        }}
+                        disabled={isGeneratingThreeD}
+                        idPrefix="three-d"
+                        collapsed
+                    />
+
+                    <div className="ai-image__content ai-image__content--in-main">
+                        {isGeneratingThreeD ? (
+                            <p className="ai-chat__empty">{text.threeDGenerating}</p>
+                        ) : generatedThreeDUrl ? (
+                            <section className="ai-image__result" aria-label={text.threeDResultTitle}>
+                                <div className="ai-image__result-header">
+                                    <p className="ai-image__result-label">{text.threeDResultTitle}</p>
+                                    <button
+                                        type="button"
+                                        className="ai-media__download"
+                                        onClick={() => handleMediaDownload('3d', generatedThreeDUrl, 'model.glb')}
+                                        disabled={mediaDownloadBusy === '3d'}
+                                    >
+                                        <Download size={14} aria-hidden="true" />
+                                        {mediaDownloadBusy === '3d' ? text.mediaDownloading : text.mediaDownloadButton}
+                                    </button>
+                                </div>
+                                <p className="ai-chat__empty">{generatedThreeDUrl}</p>
+                            </section>
+                        ) : (
+                            <p className="ai-chat__empty">{text.threeDPromptPlaceholder}</p>
+                        )}
+                    </div>
+
+                    {threeDError ? (
+                        <p className="ai-chat__inline-error" role="alert">{threeDError}</p>
+                    ) : null}
+                </div>
+
+                <footer className="ai-video__composer">
+                    {(requiresImage || requiresMultiImage) ? (
+                        <input
+                            ref={threeDFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            multiple={requiresMultiImage}
+                            className="ai-chat__file-input"
+                            aria-hidden="true"
+                            tabIndex={-1}
+                            onChange={requiresMultiImage ? handleThreeDMultiAttachmentSelect : handleThreeDAttachmentSelect}
+                        />
+                    ) : null}
+
+                    <div className="ai-video__composer-field">
+                        {(requiresImage || requiresMultiImage) ? (
+                            <button
+                                type="button"
+                                className="ai-chat__attach ai-video__attach-inline"
+                                aria-label={requiresMultiImage ? text.threeDAttachImages : text.threeDAttachImage}
+                                disabled={isGeneratingThreeD}
+                                onClick={() => threeDFileInputRef.current?.click()}
+                            >
+                                <Paperclip size={18} aria-hidden="true" />
+                                <span>{requiresMultiImage ? text.threeDAttachImages : text.threeDAttachImage}</span>
+                            </button>
+                        ) : null}
+
+                        {threeDAttachment ? (
+                            <div className="ai-chat__attachment-preview">
+                                <img src={threeDAttachment.previewUrl} alt="" />
+                                <button
+                                    type="button"
+                                    className="ai-chat__attachment-remove"
+                                    onClick={() => setThreeDAttachment(null)}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ) : null}
+
+                        {threeDAttachments.length > 0 ? (
+                            <div className="ai-chat__attachment-preview ai-chat__attachment-preview--multi">
+                                {threeDAttachments.map((item, index) => (
+                                    <img key={`${item.previewUrl}-${index}`} src={item.previewUrl} alt="" />
+                                ))}
+                                <button
+                                    type="button"
+                                    className="ai-chat__attachment-remove"
+                                    onClick={() => setThreeDAttachments([])}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ) : null}
+
+                        <label className="ai-video__label" htmlFor="ai-3d-prompt">
+                            {promptOptional ? `${text.threeDPromptLabel} (${language === 'ru' ? 'опционально' : 'optional'})` : text.threeDPromptLabel}
+                        </label>
+                        <textarea
+                            id="ai-3d-prompt"
+                            className="ai-video__prompt"
+                            value={threeDPrompt}
+                            onChange={(event) => setThreeDPrompt(event.target.value)}
+                            placeholder={text.threeDPromptPlaceholder}
+                            rows={3}
+                            disabled={isGeneratingThreeD}
+                        />
+                    </div>
+
+                    <button
+                        type="button"
+                        className="ai-video__submit"
+                        onClick={handleGenerateThreeD}
+                        disabled={isGeneratingThreeD}
+                    >
+                        {isGeneratingThreeD ? text.threeDGenerating : text.threeDGenerateButton}
+                    </button>
+                </footer>
+            </section>
+        );
+    };
+
     const renderProfileScreen = () => {
         const profileInitials = userData.displayName
             .split(' ')
@@ -5386,7 +5934,9 @@ function App() {
                                                         ? renderAiVideoScreen()
                                                         : currentPage === 'ai-voice'
                                                             ? renderAiVoiceScreen()
-                                                            : renderInfoScreen()}
+                                                            : currentPage === 'ai-3d'
+                                                                ? renderAiThreeDScreen()
+                                                                : renderInfoScreen()}
             </main>
 
             {showBottomNav ? (

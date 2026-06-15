@@ -1,0 +1,133 @@
+import { Box, Cuboid, Layers, Sparkles, Zap } from 'lucide-react';
+
+import { THREE_D_MODEL_IDS } from '../api/telegramApi.js';
+
+export const THREE_D_MODEL_DEFINITIONS = [
+    {
+        id: 'tripo3d-v2.5-i2d',
+        nameKey: 'modelTripoV25I2dName',
+        subKey: 'modelTripoV25I2dSub',
+        tab: '3d',
+        categories: ['3d'],
+        accent: 'sky',
+        icon: Cuboid,
+        badge: 'new',
+        page: 'ai-3d',
+        backendModel: 'tripo3d-v2.5-i2d',
+        group: 'Tripo3D',
+    },
+    {
+        id: 'tripo3d-v2.5-multiview',
+        nameKey: 'modelTripoV25MultiviewName',
+        subKey: 'modelTripoV25MultiviewSub',
+        tab: '3d',
+        categories: ['3d'],
+        accent: 'sky',
+        icon: Layers,
+        badge: 'new',
+        page: 'ai-3d',
+        backendModel: 'tripo3d-v2.5-multiview',
+        group: 'Tripo3D',
+    },
+    {
+        id: 'tripo3d-h3.1-t2d',
+        nameKey: 'modelTripoH31T2dName',
+        subKey: 'modelTripoH31T2dSub',
+        tab: '3d',
+        categories: ['3d'],
+        accent: 'indigo',
+        icon: Sparkles,
+        badge: 'new',
+        page: 'ai-3d',
+        backendModel: 'tripo3d-h3.1-t2d',
+        group: 'Tripo3D',
+    },
+    {
+        id: 'tripo3d-h3.1-i2d',
+        nameKey: 'modelTripoH31I2dName',
+        subKey: 'modelTripoH31I2dSub',
+        tab: '3d',
+        categories: ['3d'],
+        accent: 'indigo',
+        icon: Cuboid,
+        badge: 'new',
+        page: 'ai-3d',
+        backendModel: 'tripo3d-h3.1-i2d',
+        group: 'Tripo3D',
+    },
+    {
+        id: 'hunyuan3d-v3-t2d',
+        nameKey: 'modelHunyuan3dV3Name',
+        subKey: 'modelHunyuan3dV3Sub',
+        tab: '3d',
+        categories: ['3d'],
+        accent: 'teal',
+        icon: Box,
+        badge: 'new',
+        page: 'ai-3d',
+        backendModel: 'hunyuan3d-v3-t2d',
+        group: 'Hunyuan3D',
+    },
+    {
+        id: 'hunyuan3d-v3.1-rapid',
+        nameKey: 'modelHunyuan3dRapidName',
+        subKey: 'modelHunyuan3dRapidSub',
+        tab: '3d',
+        categories: ['3d'],
+        accent: 'teal',
+        icon: Zap,
+        badge: 'hot',
+        page: 'ai-3d',
+        backendModel: 'hunyuan3d-v3.1-rapid',
+        group: 'Hunyuan3D',
+    },
+    {
+        id: 'meshy6-t2d',
+        nameKey: 'modelMeshy6Name',
+        subKey: 'modelMeshy6Sub',
+        tab: '3d',
+        categories: ['3d'],
+        accent: 'violet',
+        icon: Sparkles,
+        badge: 'pro',
+        page: 'ai-3d',
+        backendModel: 'meshy6-t2d',
+        group: 'Meshy',
+    },
+    {
+        id: 'rodin-v2-i2d',
+        nameKey: 'modelRodinV2Name',
+        subKey: 'modelRodinV2Sub',
+        tab: '3d',
+        categories: ['3d'],
+        accent: 'amber',
+        icon: Cuboid,
+        badge: 'new',
+        page: 'ai-3d',
+        backendModel: 'rodin-v2-i2d',
+        group: 'Hyper3D Rodin',
+    },
+    {
+        id: 'rodin-v2.5-i2d',
+        nameKey: 'modelRodinV25Name',
+        subKey: 'modelRodinV25Sub',
+        tab: '3d',
+        categories: ['3d'],
+        accent: 'amber',
+        icon: Layers,
+        badge: 'pro',
+        page: 'ai-3d',
+        backendModel: 'rodin-v2.5-i2d',
+        group: 'Hyper3D Rodin',
+    },
+];
+
+THREE_D_MODEL_IDS.forEach((modelId) => {
+    if (!THREE_D_MODEL_DEFINITIONS.some((model) => model.id === modelId)) {
+        throw new Error(`Missing 3D model definition for ${modelId}`);
+    }
+});
+
+export function getThreeDModelDefinition(modelId) {
+    return THREE_D_MODEL_DEFINITIONS.find((model) => model.id === modelId) ?? null;
+}

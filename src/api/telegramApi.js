@@ -227,6 +227,17 @@ export const AUDIO_MODEL_IDS = [
     'mureka-v9',
     'ace-step-1.5',
 ];
+export const THREE_D_MODEL_IDS = [
+    'tripo3d-v2.5-i2d',
+    'tripo3d-v2.5-multiview',
+    'tripo3d-h3.1-t2d',
+    'tripo3d-h3.1-i2d',
+    'hunyuan3d-v3-t2d',
+    'hunyuan3d-v3.1-rapid',
+    'meshy6-t2d',
+    'rodin-v2-i2d',
+    'rodin-v2.5-i2d',
+];
 
 export async function fetchTextModels() {
     const res = await apiFetch('/v1/generate/models', {
@@ -703,6 +714,122 @@ export async function generateAudio({
     return {
         audioUrl: data?.audioUrl ?? data?.audio_url ?? '',
         model: data?.model ?? normalizedModel,
+    };
+}
+
+export async function generate3D({
+    prompt,
+    model = 'hunyuan3d-v3.1-rapid',
+    sessionId,
+    negativePrompt,
+    sourceImageUrl,
+    imageBase64,
+    imageMimeType,
+    sourceImages,
+    imageBase64List,
+    imageMimeTypes,
+    textureQuality,
+    outputFormat,
+    geometryQuality,
+    mode,
+    artStyle,
+    topology,
+    tier,
+    material,
+    geometryFileFormat,
+    textureMode,
+}) {
+    const telegramId = getCurrentTelegramId();
+    const trimmedPrompt = prompt?.trim() ?? '';
+    const normalizedModel = THREE_D_MODEL_IDS.includes(model) ? model : 'hunyuan3d-v3.1-rapid';
+
+    const body = {
+        telegramId: String(telegramId),
+        prompt: trimmedPrompt,
+        category: '3d',
+        model: normalizedModel,
+    };
+
+    if (negativePrompt?.trim()) {
+        body.negative_prompt = negativePrompt.trim();
+    }
+    if (textureQuality?.trim()) {
+        body.texture_quality = textureQuality.trim();
+    }
+    if (outputFormat?.trim()) {
+        body.output_format = outputFormat.trim();
+    }
+    if (geometryQuality?.trim()) {
+        body.geometry_quality = geometryQuality.trim();
+    }
+    if (mode?.trim()) {
+        body.mode = mode.trim();
+    }
+    if (artStyle?.trim()) {
+        body.art_style = artStyle.trim();
+    }
+    if (topology?.trim()) {
+        body.topology = topology.trim();
+    }
+    if (tier?.trim()) {
+        body.tier = tier.trim();
+    }
+    if (material?.trim()) {
+        body.material = material.trim();
+    }
+    if (geometryFileFormat?.trim()) {
+        body.geometry_file_format = geometryFileFormat.trim();
+    }
+    if (textureMode?.trim()) {
+        body.texture_mode = textureMode.trim();
+    }
+
+    const trimmedSource = sourceImageUrl?.trim();
+    if (trimmedSource) {
+        body.sourceImageUrl = trimmedSource;
+    }
+    const trimmedImage = imageBase64?.trim();
+    if (trimmedImage) {
+        body.imageBase64 = trimmedImage;
+        if (imageMimeType?.trim()) {
+            body.imageMimeType = imageMimeType.trim();
+        }
+    }
+    if (Array.isArray(sourceImages) && sourceImages.length > 0) {
+        body.sourceImages = sourceImages.map((item) => String(item || '').trim()).filter(Boolean);
+    }
+    if (Array.isArray(imageBase64List) && imageBase64List.length > 0) {
+        body.imageBase64List = imageBase64List;
+        if (Array.isArray(imageMimeTypes) && imageMimeTypes.length > 0) {
+            body.imageMimeTypes = imageMimeTypes;
+        }
+    }
+
+    const trimmedSessionId = sessionId?.trim();
+    if (trimmedSessionId) {
+        body.sessionId = trimmedSessionId;
+    }
+
+    const res = await apiFetch('/v1/generate/3d', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to generate 3D model.');
+    }
+
+    const payload = await res.json();
+    const data = payload?.data ?? payload;
+
+    return {
+        modelUrl: data?.modelUrl ?? data?.model_url ?? '',
+        model: data?.model ?? normalizedModel,
+        item: data?.item ?? null,
     };
 }
 

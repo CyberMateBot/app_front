@@ -589,6 +589,115 @@ export default function MediaModelOptionsBar({
                     offLabel={labels.toggleOff}
                 />
             )) : null}
+
+            {options.textureQuality?.values ? picker('textureQuality', labels.textureQuality, values.textureQuality, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="texture-quality"
+                    label={labels.textureQuality}
+                    value={values.textureQuality}
+                    values={options.textureQuality?.values}
+                    onChange={(next) => onChange('textureQuality', next)}
+                    disabled={disabled}
+                />
+            )) : null}
+
+            {options.geometryQuality?.values ? picker('geometryQuality', labels.geometryQuality, values.geometryQuality, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="geometry-quality"
+                    label={labels.geometryQuality}
+                    value={values.geometryQuality}
+                    values={options.geometryQuality?.values}
+                    onChange={(next) => onChange('geometryQuality', next)}
+                    disabled={disabled}
+                />
+            )) : null}
+
+            {options.mode?.values ? picker('mode', labels.mode, values.mode, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="mode"
+                    label={labels.mode}
+                    value={values.mode}
+                    values={options.mode?.values}
+                    onChange={(next) => onChange('mode', next)}
+                    disabled={disabled}
+                />
+            )) : null}
+
+            {options.artStyle?.values ? picker('artStyle', labels.artStyle, values.artStyle, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="art-style"
+                    label={labels.artStyle}
+                    value={values.artStyle}
+                    values={options.artStyle?.values}
+                    onChange={(next) => onChange('artStyle', next)}
+                    disabled={disabled}
+                />
+            )) : null}
+
+            {options.topology?.values ? picker('topology', labels.topology, values.topology, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="topology"
+                    label={labels.topology}
+                    value={values.topology}
+                    values={options.topology?.values}
+                    onChange={(next) => onChange('topology', next)}
+                    disabled={disabled}
+                />
+            )) : null}
+
+            {options.tier?.values ? picker('tier', labels.tier, values.tier, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="tier"
+                    label={labels.tier}
+                    value={values.tier}
+                    values={options.tier?.values}
+                    onChange={(next) => onChange('tier', next)}
+                    disabled={disabled}
+                />
+            )) : null}
+
+            {options.material?.values ? picker('material', labels.material, values.material, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="material"
+                    label={labels.material}
+                    value={values.material}
+                    values={options.material?.values}
+                    onChange={(next) => onChange('material', next)}
+                    disabled={disabled}
+                />
+            )) : null}
+
+            {options.geometryFileFormat?.values ? picker('geometryFileFormat', labels.geometryFileFormat, values.geometryFileFormat, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="geometry-file-format"
+                    label={labels.geometryFileFormat}
+                    value={values.geometryFileFormat}
+                    values={options.geometryFileFormat?.values}
+                    onChange={(next) => onChange('geometryFileFormat', next)}
+                    disabled={disabled}
+                    formatValue={formatOutputFormatLabel}
+                />
+            )) : null}
+
+            {options.textureMode?.values ? picker('textureMode', labels.textureMode, values.textureMode, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="texture-mode"
+                    label={labels.textureMode}
+                    value={values.textureMode}
+                    values={options.textureMode?.values}
+                    onChange={(next) => onChange('textureMode', next)}
+                    disabled={disabled}
+                />
+            )) : null}
         </div>
     );
 }

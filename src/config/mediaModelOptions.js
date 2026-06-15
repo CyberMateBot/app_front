@@ -299,6 +299,33 @@ function buildDefaults(capabilities) {
     if (options.numberOfSongs) {
         defaults.numberOfSongs = options.numberOfSongs.default ?? '1';
     }
+    if (options.textureQuality) {
+        defaults.textureQuality = options.textureQuality.default;
+    }
+    if (options.geometryQuality) {
+        defaults.geometryQuality = options.geometryQuality.default;
+    }
+    if (options.mode) {
+        defaults.mode = options.mode.default;
+    }
+    if (options.artStyle) {
+        defaults.artStyle = options.artStyle.default;
+    }
+    if (options.topology) {
+        defaults.topology = options.topology.default;
+    }
+    if (options.tier) {
+        defaults.tier = options.tier.default;
+    }
+    if (options.material) {
+        defaults.material = options.material.default;
+    }
+    if (options.geometryFileFormat) {
+        defaults.geometryFileFormat = options.geometryFileFormat.default;
+    }
+    if (options.textureMode) {
+        defaults.textureMode = options.textureMode.default;
+    }
 
     return defaults;
 }
@@ -407,6 +434,77 @@ export function audioModelSupportsClone(modelId) {
 
 export function audioModelIsMusic(modelId) {
     return modelId === 'mureka-v9' || modelId === 'ace-step-1.5';
+}
+
+export const THREE_D_MODEL_CAPABILITIES = {
+    'tripo3d-v2.5-i2d': {
+        requiresImage: true,
+        options: {
+            textureQuality: { values: ['standard', 'detailed'], default: 'detailed' },
+            outputFormat: { values: ['glb', 'fbx', 'obj', 'usdz', 'stl'], default: 'glb' },
+        },
+    },
+    'tripo3d-v2.5-multiview': {
+        requiresMultiImage: true,
+        options: {
+            textureQuality: { values: ['standard', 'detailed'], default: 'detailed' },
+        },
+    },
+    'tripo3d-h3.1-t2d': {
+        options: {
+            textureQuality: { values: ['standard', 'detailed'], default: 'detailed' },
+            geometryQuality: { values: ['standard', 'detailed'], default: 'detailed' },
+            negativePrompt: { default: '' },
+        },
+    },
+    'tripo3d-h3.1-i2d': {
+        requiresImage: true,
+        options: {
+            textureQuality: { values: ['standard', 'detailed'], default: 'detailed' },
+            geometryQuality: { values: ['standard', 'detailed'], default: 'detailed' },
+        },
+    },
+    'hunyuan3d-v3-t2d': {
+        options: {
+            negativePrompt: { default: '' },
+        },
+    },
+    'hunyuan3d-v3.1-rapid': {
+        options: {},
+    },
+    'meshy6-t2d': {
+        options: {
+            mode: { values: ['full', 'preview'], default: 'full' },
+            artStyle: { values: ['realistic', 'sculpture'], default: 'realistic' },
+            topology: { values: ['quad', 'triangle'], default: 'quad' },
+        },
+    },
+    'rodin-v2-i2d': {
+        requiresImage: true,
+        options: {
+            tier: { values: ['Gen-2-Low', 'Gen-2-Medium', 'Gen-2-High'], default: 'Gen-2-Medium' },
+            material: { values: ['PBR', 'Shaded', 'All', 'None'], default: 'PBR' },
+        },
+    },
+    'rodin-v2.5-i2d': {
+        requiresImage: true,
+        options: {
+            tier: {
+                values: ['Gen-2.5-Extreme-Low', 'Gen-2.5-Low', 'Gen-2.5-Medium', 'Gen-2.5-High', 'Gen-2.5-Extreme-High'],
+                default: 'Gen-2.5-Medium',
+            },
+            geometryFileFormat: { values: ['glb', 'usdz', 'fbx', 'obj', 'stl'], default: 'glb' },
+            textureMode: { values: ['legacy', 'low', 'medium', 'high'], default: 'medium' },
+        },
+    },
+};
+
+export function getThreeDModelCapabilities(modelId) {
+    return THREE_D_MODEL_CAPABILITIES[modelId] ?? { options: {} };
+}
+
+export function getThreeDModelDefaults(modelId) {
+    return buildDefaults(getThreeDModelCapabilities(modelId));
 }
 
 export function imageModelSupportsEdit(modelId) {

@@ -1,4 +1,4 @@
-import { Bot, Image as ImageIcon, Mic, Music2, Sparkles, Volume2, Wand2, Waves } from 'lucide-react';
+import { Bot, Box, Cuboid, Image as ImageIcon, Mic, Music2, Sparkles, Volume2, Wand2, Waves } from 'lucide-react';
 import {
     buildGroupedSelectorItems,
     formatGroupIdLabel,
@@ -317,6 +317,89 @@ export function getAudioSelectorChipVisual(item) {
     }
 
     const override = AUDIO_GROUP_OVERRIDES[item.id];
+    const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
+        ?? item.variants[0];
+
+    return {
+        accent: override?.accent ?? defaultVariant?.accent,
+        icon: override?.icon ?? defaultVariant?.icon,
+    };
+}
+
+export const THREE_D_GROUP_OVERRIDES = {
+    Tripo3D: {
+        nameKey: 'modelTripo3dGroupName',
+        subKey: 'modelTripo3dGroupSub',
+        defaultModelId: 'tripo3d-h3.1-t2d',
+        icon: Cuboid,
+    },
+    Hunyuan3D: {
+        nameKey: 'modelHunyuan3dGroupName',
+        subKey: 'modelHunyuan3dGroupSub',
+        defaultModelId: 'hunyuan3d-v3.1-rapid',
+        icon: Box,
+    },
+    Meshy: {
+        nameKey: 'modelMeshyGroupName',
+        subKey: 'modelMeshyGroupSub',
+        defaultModelId: 'meshy6-t2d',
+        icon: Sparkles,
+    },
+    'Hyper3D Rodin': {
+        nameKey: 'modelRodinGroupName',
+        subKey: 'modelRodinGroupSub',
+        defaultModelId: 'rodin-v2-i2d',
+        icon: Cuboid,
+    },
+};
+
+export function buildThreeDModelSelectorItems(definitions) {
+    return buildGroupedSelectorItems(definitions, {
+        getGroupKey: (model) => model.group || model.id,
+        getGroupLabel: (groupId) => {
+            const override = THREE_D_GROUP_OVERRIDES[groupId];
+            if (override?.nameKey) {
+                return override.nameKey;
+            }
+            return formatGroupIdLabel(groupId);
+        },
+        getDefaultItemId: (groupId, variants) => (
+            THREE_D_GROUP_OVERRIDES[groupId]?.defaultModelId
+            ?? variants[0]?.id
+        ),
+        sortGroupItems: (variants) => [...variants],
+    });
+}
+
+export function buildCatalogThreeDTools(definitions) {
+    return buildCatalogMediaTools(
+        definitions,
+        buildThreeDModelSelectorItems(definitions),
+        THREE_D_GROUP_OVERRIDES,
+        'ai-3d',
+    );
+}
+
+export function getThreeDSelectorChipLabel(item, text) {
+    if (item.type === 'single') {
+        return text[item.model.nameKey] ?? item.model.id;
+    }
+
+    const override = THREE_D_GROUP_OVERRIDES[item.id];
+
+    if (override?.nameKey) {
+        return text[override.nameKey] ?? item.label;
+    }
+
+    return item.label;
+}
+
+export function getThreeDSelectorChipVisual(item) {
+    if (item.type === 'single') {
+        return { accent: item.model.accent, icon: item.model.icon };
+    }
+
+    const override = THREE_D_GROUP_OVERRIDES[item.id];
     const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
         ?? item.variants[0];
 
