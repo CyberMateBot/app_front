@@ -133,6 +133,7 @@ import {
     getAudioModelCapabilities,
     getAudioModelDefaults,
     audioModelSupportsClone,
+    audioModelIsMusic,
     videoModelIsKling,
 } from './config/mediaModelOptions.js';
 import {
@@ -143,8 +144,10 @@ import {
 } from './config/audioModels.js';
 import {
     buildCatalogTextTools,
+    buildTextModelGroupOptions,
     buildTextModelSelectorItems,
     DEFAULT_TEXT_MODELS,
+    getActiveTextModelGroupId,
     resolveEffectiveTextModels,
     findTextModel,
     getCatalogModelDescription,
@@ -270,20 +273,38 @@ const translations = {
         badgePro: 'PRO',
         badgeFree: 'FREE',
         toolChatTitle: 'AI Чат',
-        toolChatSub: 'YandexGPT, DeepSeek, GPT OSS, Qwen',
+        toolChatSub: 'YandexGPT, ChatGPT, Claude, Gemini, DeepSeek',
         toolImagesTitle: 'Генерация фото',
         toolImagesSub: 'Nano Banana, GPT Image, Alice AI ART',
         toolVideoTitle: 'Видео',
         toolVideoSub: 'Kling, Seedance',
         toolMusicTitle: 'Музыка',
-        toolMusicSub: 'Suno, Udio',
+        toolMusicSub: 'Mureka V9, ACE-Step',
         toolVoiceTitle: 'Озвучка',
-        toolVoiceSub: 'Qwen3 TTS',
+        toolVoiceSub: 'Qwen3, OmniVoice, ElevenLabs',
         modelQwen3TtsName: 'Qwen3 TTS',
         modelQwen3TtsSub: 'Озвучка и клонирование голоса',
+        modelOmniVoiceName: 'OmniVoice',
+        modelOmniVoiceSub: 'TTS на 600+ языках',
+        modelElevenLabsV3Name: 'ElevenLabs V3',
+        modelElevenLabsV3Sub: 'Естественная озвучка',
+        modelMiniMaxSpeechName: 'MiniMax Speech 2.6',
+        modelMiniMaxSpeechSub: 'Эмоциональная озвучка',
+        modelMurekaV9Name: 'Mureka V9',
+        modelMurekaV9Sub: 'Генерация песен',
+        modelAceStepName: 'ACE-Step 1.5',
+        modelAceStepSub: 'Музыка до 4 минут',
         voiceGenerateTitle: 'Озвучка текста',
+        musicGenerateTitle: 'Генерация музыки',
         voicePromptLabel: 'Текст для озвучки',
+        musicLyricsLabel: 'Текст песни',
+        musicTagsLabel: 'Стиль (tags)',
         voicePromptPlaceholder: 'Введите текст, который нужно озвучить...',
+        musicLyricsPlaceholder: 'Введите текст песни (куплеты, припев)...',
+        musicLyricsOptionalPlaceholder: 'Текст песни (опционально, пусто = инструментал)...',
+        musicStylePlaceholder: 'Например: upbeat pop, electronic, 120bpm',
+        musicTagsPlaceholder: 'Например: lo-fi, chill, ambient, piano',
+        omnivoiceDescriptionPlaceholder: 'female, young adult, russian accent',
         voiceClonePlaceholder: 'Текст для клонированного голоса...',
         voiceCloneHint: 'Прикрепите образец голоса (3–15 сек) — включится клонирование',
         voiceAttachAudio: 'Прикрепить голос',
@@ -295,6 +316,13 @@ const translations = {
         mediaOptionLanguage: 'Язык',
         mediaOptionVoice: 'Голос',
         mediaOptionStyleInstruction: 'Стиль речи',
+        mediaOptionMusicStyle: 'Стиль песни',
+        mediaOptionMusicTags: 'Стиль (tags)',
+        mediaOptionSpeed: 'Скорость',
+        mediaOptionEmotion: 'Эмоция',
+        mediaOptionNumberOfSongs: 'Кол-во песен',
+        musicGenerateButton: 'Сгенерировать',
+        musicGenerating: 'Генерация музыки...',
         mediaOptionReferenceText: 'Текст из образца',
         mediaStyleInstructionPlaceholder: 'Например: спокойно и профессионально',
         mediaReferenceTextPlaceholder: 'Что говорится в прикреплённом аудио',
@@ -338,6 +366,32 @@ const translations = {
         modelFluxDevSub: 'Качественные изображения через WaveSpeed',
         modelAliceAIArtName: 'Alice AI ART',
         modelAliceAIArtSub: 'Художественные изображения и иллюстрации от Yandex ART',
+        modelSeedreamGroupName: 'Seedream',
+        modelSeedreamGroupSub: 'ByteDance: генерация, edit и sequential',
+        modelSeedream45Name: 'Seedream 4.5',
+        modelSeedream45Sub: 'Text-to-image, edit и multi-image',
+        modelSeedream50LiteName: 'Seedream 5.0 Lite',
+        modelSeedream50LiteSub: 'До 4K: генерация, edit и sequential',
+        modelQwenImageGroupName: 'Qwen Image',
+        modelQwenImageGroupSub: 'Qwen: постеры и иллюстрации',
+        modelQwenImageName: 'Qwen Image',
+        modelQwenImageSub: 'Базовая 20B text-to-image',
+        modelQwenImage2512Name: 'Qwen Image 2512',
+        modelQwenImage2512Sub: 'Актуальная версия с negative prompt',
+        modelQwenImage20Name: 'Qwen Image 2.0',
+        modelQwenImage20Sub: 'Кастомный размер и пресеты',
+        modelQwenImage20ProName: 'Qwen Image 2.0 Pro',
+        modelQwenImage20ProSub: 'Редактирование изображений',
+        modelZImageGroupName: 'Z-Image',
+        modelZImageGroupSub: 'Z-Image text-to-image и img2img',
+        modelZImageBaseName: 'Z-Image Base',
+        modelZImageBaseSub: 'Base с negative prompt и ref',
+        modelZImageTurboName: 'Z-Image Turbo',
+        modelZImageTurboSub: 'Быстрая генерация',
+        modelGrokGroupName: 'Grok',
+        modelGrokGroupSub: 'xAI Grok Imagine edit',
+        modelGrokImagineEditName: 'Grok Imagine Edit',
+        modelGrokImagineEditSub: 'Редактирование изображений высокого качества',
         modelKlingGroupName: 'Kling',
         modelKlingGroupSub: 'Генерация видео по тексту',
         modelKlingStdName: 'Kling 3.0 Standard',
@@ -360,6 +414,58 @@ const translations = {
         modelSeedanceV2EditSub: '480p — стандарт, 720p/1080p — Turbo автоматически',
         modelSeedanceV2ExtendName: 'Seedance 2.0 Extend',
         modelSeedanceV2ExtendSub: 'Продление видео новым сегментом',
+        modelWanGroupName: 'WAN',
+        modelWanGroupSub: 'Alibaba WAN 2.5–2.7',
+        modelWan25T2vName: 'WAN 2.5 T2V',
+        modelWan25T2vSub: 'Text-to-video 480P–1080P',
+        modelWan26I2vName: 'WAN 2.6 I2V',
+        modelWan26I2vSub: 'Image-to-video',
+        modelWan27T2vName: 'WAN 2.7 T2V',
+        modelWan27T2vSub: 'Text-to-video до 1080P',
+        modelWan27FlfName: 'WAN 2.7 First/Last',
+        modelWan27FlfSub: 'Переход между кадрами',
+        modelWan27GridName: 'WAN 2.7 Grid',
+        modelWan27GridSub: 'Анимация 3×3 сетки',
+        modelWan27EditName: 'WAN 2.7 Edit',
+        modelWan27EditSub: 'Редактирование видео',
+        modelWan22SpicyI2vName: 'WAN 2.2 Spicy I2V',
+        modelWan22SpicyI2vSub: 'Spicy image-to-video',
+        modelHappyHorseGroupName: 'Happy Horse',
+        modelHappyHorseGroupSub: 'Alibaba Happy Horse 1.0',
+        modelHappyHorseT2vName: 'Happy Horse T2V',
+        modelHappyHorseT2vSub: 'Text-to-video',
+        modelHappyHorseI2vName: 'Happy Horse I2V',
+        modelHappyHorseI2vSub: 'Image-to-video',
+        modelHappyHorseRef2vName: 'Happy Horse Ref2V',
+        modelHappyHorseRef2vSub: 'Reference-to-video',
+        modelHappyHorseVideoEditName: 'Happy Horse Edit',
+        modelHappyHorseVideoEditSub: 'Редактирование видео',
+        modelHappyHorseVideoExtendName: 'Happy Horse Extend',
+        modelHappyHorseVideoExtendSub: 'Продление видео',
+        modelSoraGroupName: 'Sora',
+        modelSoraGroupSub: 'OpenAI Sora 2',
+        modelSora2T2vName: 'Sora 2 T2V',
+        modelSora2T2vSub: 'Text-to-video',
+        modelSora2I2vName: 'Sora 2 I2V',
+        modelSora2I2vSub: 'Image-to-video',
+        modelSora2T2vProName: 'Sora 2 Pro',
+        modelSora2T2vProSub: 'Text-to-video Pro',
+        modelVeoGroupName: 'Veo',
+        modelVeoGroupSub: 'Google Veo 3.1',
+        modelVeo31ExtendName: 'Veo 3.1 Extend',
+        modelVeo31ExtendSub: 'Продление видео',
+        modelViduGroupName: 'Vidu',
+        modelViduGroupSub: 'Vidu Q3',
+        modelViduQ3I2vSpicyName: 'Vidu Q3 Spicy I2V',
+        modelViduQ3I2vSpicySub: 'I2V с аудио и BGM',
+        modelHailuoGroupName: 'Hailuo',
+        modelHailuoGroupSub: 'MiniMax Hailuo 2.3',
+        modelHailuo23T2vName: 'Hailuo 2.3 T2V',
+        modelHailuo23T2vSub: 'Text-to-video standard',
+        modelHailuo23I2vFastName: 'Hailuo 2.3 Fast',
+        modelHailuo23I2vFastSub: 'Быстрый image-to-video',
+        modelHailuo23I2vProName: 'Hailuo 2.3 Pro I2V',
+        modelHailuo23I2vProSub: 'Pro image-to-video 1080p',
         imageGenerateTitle: 'Генерация фото',
         imagePromptLabel: 'Описание',
         imagePromptPlaceholder: 'Опишите изображение, которое нужно создать...',
@@ -382,6 +488,7 @@ const translations = {
         imageContentPolicy: 'Модель отклонила запрос. Попробуйте другую формулировку без запрещённых тем.',
         mediaOptionsGroup: 'Параметры генерации',
         mediaModelVariantLabel: 'Модель',
+        mediaModelGroupLabel: 'Нейросеть',
         mediaOptionAspectRatio: 'Формат',
         mediaOptionResolution: 'Разрешение',
         mediaOptionQuality: 'Качество',
@@ -623,20 +730,38 @@ const translations = {
         badgePro: 'PRO',
         badgeFree: 'FREE',
         toolChatTitle: 'AI Chat',
-        toolChatSub: 'YandexGPT, DeepSeek, GPT OSS, Qwen',
+        toolChatSub: 'YandexGPT, ChatGPT, Claude, Gemini, DeepSeek',
         toolImagesTitle: 'Image generation',
         toolImagesSub: 'Nano Banana, GPT Image, Alice AI ART',
         toolVideoTitle: 'Video',
         toolVideoSub: 'Kling, Seedance',
         toolMusicTitle: 'Music',
-        toolMusicSub: 'Suno, Udio',
+        toolMusicSub: 'Mureka V9, ACE-Step',
         toolVoiceTitle: 'Voiceover',
-        toolVoiceSub: 'Qwen3 TTS',
+        toolVoiceSub: 'Qwen3, OmniVoice, ElevenLabs',
         modelQwen3TtsName: 'Qwen3 TTS',
         modelQwen3TtsSub: 'Text-to-speech and voice cloning',
+        modelOmniVoiceName: 'OmniVoice',
+        modelOmniVoiceSub: 'TTS in 600+ languages',
+        modelElevenLabsV3Name: 'ElevenLabs V3',
+        modelElevenLabsV3Sub: 'Natural voice synthesis',
+        modelMiniMaxSpeechName: 'MiniMax Speech 2.6',
+        modelMiniMaxSpeechSub: 'Emotional speech synthesis',
+        modelMurekaV9Name: 'Mureka V9',
+        modelMurekaV9Sub: 'Song generation from lyrics',
+        modelAceStepName: 'ACE-Step 1.5',
+        modelAceStepSub: 'Music up to 4 minutes',
         voiceGenerateTitle: 'Text-to-speech',
+        musicGenerateTitle: 'Music generation',
         voicePromptLabel: 'Text to speak',
+        musicLyricsLabel: 'Song lyrics',
+        musicTagsLabel: 'Style (tags)',
         voicePromptPlaceholder: 'Enter the text you want to hear...',
+        musicLyricsPlaceholder: 'Enter song lyrics (verses, chorus)...',
+        musicLyricsOptionalPlaceholder: 'Song lyrics (optional, empty = instrumental)...',
+        musicStylePlaceholder: 'e.g. upbeat pop, electronic, 120bpm',
+        musicTagsPlaceholder: 'e.g. lo-fi, chill, ambient, piano',
+        omnivoiceDescriptionPlaceholder: 'female, young adult, russian accent',
         voiceClonePlaceholder: 'Text for the cloned voice...',
         voiceCloneHint: 'Attach a voice sample (3–15 sec) to enable cloning',
         voiceAttachAudio: 'Attach voice sample',
@@ -648,6 +773,13 @@ const translations = {
         mediaOptionLanguage: 'Language',
         mediaOptionVoice: 'Voice',
         mediaOptionStyleInstruction: 'Speaking style',
+        mediaOptionMusicStyle: 'Song style',
+        mediaOptionMusicTags: 'Style (tags)',
+        mediaOptionSpeed: 'Speed',
+        mediaOptionEmotion: 'Emotion',
+        mediaOptionNumberOfSongs: 'Number of songs',
+        musicGenerateButton: 'Generate',
+        musicGenerating: 'Generating music...',
         mediaOptionReferenceText: 'Sample transcript',
         mediaStyleInstructionPlaceholder: 'e.g. calm and professional',
         mediaReferenceTextPlaceholder: 'What is said in the attached audio',
@@ -691,6 +823,32 @@ const translations = {
         modelFluxDevSub: 'High-quality images via WaveSpeed',
         modelAliceAIArtName: 'Alice AI ART',
         modelAliceAIArtSub: 'Artistic images and illustrations via Yandex ART',
+        modelSeedreamGroupName: 'Seedream',
+        modelSeedreamGroupSub: 'ByteDance: generate, edit, and sequential',
+        modelSeedream45Name: 'Seedream 4.5',
+        modelSeedream45Sub: 'Text-to-image, edit, and multi-image',
+        modelSeedream50LiteName: 'Seedream 5.0 Lite',
+        modelSeedream50LiteSub: 'Up to 4K with edit and sequential',
+        modelQwenImageGroupName: 'Qwen Image',
+        modelQwenImageGroupSub: 'Qwen posters and illustrations',
+        modelQwenImageName: 'Qwen Image',
+        modelQwenImageSub: 'Base 20B text-to-image',
+        modelQwenImage2512Name: 'Qwen Image 2512',
+        modelQwenImage2512Sub: 'Latest version with negative prompt',
+        modelQwenImage20Name: 'Qwen Image 2.0',
+        modelQwenImage20Sub: 'Custom size and aspect presets',
+        modelQwenImage20ProName: 'Qwen Image 2.0 Pro',
+        modelQwenImage20ProSub: 'Image editing',
+        modelZImageGroupName: 'Z-Image',
+        modelZImageGroupSub: 'Z-Image text-to-image and img2img',
+        modelZImageBaseName: 'Z-Image Base',
+        modelZImageBaseSub: 'Base with negative prompt and ref',
+        modelZImageTurboName: 'Z-Image Turbo',
+        modelZImageTurboSub: 'Fast generation',
+        modelGrokGroupName: 'Grok',
+        modelGrokGroupSub: 'xAI Grok Imagine edit',
+        modelGrokImagineEditName: 'Grok Imagine Edit',
+        modelGrokImagineEditSub: 'High-quality image editing',
         modelKlingGroupName: 'Kling',
         modelKlingGroupSub: 'Text-to-video generation',
         modelKlingStdName: 'Kling 3.0 Standard',
@@ -713,6 +871,58 @@ const translations = {
         modelSeedanceV2EditSub: '480p standard, 720p/1080p Turbo auto',
         modelSeedanceV2ExtendName: 'Seedance 2.0 Extend',
         modelSeedanceV2ExtendSub: 'Extend video with a new segment',
+        modelWanGroupName: 'WAN',
+        modelWanGroupSub: 'Alibaba WAN 2.5–2.7',
+        modelWan25T2vName: 'WAN 2.5 T2V',
+        modelWan25T2vSub: 'Text-to-video 480P–1080P',
+        modelWan26I2vName: 'WAN 2.6 I2V',
+        modelWan26I2vSub: 'Image-to-video',
+        modelWan27T2vName: 'WAN 2.7 T2V',
+        modelWan27T2vSub: 'Text-to-video up to 1080P',
+        modelWan27FlfName: 'WAN 2.7 First/Last',
+        modelWan27FlfSub: 'First/last frame transition',
+        modelWan27GridName: 'WAN 2.7 Grid',
+        modelWan27GridSub: '3×3 grid animation',
+        modelWan27EditName: 'WAN 2.7 Edit',
+        modelWan27EditSub: 'Video editing',
+        modelWan22SpicyI2vName: 'WAN 2.2 Spicy I2V',
+        modelWan22SpicyI2vSub: 'Spicy image-to-video',
+        modelHappyHorseGroupName: 'Happy Horse',
+        modelHappyHorseGroupSub: 'Alibaba Happy Horse 1.0',
+        modelHappyHorseT2vName: 'Happy Horse T2V',
+        modelHappyHorseT2vSub: 'Text-to-video',
+        modelHappyHorseI2vName: 'Happy Horse I2V',
+        modelHappyHorseI2vSub: 'Image-to-video',
+        modelHappyHorseRef2vName: 'Happy Horse Ref2V',
+        modelHappyHorseRef2vSub: 'Reference-to-video',
+        modelHappyHorseVideoEditName: 'Happy Horse Edit',
+        modelHappyHorseVideoEditSub: 'Video editing',
+        modelHappyHorseVideoExtendName: 'Happy Horse Extend',
+        modelHappyHorseVideoExtendSub: 'Video extend',
+        modelSoraGroupName: 'Sora',
+        modelSoraGroupSub: 'OpenAI Sora 2',
+        modelSora2T2vName: 'Sora 2 T2V',
+        modelSora2T2vSub: 'Text-to-video',
+        modelSora2I2vName: 'Sora 2 I2V',
+        modelSora2I2vSub: 'Image-to-video',
+        modelSora2T2vProName: 'Sora 2 Pro',
+        modelSora2T2vProSub: 'Text-to-video Pro',
+        modelVeoGroupName: 'Veo',
+        modelVeoGroupSub: 'Google Veo 3.1',
+        modelVeo31ExtendName: 'Veo 3.1 Extend',
+        modelVeo31ExtendSub: 'Video extend',
+        modelViduGroupName: 'Vidu',
+        modelViduGroupSub: 'Vidu Q3',
+        modelViduQ3I2vSpicyName: 'Vidu Q3 Spicy I2V',
+        modelViduQ3I2vSpicySub: 'I2V with audio and BGM',
+        modelHailuoGroupName: 'Hailuo',
+        modelHailuoGroupSub: 'MiniMax Hailuo 2.3',
+        modelHailuo23T2vName: 'Hailuo 2.3 T2V',
+        modelHailuo23T2vSub: 'Text-to-video standard',
+        modelHailuo23I2vFastName: 'Hailuo 2.3 Fast',
+        modelHailuo23I2vFastSub: 'Fast image-to-video',
+        modelHailuo23I2vProName: 'Hailuo 2.3 Pro I2V',
+        modelHailuo23I2vProSub: 'Pro image-to-video 1080p',
         imageGenerateTitle: 'Image generation',
         imagePromptLabel: 'Description',
         imagePromptPlaceholder: 'Describe the image you want to create...',
@@ -735,6 +945,7 @@ const translations = {
         imageContentPolicy: 'The model rejected this prompt. Try a different wording.',
         mediaOptionsGroup: 'Generation settings',
         mediaModelVariantLabel: 'Model',
+        mediaModelGroupLabel: 'Provider',
         mediaOptionAspectRatio: 'Aspect ratio',
         mediaOptionResolution: 'Resolution',
         mediaOptionQuality: 'Quality',
@@ -1086,6 +1297,11 @@ function App() {
     const [audioVoice, setAudioVoice] = useState(initialAudioDefaults.voice ?? 'Dylan');
     const [audioStyleInstruction, setAudioStyleInstruction] = useState(initialAudioDefaults.styleInstruction ?? '');
     const [audioReferenceText, setAudioReferenceText] = useState(initialAudioDefaults.referenceText ?? '');
+    const [audioSpeed, setAudioSpeed] = useState(initialAudioDefaults.speed ?? '1.0');
+    const [audioEmotion, setAudioEmotion] = useState(initialAudioDefaults.emotion ?? 'happy');
+    const [audioDuration, setAudioDuration] = useState(initialAudioDefaults.duration ?? 60);
+    const [audioNumberOfSongs, setAudioNumberOfSongs] = useState(initialAudioDefaults.numberOfSongs ?? '1');
+    const [audioOutputFormat, setAudioOutputFormat] = useState(initialAudioDefaults.outputFormat ?? 'mp3');
     const [audioAttachment, setAudioAttachment] = useState(null);
     const [generatedAudioUrl, setGeneratedAudioUrl] = useState('');
     const [audioSessionId, setAudioSessionId] = useState(() => createChatSessionId());
@@ -1619,7 +1835,11 @@ function App() {
     }, [language]);
 
     useEffect(() => {
-        if (currentPage !== 'ai-chat' || textModels.length) {
+        if (textModels.length >= 20) {
+            return undefined;
+        }
+
+        if (currentPage !== 'ai-chat' && currentPage !== 'catalog' && currentPage !== 'home') {
             return undefined;
         }
 
@@ -2512,6 +2732,11 @@ function App() {
         setAudioVoice(defaults.voice ?? 'Dylan');
         setAudioStyleInstruction(defaults.styleInstruction ?? '');
         setAudioReferenceText(defaults.referenceText ?? '');
+        setAudioSpeed(defaults.speed ?? '1.0');
+        setAudioEmotion(defaults.emotion ?? 'happy');
+        setAudioDuration(defaults.duration ?? 60);
+        setAudioNumberOfSongs(defaults.numberOfSongs ?? '1');
+        setAudioOutputFormat(defaults.outputFormat ?? 'mp3');
     }, []);
 
     const handleImageOptionChange = (key, value) => {
@@ -2642,6 +2867,21 @@ function App() {
                 break;
             case 'referenceText':
                 setAudioReferenceText(value);
+                break;
+            case 'speed':
+                setAudioSpeed(value);
+                break;
+            case 'emotion':
+                setAudioEmotion(value);
+                break;
+            case 'duration':
+                setAudioDuration(value);
+                break;
+            case 'numberOfSongs':
+                setAudioNumberOfSongs(value);
+                break;
+            case 'outputFormat':
+                setAudioOutputFormat(value);
                 break;
             default:
                 break;
@@ -3212,9 +3452,15 @@ function App() {
 
     const handleGenerateAudio = async () => {
         const trimmedPrompt = audioPrompt.trim();
+        const isAceStep = audioModel === 'ace-step-1.5';
 
-        if (!trimmedPrompt) {
+        if (!trimmedPrompt && !isAceStep) {
             setAudioError(text.textPromptEmpty);
+            return;
+        }
+
+        if (isAceStep && !audioStyleInstruction.trim()) {
+            setAudioError(language === 'ru' ? 'Укажите стиль (tags) для генерации.' : 'Style tags are required.');
             return;
         }
 
@@ -3235,6 +3481,11 @@ function App() {
                 referenceText: isCloneMode ? (audioReferenceText || undefined) : undefined,
                 audioBase64: isCloneMode ? audioAttachment?.base64 : undefined,
                 audioMimeType: isCloneMode ? audioAttachment?.mimeType : undefined,
+                speed: audioSpeed || undefined,
+                emotion: audioEmotion || undefined,
+                duration: audioDuration || undefined,
+                numberOfSongs: audioNumberOfSongs || undefined,
+                outputFormat: audioOutputFormat || undefined,
             });
             const audioUrl = response?.audioUrl?.trim() ?? '';
 
@@ -3593,9 +3844,7 @@ function App() {
         }
 
         if (card.id === 'music') {
-            showAppNotice(language === 'en'
-                ? 'Music generation is coming soon.'
-                : 'Генерация музыки скоро будет доступна.');
+            openAiVoice('mureka-v9', 'home');
             return;
         }
 
@@ -3794,6 +4043,11 @@ function App() {
             ? text.chatTitle
             : (activeModel?.description ?? text.chatTitle);
         const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'text');
+        const groupOptions = buildTextModelGroupOptions(
+            textModelSelectorItems,
+            (item) => getAiGroupTitle(item, text, (entry) => entry.label),
+        );
+        const activeGroupId = getActiveTextModelGroupId(activeSelectorItem);
         const supportsChatImage = textModelSupportsImage(activeModel);
 
         return (
@@ -3805,6 +4059,25 @@ function App() {
                     onNewDialog: handleNewChatDialog,
                     newDialogDisabled: isGeneratingText,
                 })}
+
+                {groupOptions.length > 1 ? (
+                    <AiVariantSelect
+                        id="ai-chat-group"
+                        label={text.mediaModelGroupLabel}
+                        value={activeGroupId}
+                        options={groupOptions.map((option) => ({
+                            id: option.id,
+                            label: option.label,
+                        }))}
+                        onChange={(groupId) => {
+                            const option = groupOptions.find((entry) => entry.id === groupId);
+                            if (option) {
+                                handleTextModelChange(option.modelId);
+                            }
+                        }}
+                        disabled={isGeneratingText}
+                    />
+                ) : null}
 
                 {variantOptions.length > 1 ? (
                     <AiVariantSelect
@@ -4316,16 +4589,30 @@ function App() {
     const renderAiVoiceScreen = () => {
         const activeSelectorItem = getMediaSelectorItemForModelId(audioModelSelectorItems, audioModel);
         const headerTitle = getAiGroupTitle(activeSelectorItem, text, getAudioSelectorChipLabel);
-        const headerSubtitle = text.voiceGenerateTitle;
+        const isMusicModel = audioModelIsMusic(audioModel);
+        const isAceStep = audioModel === 'ace-step-1.5';
+        const isMureka = audioModel === 'mureka-v9';
+        const isOmniVoice = audioModel === 'omnivoice';
+        const headerSubtitle = isMusicModel ? text.musicGenerateTitle : text.voiceGenerateTitle;
         const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media');
         const supportsClone = audioModelSupportsClone(audioModel);
         const isCloneMode = Boolean(audioAttachment) && supportsClone;
         const promptPlaceholder = isCloneMode
             ? text.voiceClonePlaceholder
-            : text.voicePromptPlaceholder;
+            : (isAceStep
+                ? text.musicLyricsOptionalPlaceholder
+                : (isMureka ? text.musicLyricsPlaceholder : text.voicePromptPlaceholder));
+        const styleInstructionLabel = isAceStep
+            ? text.mediaOptionMusicTags
+            : (isMureka ? text.mediaOptionMusicStyle : (isOmniVoice ? text.mediaOptionVoice : text.mediaOptionStyleInstruction));
+        const styleInstructionPlaceholder = isAceStep
+            ? text.musicTagsPlaceholder
+            : (isMureka ? text.musicStylePlaceholder : (isOmniVoice ? text.omnivoiceDescriptionPlaceholder : text.mediaStyleInstructionPlaceholder));
+        const generateLabel = isMusicModel ? text.musicGenerateButton : text.voiceGenerateButton;
+        const generatingLabel = isMusicModel ? text.musicGenerating : text.voiceGenerating;
 
         return (
-            <section className="ai-image-screen ai-image-screen--concept" aria-label={text.voiceGenerateTitle}>
+            <section className="ai-image-screen ai-image-screen--concept" aria-label={headerSubtitle}>
                 {renderAiScreenHeader({
                     title: headerTitle,
                     subtitle: headerSubtitle,
@@ -4351,16 +4638,27 @@ function App() {
                             voice: audioVoice,
                             styleInstruction: audioStyleInstruction,
                             referenceText: audioReferenceText,
+                            speed: audioSpeed,
+                            emotion: audioEmotion,
+                            duration: audioDuration,
+                            numberOfSongs: audioNumberOfSongs,
+                            outputFormat: audioOutputFormat,
                         }}
                         onChange={handleAudioOptionChange}
                         labels={{
                             group: text.mediaOptionsGroup,
                             language: text.mediaOptionLanguage,
                             voice: text.mediaOptionVoice,
-                            styleInstruction: text.mediaOptionStyleInstruction,
+                            styleInstruction: styleInstructionLabel,
                             referenceText: text.mediaOptionReferenceText,
-                            styleInstructionPlaceholder: text.mediaStyleInstructionPlaceholder,
+                            styleInstructionPlaceholder,
                             referenceTextPlaceholder: text.mediaReferenceTextPlaceholder,
+                            speed: text.mediaOptionSpeed,
+                            emotion: text.mediaOptionEmotion,
+                            numberOfSongs: text.mediaOptionNumberOfSongs,
+                            duration: text.mediaOptionDuration,
+                            outputFormat: text.mediaOptionOutputFormat,
+                            durationValue: (seconds) => `${seconds}s`,
                         }}
                         disabled={isGeneratingAudio}
                         idPrefix="audio"
@@ -4374,7 +4672,7 @@ function App() {
 
                     <div className="ai-image__content ai-image__content--in-main">
                         {isGeneratingAudio ? (
-                            <p className="ai-chat__empty">{text.voiceGenerating}</p>
+                            <p className="ai-chat__empty">{generatingLabel}</p>
                         ) : generatedAudioUrl ? (
                             <section className="ai-image__result" aria-label={text.voiceResultTitle}>
                                 <div className="ai-image__result-header">
@@ -4396,7 +4694,7 @@ function App() {
                                 />
                             </section>
                         ) : (
-                            <p className="ai-chat__empty">{text.voicePromptPlaceholder}</p>
+                            <p className="ai-chat__empty">{promptPlaceholder}</p>
                         )}
                     </div>
 
@@ -4456,7 +4754,7 @@ function App() {
                     <button
                         type="button"
                         className="ai-chat__send"
-                        aria-label={text.voiceGenerateButton}
+                        aria-label={generateLabel}
                         onClick={handleGenerateAudio}
                         disabled={isGeneratingAudio}
                     >

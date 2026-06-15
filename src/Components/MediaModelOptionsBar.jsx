@@ -343,6 +343,43 @@ export default function MediaModelOptionsBar({
                 />
             )) : null}
 
+            {options.speed?.values ? picker('speed', labels.speed, values.speed, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="speed"
+                    label={labels.speed}
+                    value={values.speed}
+                    values={options.speed?.values}
+                    onChange={(next) => onChange('speed', next)}
+                    disabled={disabled}
+                />
+            )) : null}
+
+            {options.emotion?.values ? picker('emotion', labels.emotion, labels.emotionValues?.[values.emotion] ?? values.emotion, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="emotion"
+                    label={labels.emotion}
+                    value={values.emotion}
+                    values={options.emotion?.values}
+                    onChange={(next) => onChange('emotion', next)}
+                    disabled={disabled}
+                    formatValue={(item) => labels.emotionValues?.[item] ?? item}
+                />
+            )) : null}
+
+            {options.numberOfSongs?.values ? picker('numberOfSongs', labels.numberOfSongs, values.numberOfSongs, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="number-of-songs"
+                    label={labels.numberOfSongs}
+                    value={values.numberOfSongs}
+                    values={options.numberOfSongs?.values}
+                    onChange={(next) => onChange('numberOfSongs', next)}
+                    disabled={disabled}
+                />
+            )) : null}
+
             {!cloneMode && options.styleInstruction ? picker('styleInstruction', labels.styleInstruction, values.styleInstruction?.trim() || '—', (
                 <OptionTextField
                     id={`${idPrefix}-style-instruction`}

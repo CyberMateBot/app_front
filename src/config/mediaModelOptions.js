@@ -53,6 +53,62 @@ export const IMAGE_MODEL_CAPABILITIES = {
     'alice-ai-art': {
         options: {},
     },
+    'seedream-v4.5': {
+        supportsEdit: true,
+        supportsMulti: true,
+        options: {
+            aspectRatio: { values: ['1:1', '16:9', '9:16', '4:3', '3:4'], default: '1:1' },
+            outputFormat: { values: ['jpeg', 'png', 'webp'], default: 'jpeg' },
+        },
+    },
+    'seedream-v5.0-lite': {
+        supportsEdit: true,
+        supportsMulti: true,
+        options: {
+            aspectRatio: { values: ['1:1', '16:9', '9:16', '4:3', '3:4'], default: '1:1' },
+            outputFormat: { values: ['jpeg', 'png', 'webp'], default: 'jpeg' },
+        },
+    },
+    'qwen-image': {
+        options: {
+            size: { values: ['1024*1024', '1024x1024'], default: '1024*1024' },
+        },
+    },
+    'qwen-image-2512': {
+        options: {
+            size: { values: ['1024*1024', '1328*1328'], default: '1024*1024' },
+            negativePrompt: { default: '' },
+        },
+    },
+    'qwen-image-2.0': {
+        options: {
+            aspectRatio: { values: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'], default: '16:9' },
+        },
+    },
+    'qwen-image-2.0-pro': {
+        supportsEdit: true,
+        options: {},
+    },
+    'z-image-base': {
+        supportsEdit: true,
+        options: {
+            size: { values: ['1024*1024'], default: '1024*1024' },
+            negativePrompt: { default: '' },
+        },
+    },
+    'z-image-turbo': {
+        options: {
+            size: { values: ['1024*1024'], default: '1024*1024' },
+        },
+    },
+    'grok-imagine-edit': {
+        supportsEdit: true,
+        options: {
+            aspectRatio: { values: ['auto', '1:1', '16:9', '9:16', '4:3', '3:4'], default: 'auto' },
+            resolution: { values: ['1k', '2k'], default: '1k' },
+            outputFormat: { values: ['jpeg', 'png', 'webp'], default: 'jpeg' },
+        },
+    },
 };
 
 const SEEDANCE_V15_ASPECT = ['16:9', '9:16', '4:3', '1:1', '3:4', '21:9'];
@@ -149,6 +205,32 @@ export const VIDEO_MODEL_CAPABILITIES = {
             resolution: { values: ['720p', '1080p'], default: '720p' },
         },
     },
+    'wan-2.5-t2v': {
+        options: {
+            duration: { values: [2, 5, 10, 15], default: 5 },
+            resolution: { values: ['480P', '720P', '1080P'], default: '720P' },
+            negativePrompt: { default: '' },
+        },
+    },
+    'wan-2.6-i2v': { requiresImage: true, options: { duration: { values: [5, 8], default: 5 }, resolution: { values: ['480P', '720P'], default: '720P' } } },
+    'wan-2.7-t2v': { options: { duration: { values: [5, 10, 15], default: 5 }, resolution: { values: ['720P', '1080P'], default: '1080P' }, negativePrompt: { default: '' } } },
+    'wan-2.7-flf': { options: { duration: { values: [5, 10], default: 5 } } },
+    'wan-2.7-grid': { requiresImage: true, options: { duration: { values: [5, 10], default: 5 } } },
+    'wan-2.7-edit': { requiresVideo: true, options: {} },
+    'wan-2.2-spicy-i2v': { requiresImage: true, options: { duration: { values: [5, 8], default: 5 }, resolution: { values: ['480p', '720p'], default: '720p' } } },
+    'happyhorse-t2v': { options: { aspectRatio: { values: ['16:9', '9:16', '1:1', '4:3', '3:4'], default: '16:9' }, duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
+    'happyhorse-i2v': { requiresImage: true, options: { duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
+    'happyhorse-ref2v': { requiresImage: true, options: { duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
+    'happyhorse-video-edit': { requiresVideo: true, options: {} },
+    'happyhorse-video-extend': { requiresVideo: true, options: { duration: { values: [3, 5, 10], default: 5 } } },
+    'sora-2-t2v': { options: { duration: { values: [5, 10], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
+    'sora-2-i2v': { requiresImage: true, options: { duration: { values: [5, 10], default: 5 } } },
+    'sora-2-t2v-pro': { options: { duration: { values: [5, 10], default: 5 } } },
+    'veo-3.1-extend': { requiresVideo: true, options: { resolution: { values: ['720p', '1080p'], default: '1080p' }, negativePrompt: { default: '' } } },
+    'vidu-q3-i2v-spicy': { requiresImage: true, options: { duration: { values: [1, 5, 10, 16], default: 5 }, resolution: { values: ['540p', '720p', '1080p'], default: '720p' }, generateAudio: { default: true } } },
+    'hailuo-2.3-t2v': { options: { duration: { values: [6], default: 6 } } },
+    'hailuo-2.3-i2v-fast': { requiresImage: true, options: { duration: { values: [6], default: 6 } } },
+    'hailuo-2.3-i2v-pro': { requiresImage: true, options: { duration: { values: [6], default: 6 } } },
 };
 
 function buildDefaults(capabilities) {
@@ -208,6 +290,15 @@ function buildDefaults(capabilities) {
     if (options.referenceText) {
         defaults.referenceText = options.referenceText.default ?? '';
     }
+    if (options.speed) {
+        defaults.speed = options.speed.default ?? '1.0';
+    }
+    if (options.emotion) {
+        defaults.emotion = options.emotion.default;
+    }
+    if (options.numberOfSongs) {
+        defaults.numberOfSongs = options.numberOfSongs.default ?? '1';
+    }
 
     return defaults;
 }
@@ -234,6 +325,54 @@ export const AUDIO_MODEL_CAPABILITIES = {
             voice: { values: QWEN3_VOICES, default: 'Dylan' },
             styleInstruction: { default: '' },
             referenceText: { default: '' },
+        },
+    },
+    omnivoice: {
+        options: {
+            styleInstruction: { default: 'female, young adult, russian accent' },
+            speed: { values: ['0.8', '1.0', '1.2', '1.5'], default: '1.0' },
+        },
+    },
+    'elevenlabs-v3': {
+        options: {
+            voice: {
+                values: [
+                    'Alice', 'Aria', 'Roger', 'Sarah', 'Laura', 'Charlie', 'George',
+                    'Callum', 'River', 'Liam', 'Charlotte', 'Matilda', 'Will', 'Jessica',
+                    'Eric', 'Chris', 'Brian', 'Daniel', 'Lily', 'Bill',
+                ],
+                default: 'Alice',
+            },
+        },
+    },
+    'minimax-speech-2.6': {
+        options: {
+            voice: {
+                values: [
+                    'Wise_Woman', 'Friendly_Person', 'Inspirational_girl', 'Deep_Voice_Man',
+                    'Calm_Woman', 'Casual_Guy', 'Lively_Girl', 'Patient_Man', 'Young_Knight',
+                    'Determined_Man', 'Lovely_Girl', 'Decent_Boy', 'Imposing_Manner', 'Elegant_Man',
+                    'Abbess', 'Sweet_Girl_2', 'Exuberant_Girl',
+                ],
+                default: 'Friendly_Person',
+            },
+            emotion: {
+                values: ['happy', 'sad', 'angry', 'fearful', 'disgusted', 'surprised', 'neutral'],
+                default: 'happy',
+            },
+        },
+    },
+    'mureka-v9': {
+        options: {
+            styleInstruction: { default: 'upbeat pop, electronic, 120bpm, female vocals, energetic' },
+            numberOfSongs: { values: ['1', '2', '3'], default: '1' },
+            outputFormat: { values: ['mp3', 'wav', 'flac'], default: 'mp3' },
+        },
+    },
+    'ace-step-1.5': {
+        options: {
+            styleInstruction: { default: 'lo-fi, chill, ambient, piano, rainy mood' },
+            duration: { values: [30, 60, 120, 180, 240], presets: [30, 60, 120], default: 60 },
         },
     },
 };
@@ -266,6 +405,10 @@ export function audioModelSupportsClone(modelId) {
     return Boolean(getAudioModelCapabilities(modelId).supportsClone);
 }
 
+export function audioModelIsMusic(modelId) {
+    return modelId === 'mureka-v9' || modelId === 'ace-step-1.5';
+}
+
 export function imageModelSupportsEdit(modelId) {
     return Boolean(getImageModelCapabilities(modelId).supportsEdit);
 }
@@ -274,5 +417,9 @@ export function imageModelSupportsSourceUpload(modelId) {
     const id = String(modelId || '').trim().toLowerCase();
     return id === 'nano-banana'
         || id === 'nano-banana-pro'
-        || id === 'nano-banana-2';
+        || id === 'nano-banana-2'
+        || id.startsWith('seedream-')
+        || id === 'qwen-image-2.0-pro'
+        || id === 'z-image-base'
+        || id === 'grok-imagine-edit';
 }

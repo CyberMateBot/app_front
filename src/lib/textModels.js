@@ -17,6 +17,8 @@ const MERGED_GROUPS = {
     Qwen: { displayName: 'Qwen', defaultModelId: 'qwen3.6-35b' },
     Claude: { displayName: 'Claude', defaultModelId: 'claude-haiku-4.5' },
     Gemini: { displayName: 'Gemini', defaultModelId: 'gemini-2.5-flash' },
+    DeepSeek: { displayName: 'DeepSeek', defaultModelId: 'deepseek-v4-flash' },
+    ChatGPT: { displayName: 'ChatGPT', defaultModelId: 'gpt-4o-mini' },
 };
 
 /** UI tier for merged groups: Lite / Pro */
@@ -31,9 +33,27 @@ const MODEL_DISPLAY_TIER = {
     'claude-opus-4.8': 'pro',
     'gemini-2.5-flash': 'lite',
     'gemini-2.5-pro': 'pro',
+    'deepseek-v4-flash': 'lite',
+    'deepseek-chat': 'lite',
+    'deepseek-r1': 'pro',
+    'deepseek-v4': 'pro',
+    'deepseek-v3.2': 'pro',
+    'deepseek-v3.2-exp': 'pro',
+    'deepseek-chat-v3-0324': 'pro',
+    'gpt-5.4-mini': 'lite',
+    'gpt-4.1-nano': 'lite',
+    'gpt-4o-mini': 'lite',
+    'o4-mini': 'lite',
+    'gpt-5.4': 'pro',
+    'gpt-4.1': 'pro',
+    'gpt-4.1-mini': 'pro',
+    'gpt-4o': 'pro',
+    'o3': 'pro',
+    'o3-mini': 'pro',
+    'o1': 'pro',
 };
 
-const MODELS_WITHOUT_BADGE = new Set(['yandexgpt', 'deepseek']);
+const MODELS_WITHOUT_BADGE = new Set(['yandexgpt']);
 
 const GROUP_ACCENTS = {
     Yandex: 'violet',
@@ -41,11 +61,19 @@ const GROUP_ACCENTS = {
     Qwen: 'teal',
     Claude: 'orange',
     Gemini: 'amber',
+    DeepSeek: 'teal',
+    ChatGPT: 'green',
 };
 
 const MODEL_ACCENTS = {
     yandexgpt: 'violet',
-    deepseek: 'teal',
+    'deepseek-v4': 'teal',
+    'deepseek-r1': 'teal',
+    'deepseek-v4-flash': 'teal',
+    'deepseek-v3.2': 'teal',
+    'deepseek-v3.2-exp': 'teal',
+    'deepseek-chat-v3-0324': 'teal',
+    'deepseek-chat': 'teal',
     'gpt-oss-20b': 'blue',
     'gpt-oss-120b': 'blue',
     'qwen3.6-35b': 'teal',
@@ -56,11 +84,28 @@ const MODEL_ACCENTS = {
     'claude-opus-4.8': 'orange',
     'gemini-2.5-flash': 'amber',
     'gemini-2.5-pro': 'amber',
+    'gpt-5.4': 'green',
+    'gpt-5.4-mini': 'green',
+    'gpt-4.1': 'green',
+    'gpt-4.1-mini': 'green',
+    'gpt-4.1-nano': 'green',
+    'gpt-4o': 'green',
+    'gpt-4o-mini': 'green',
+    'o4-mini': 'green',
+    'o3': 'green',
+    'o3-mini': 'green',
+    'o1': 'green',
 };
 
 const MODEL_ICONS = {
     yandexgpt: Bot,
-    deepseek: Code2,
+    'deepseek-v4': Code2,
+    'deepseek-r1': Code2,
+    'deepseek-v4-flash': Code2,
+    'deepseek-v3.2': Code2,
+    'deepseek-v3.2-exp': Code2,
+    'deepseek-chat-v3-0324': Code2,
+    'deepseek-chat': Code2,
     'gpt-oss-20b': Zap,
     'gpt-oss-120b': Zap,
     'qwen3.6-35b': Brain,
@@ -71,6 +116,17 @@ const MODEL_ICONS = {
     'claude-opus-4.8': Feather,
     'gemini-2.5-flash': Hexagon,
     'gemini-2.5-pro': Hexagon,
+    'gpt-5.4': Sparkles,
+    'gpt-5.4-mini': Sparkles,
+    'gpt-4.1': Sparkles,
+    'gpt-4.1-mini': Sparkles,
+    'gpt-4.1-nano': Sparkles,
+    'gpt-4o': Sparkles,
+    'gpt-4o-mini': Sparkles,
+    'o4-mini': Sparkles,
+    'o3': Sparkles,
+    'o3-mini': Sparkles,
+    'o1': Sparkles,
 };
 
 const GROUP_ICONS = {
@@ -80,33 +136,41 @@ const GROUP_ICONS = {
     Qwen: Brain,
     Claude: Feather,
     Gemini: Hexagon,
+    ChatGPT: Sparkles,
 };
 
 const CATALOG_DESCRIPTIONS = {
     ru: {
         yandexgpt: 'Повседневные вопросы, письма и тексты на русском',
-        deepseek: 'Код, отладка, алгоритмы и пошаговые рассуждения',
+        DeepSeek: 'Код, отладка, алгоритмы и пошаговые рассуждения',
         'Open-weight GPT': 'Тексты и идеи: черновики, правки и рассуждения',
         Qwen: 'Длинные документы, сводки и мультиязычный анализ',
         Claude: 'Anthropic Claude: от быстрых ответов до максимального качества',
         Gemini: 'Google Gemini: текст и изображения через Wavespeed',
+        ChatGPT: 'OpenAI ChatGPT: от быстрых ответов до o-серии рассуждений',
     },
     en: {
         yandexgpt: 'Everyday questions, emails, and text in Russian',
-        deepseek: 'Code, debugging, algorithms, and step-by-step reasoning',
+        DeepSeek: 'Code, debugging, algorithms, and step-by-step reasoning',
         'Open-weight GPT': 'Writing and ideas: drafts, edits, and reasoning',
         Qwen: 'Long documents, summaries, and multilingual analysis',
         Claude: 'Anthropic Claude: from fast replies to top-tier quality',
         Gemini: 'Google Gemini: text and images via Wavespeed',
+        ChatGPT: 'OpenAI ChatGPT: from fast chat to o-series reasoning',
     },
 };
 
 const LEGACY_MODEL_ALIASES = {
     'gemini-flash': 'gemini-2.5-flash',
     gemini: 'gemini-2.5-flash',
-    openai: 'yandexgpt',
+    openai: 'gpt-4o-mini',
     yandex: 'yandexgpt',
     default: 'yandexgpt',
+    deepseek: 'deepseek-v3.2',
+    'deepseek-v32': 'deepseek-v3.2',
+    'deepseek-v32/latest': 'deepseek-v3.2',
+    'deepseek-r1': 'deepseek-r1',
+    'deepseek/deepseek-r1': 'deepseek-r1',
 };
 
 /** Fallback when API models are not loaded yet or request failed */
@@ -119,11 +183,62 @@ export const DEFAULT_TEXT_MODELS = [
         tier: 'standard',
     },
     {
-        id: 'deepseek',
-        label: 'DeepSeek',
-        group: 'DeepSeek',
-        description: CATALOG_DESCRIPTIONS.ru.deepseek,
+        id: 'gpt-4o-mini',
+        label: 'GPT-4o Mini',
+        group: 'ChatGPT',
+        description: CATALOG_DESCRIPTIONS.ru.ChatGPT,
+        tier: 'fast',
+    },
+    {
+        id: 'gpt-5.4',
+        label: 'GPT-5.4',
+        group: 'ChatGPT',
+        description: CATALOG_DESCRIPTIONS.ru.ChatGPT,
+        tier: 'pro',
+    },
+    {
+        id: 'claude-haiku-4.5',
+        label: 'Claude Haiku 4.5',
+        group: 'Claude',
+        description: CATALOG_DESCRIPTIONS.ru.Claude,
+        tier: 'fast',
+    },
+    {
+        id: 'claude-sonnet-4.5',
+        label: 'Claude Sonnet 4.5',
+        group: 'Claude',
+        description: CATALOG_DESCRIPTIONS.ru.Claude,
         tier: 'standard',
+    },
+    {
+        id: 'gemini-2.5-flash',
+        label: 'Gemini 2.5 Flash',
+        group: 'Gemini',
+        description: CATALOG_DESCRIPTIONS.ru.Gemini,
+        tier: 'fast',
+        supports_image: true,
+    },
+    {
+        id: 'gemini-2.5-pro',
+        label: 'Gemini 2.5 Pro',
+        group: 'Gemini',
+        description: CATALOG_DESCRIPTIONS.ru.Gemini,
+        tier: 'pro',
+        supports_image: true,
+    },
+    {
+        id: 'deepseek-v4-flash',
+        label: 'DeepSeek V4 Flash',
+        group: 'DeepSeek',
+        description: CATALOG_DESCRIPTIONS.ru.DeepSeek,
+        tier: 'fast',
+    },
+    {
+        id: 'deepseek-v4',
+        label: 'DeepSeek V4',
+        group: 'DeepSeek',
+        description: CATALOG_DESCRIPTIONS.ru.DeepSeek,
+        tier: 'pro',
     },
     {
         id: 'gpt-oss-20b',
@@ -209,6 +324,7 @@ export function textModelSupportsImage(model) {
     return id === 'qwen3.6-35b'
         || id === 'gemini-2.5-flash'
         || id === 'gemini-2.5-pro'
+        || id === 'gpt-4o'
         || id === 'gemini';
 }
 
@@ -262,7 +378,7 @@ export function sortModelsByDisplayTier(models) {
 export function buildTextModelSelectorItems(models) {
     return buildGroupedSelectorItems(models, {
         getGroupKey: (model) => {
-            if (model.id === 'yandexgpt' || model.id === 'deepseek') {
+            if (model.id === 'yandexgpt') {
                 return model.id;
             }
 
@@ -274,6 +390,36 @@ export function buildTextModelSelectorItems(models) {
         ),
         sortGroupItems: sortModelsByDisplayTier,
     });
+}
+
+export function buildTextModelGroupOptions(selectorItems, getLabel) {
+    return selectorItems.map((item) => {
+        if (item.type === 'single') {
+            return {
+                id: item.model.id,
+                label: getLabel(item),
+                modelId: item.model.id,
+            };
+        }
+
+        return {
+            id: item.id,
+            label: getLabel(item),
+            modelId: item.defaultModelId,
+        };
+    });
+}
+
+export function getActiveTextModelGroupId(selectorItem) {
+    if (!selectorItem) {
+        return '';
+    }
+
+    if (selectorItem.type === 'single') {
+        return selectorItem.model.id;
+    }
+
+    return selectorItem.id;
 }
 
 /**

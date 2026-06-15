@@ -1,4 +1,4 @@
-import { Bot, Image as ImageIcon } from 'lucide-react';
+import { Bot, Image as ImageIcon, Mic, Music2, Sparkles, Volume2, Wand2, Waves } from 'lucide-react';
 import {
     buildGroupedSelectorItems,
     formatGroupIdLabel,
@@ -22,6 +22,30 @@ export const IMAGE_GROUP_OVERRIDES = {
         defaultModelId: 'gpt-image-2',
         icon: Bot,
     },
+    seedream: {
+        nameKey: 'modelSeedreamGroupName',
+        subKey: 'modelSeedreamGroupSub',
+        defaultModelId: 'seedream-v4.5',
+        icon: Sparkles,
+    },
+    'qwen-image': {
+        nameKey: 'modelQwenImageGroupName',
+        subKey: 'modelQwenImageGroupSub',
+        defaultModelId: 'qwen-image-2.0',
+        icon: Bot,
+    },
+    'z-image': {
+        nameKey: 'modelZImageGroupName',
+        subKey: 'modelZImageGroupSub',
+        defaultModelId: 'z-image-base',
+        icon: ImageIcon,
+    },
+    grok: {
+        nameKey: 'modelGrokGroupName',
+        subKey: 'modelGrokGroupSub',
+        defaultModelId: 'grok-imagine-edit',
+        icon: Wand2,
+    },
 };
 
 export const VIDEO_GROUP_OVERRIDES = {
@@ -34,6 +58,36 @@ export const VIDEO_GROUP_OVERRIDES = {
         nameKey: 'modelSeedanceGroupName',
         subKey: 'modelSeedanceGroupSub',
         defaultModelId: 'seedance-v1.5-t2v-fast',
+    },
+    wan: {
+        nameKey: 'modelWanGroupName',
+        subKey: 'modelWanGroupSub',
+        defaultModelId: 'wan-2.7-t2v',
+    },
+    happyhorse: {
+        nameKey: 'modelHappyHorseGroupName',
+        subKey: 'modelHappyHorseGroupSub',
+        defaultModelId: 'happyhorse-t2v',
+    },
+    sora: {
+        nameKey: 'modelSoraGroupName',
+        subKey: 'modelSoraGroupSub',
+        defaultModelId: 'sora-2-t2v',
+    },
+    veo: {
+        nameKey: 'modelVeoGroupName',
+        subKey: 'modelVeoGroupSub',
+        defaultModelId: 'veo-3.1-extend',
+    },
+    vidu: {
+        nameKey: 'modelViduGroupName',
+        subKey: 'modelViduGroupSub',
+        defaultModelId: 'vidu-q3-i2v-spicy',
+    },
+    hailuo: {
+        nameKey: 'modelHailuoGroupName',
+        subKey: 'modelHailuoGroupSub',
+        defaultModelId: 'hailuo-2.3-t2v',
     },
 };
 
@@ -177,11 +231,59 @@ export function buildCatalogVideoTools(definitions) {
     );
 }
 
+export const AUDIO_GROUP_OVERRIDES = {
+    'Qwen3 TTS': {
+        nameKey: 'modelQwen3TtsName',
+        subKey: 'modelQwen3TtsSub',
+        defaultModelId: 'qwen3-tts',
+        icon: Mic,
+    },
+    OmniVoice: {
+        nameKey: 'modelOmniVoiceName',
+        subKey: 'modelOmniVoiceSub',
+        defaultModelId: 'omnivoice',
+        icon: Volume2,
+    },
+    ElevenLabs: {
+        nameKey: 'modelElevenLabsV3Name',
+        subKey: 'modelElevenLabsV3Sub',
+        defaultModelId: 'elevenlabs-v3',
+        icon: Waves,
+    },
+    'MiniMax Speech': {
+        nameKey: 'modelMiniMaxSpeechName',
+        subKey: 'modelMiniMaxSpeechSub',
+        defaultModelId: 'minimax-speech-2.6',
+        icon: Sparkles,
+    },
+    Mureka: {
+        nameKey: 'modelMurekaV9Name',
+        subKey: 'modelMurekaV9Sub',
+        defaultModelId: 'mureka-v9',
+        icon: Music2,
+    },
+    'ACE-Step': {
+        nameKey: 'modelAceStepName',
+        subKey: 'modelAceStepSub',
+        defaultModelId: 'ace-step-1.5',
+        icon: Music2,
+    },
+};
+
 export function buildAudioModelSelectorItems(definitions) {
     return buildGroupedSelectorItems(definitions, {
         getGroupKey: (model) => model.group || model.id,
-        getGroupLabel: (groupId) => formatGroupIdLabel(groupId),
-        getDefaultItemId: (_groupId, variants) => variants[0]?.id,
+        getGroupLabel: (groupId) => {
+            const override = AUDIO_GROUP_OVERRIDES[groupId];
+            if (override?.nameKey) {
+                return override.nameKey;
+            }
+            return formatGroupIdLabel(groupId);
+        },
+        getDefaultItemId: (groupId, variants) => (
+            AUDIO_GROUP_OVERRIDES[groupId]?.defaultModelId
+            ?? variants[0]?.id
+        ),
         sortGroupItems: (variants) => [...variants],
     });
 }
@@ -190,7 +292,7 @@ export function buildCatalogAudioTools(definitions) {
     return buildCatalogMediaTools(
         definitions,
         buildAudioModelSelectorItems(definitions),
-        {},
+        AUDIO_GROUP_OVERRIDES,
         'ai-voice',
     );
 }
@@ -199,6 +301,13 @@ export function getAudioSelectorChipLabel(item, text) {
     if (item.type === 'single') {
         return text[item.model.nameKey] ?? item.model.id;
     }
+
+    const override = AUDIO_GROUP_OVERRIDES[item.id];
+
+    if (override?.nameKey) {
+        return text[override.nameKey] ?? item.label;
+    }
+
     return item.label;
 }
 
@@ -206,8 +315,15 @@ export function getAudioSelectorChipVisual(item) {
     if (item.type === 'single') {
         return { accent: item.model.accent, icon: item.model.icon };
     }
-    const defaultVariant = item.variants[0];
-    return { accent: defaultVariant?.accent, icon: defaultVariant?.icon };
+
+    const override = AUDIO_GROUP_OVERRIDES[item.id];
+    const defaultVariant = item.variants.find((variant) => variant.id === item.defaultModelId)
+        ?? item.variants[0];
+
+    return {
+        accent: override?.accent ?? defaultVariant?.accent,
+        icon: override?.icon ?? defaultVariant?.icon,
+    };
 }
 
 export function getImageSelectorChipLabel(item, text) {

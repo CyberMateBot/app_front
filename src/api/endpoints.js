@@ -44,7 +44,7 @@ export const API_ENDPOINTS = {
         method: 'POST',
         path: '/v1/generate/text',
         when: 'Отправка сообщения в AI-чате',
-        body: '{ telegramId, prompt, category: "text", model: "yandexgpt"|"deepseek"|"gemini-flash"|"openai", messages?: [{ role, content }] }',
+        body: '{ telegramId, prompt, category: "text", model: "yandexgpt"|"deepseek-v4-flash"|"gemini-2.5-flash"|..., messages?: [{ role, content }] }',
     },
     generateImage: {
         method: 'POST',
@@ -62,7 +62,7 @@ export const API_ENDPOINTS = {
         method: 'POST',
         path: '/v1/generate/audio',
         when: 'Озвучка текста и клонирование голоса (Qwen3 TTS)',
-        body: '{ telegramId, prompt, category: "audio", model: "qwen3-tts", language?, voice?, style_instruction?, reference_text?, audioBase64?, audioMimeType?, sourceAudioUrl?, sessionId? }',
+        body: '{ telegramId, prompt, category: "audio", model: "qwen3-tts", language?, voice?, style_instruction?, reference_text?, audioBase64?, audioMimeType?, sourceAudioUrl?, speed?, emotion?, duration?, number_of_songs?, output_format?, tags?, sessionId? }',
     },
 };
 

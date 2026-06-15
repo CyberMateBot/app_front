@@ -177,6 +177,15 @@ export const IMAGE_MODEL_IDS = [
     'gpt-image-2',
     'gpt-image-1.5',
     'flux-dev',
+    'seedream-v4.5',
+    'seedream-v5.0-lite',
+    'qwen-image',
+    'qwen-image-2512',
+    'qwen-image-2.0',
+    'qwen-image-2.0-pro',
+    'z-image-base',
+    'z-image-turbo',
+    'grok-imagine-edit',
     'alice-ai-art',
 ];
 export const VIDEO_MODEL_IDS = [
@@ -189,8 +198,35 @@ export const VIDEO_MODEL_IDS = [
     'seedance-v1.5-i2v-spicy',
     'seedance-v2-video-edit',
     'seedance-v2-video-extend',
+    'wan-2.5-t2v',
+    'wan-2.6-i2v',
+    'wan-2.7-t2v',
+    'wan-2.7-flf',
+    'wan-2.7-grid',
+    'wan-2.7-edit',
+    'happyhorse-t2v',
+    'happyhorse-i2v',
+    'happyhorse-ref2v',
+    'happyhorse-video-edit',
+    'happyhorse-video-extend',
+    'wan-2.2-spicy-i2v',
+    'sora-2-t2v',
+    'sora-2-i2v',
+    'sora-2-t2v-pro',
+    'veo-3.1-extend',
+    'vidu-q3-i2v-spicy',
+    'hailuo-2.3-t2v',
+    'hailuo-2.3-i2v-fast',
+    'hailuo-2.3-i2v-pro',
 ];
-export const AUDIO_MODEL_IDS = ['qwen3-tts'];
+export const AUDIO_MODEL_IDS = [
+    'qwen3-tts',
+    'omnivoice',
+    'elevenlabs-v3',
+    'minimax-speech-2.6',
+    'mureka-v9',
+    'ace-step-1.5',
+];
 
 export async function fetchTextModels() {
     const res = await apiFetch('/v1/generate/models', {
@@ -576,6 +612,12 @@ export async function generateAudio({
     audioBase64,
     audioMimeType,
     sourceAudioUrl,
+    speed,
+    emotion,
+    duration,
+    numberOfSongs,
+    outputFormat,
+    tags,
 }) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim();
@@ -621,6 +663,25 @@ export async function generateAudio({
     const trimmedSessionId = sessionId?.trim();
     if (trimmedSessionId) {
         body.sessionId = trimmedSessionId;
+    }
+
+    if (speed != null && speed !== '') {
+        body.speed = Number(speed);
+    }
+    if (emotion?.trim()) {
+        body.emotion = emotion.trim();
+    }
+    if (duration != null && duration !== '') {
+        body.duration = Number(duration);
+    }
+    if (numberOfSongs != null && numberOfSongs !== '') {
+        body.number_of_songs = Number(numberOfSongs);
+    }
+    if (outputFormat?.trim()) {
+        body.output_format = outputFormat.trim();
+    }
+    if (tags?.trim()) {
+        body.tags = tags.trim();
     }
 
     const res = await apiFetch('/v1/generate/audio', {
