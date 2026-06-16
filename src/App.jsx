@@ -191,6 +191,7 @@ import {
 import './App.css';
 import './experimental-design.css';
 import './compact-ui.css';
+import './modern-polish.css';
 import { formatUserFacingError } from './api/apiError.js';
 import { APP_NAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
 import { deriveSubscriptionView } from './lib/subscriptionView.js';
@@ -5910,6 +5911,7 @@ function App() {
                 <span className="app-shell__orb app-shell__orb--1" />
                 <span className="app-shell__orb app-shell__orb--2" />
                 <span className="app-shell__orb app-shell__orb--3" />
+                <span className="app-shell__orb app-shell__orb--4" />
             </div>
             <main className="app-main">
                 {currentPage === 'home'
