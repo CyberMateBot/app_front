@@ -193,6 +193,7 @@ import './experimental-design.css';
 import './compact-ui.css';
 import './modern-polish.css';
 import { formatUserFacingError } from './api/apiError.js';
+import { resolveGenerationTokenBalance } from './lib/walletBalance.js';
 import { APP_NAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
 import { deriveSubscriptionView } from './lib/subscriptionView.js';
 import {
@@ -707,8 +708,8 @@ const translations = {
         profileStatRequests: 'Запросов',
         profileStatProjects: 'Проектов',
         profileStatReferrals: 'Рефералов',
-        profileStatCoins: 'CyberCoins',
-        profileBalanceLabel: 'Баланс CyberCoins',
+        profileStatCoins: 'Токены',
+        profileBalanceLabel: 'Баланс токенов',
         profileTopUp: 'Пополнить',
         profileUsageLabel: 'Использовано в этом месяце',
         profileAccountSection: 'Аккаунт',
@@ -1215,8 +1216,8 @@ const translations = {
         profileStatRequests: 'Requests',
         profileStatProjects: 'Projects',
         profileStatReferrals: 'Referrals',
-        profileStatCoins: 'CyberCoins',
-        profileBalanceLabel: 'CyberCoins balance',
+        profileStatCoins: 'Tokens',
+        profileBalanceLabel: 'Token balance',
         profileTopUp: 'Top up',
         profileUsageLabel: 'Used this month',
         profileAccountSection: 'Account',
@@ -1304,7 +1305,13 @@ function buildProfileView(profile, telegramUser) {
     const handle = rawUsername && rawUsername !== 'username_not_set' ? `@${rawUsername}` : '';
     const appUserId = profile?.backendId || (profile?.id != null ? String(profile.id) : '');
     const balance = String(profile?.balance ?? profile?.coins ?? profile?.points ?? 0);
-    const tokens = String(profile?.tokens ?? profile?.tokenBalance ?? profile?.points ?? balance);
+    const tokens = String(
+        profile?.tokens
+        ?? profile?.token_balance
+        ?? profile?.tokenBalance
+        ?? profile?.points
+        ?? balance,
+    );
 
     return {
         displayName,
@@ -2062,7 +2069,6 @@ function App() {
 
         const loadPageData = async () => {
             needWallet = (currentPage === 'wallet' || currentPage === 'profile')
-                && !pageDataLoadedRef.current.wallet
                 && !pageDataInFlightRef.current.wallet;
             needReferrals = currentPage === 'profile'
                 && !pageDataLoadedRef.current.referrals
@@ -2092,21 +2098,29 @@ function App() {
 
             if (needWallet) {
                 tasks.push(
-                    getMyWallet()
-                        .then((data) => {
-                            if (!isCancelled) {
-                                setWalletData(data ?? { wallet: null, transactions: [] });
+                    Promise.allSettled([
+                        getMyWallet(),
+                        getMyProfile(),
+                    ])
+                        .then(([walletResult, profileResult]) => {
+                            if (isCancelled) {
+                                return;
                             }
-                        })
-                        .catch((error) => {
-                            if (!isCancelled) {
+
+                            if (walletResult.status === 'fulfilled') {
+                                setWalletData(walletResult.value ?? { wallet: null, transactions: [] });
+                            } else {
                                 setWalletData({ wallet: null, transactions: [] });
+                                const error = walletResult.reason;
                                 showAppNotice(error instanceof Error ? error.message : 'Не удалось загрузить кошелёк.');
+                            }
+
+                            if (profileResult.status === 'fulfilled' && profileResult.value) {
+                                setProfile(normalizeProfileResponse(profileResult.value, telegramUser));
                             }
                         })
                         .finally(() => {
                             pageDataInFlightRef.current.wallet = false;
-                            pageDataLoadedRef.current.wallet = true;
                             if (!isCancelled) {
                                 setPageLoading((prev) => ({ ...prev, wallet: false }));
                             }
@@ -2170,7 +2184,7 @@ function App() {
         return () => {
             isCancelled = true;
 
-            if (needWallet && !pageDataLoadedRef.current.wallet) {
+            if (needWallet) {
                 pageDataInFlightRef.current.wallet = false;
             }
             if (needReferrals && !pageDataLoadedRef.current.referrals) {
@@ -2231,7 +2245,11 @@ function App() {
         const base = buildProfileView({
             ...profile,
             balance: walletData?.wallet?.balance ?? profile?.balance,
-            tokenBalance: walletData?.wallet?.balanceAvailable ?? profile?.tokenBalance,
+            tokens: walletData?.wallet?.tokens ?? profile?.tokens,
+            tokenBalance: walletData?.wallet?.tokens
+                ?? walletData?.wallet?.balanceAvailable
+                ?? profile?.tokenBalance
+                ?? profile?.tokens,
         }, telegramUser);
         const subscription = deriveSubscriptionView(profile, text);
 
@@ -2243,6 +2261,29 @@ function App() {
             subscriptionIsPaid: subscription.isPaid,
         };
     }, [profile, telegramUser, walletData, text]);
+
+    const refreshWalletBalance = useCallback(async () => {
+        if (!telegramUser?.id) {
+            return;
+        }
+
+        try {
+            const [walletResult, profileResult] = await Promise.allSettled([
+                getMyWallet(),
+                getMyProfile(),
+            ]);
+
+            if (walletResult.status === 'fulfilled') {
+                setWalletData(walletResult.value ?? { wallet: null, transactions: [] });
+            }
+
+            if (profileResult.status === 'fulfilled' && profileResult.value) {
+                setProfile(normalizeProfileResponse(profileResult.value, telegramUser));
+            }
+        } catch {
+            // Keep the previous balance visible if refresh fails.
+        }
+    }, [telegramUser]);
     const referralItems = useMemo(() => {
         const sourceItems = Array.isArray(referralData?.referrals)
             ? referralData.referrals
@@ -3519,9 +3560,10 @@ function App() {
             if (response?.item) {
                 pushPromptHistoryItem(response.item);
             }
+            void refreshWalletBalance();
         } catch (error) {
             setGeneratedImageUrl('');
-            const message = error instanceof Error ? error.message : '';
+            const message = formatUserFacingError(error, language);
             setImageError(
                 error?.code === 'CONTENT_POLICY' ? text.imageContentPolicy : (message || 'Не удалось сгенерировать изображение.'),
             );
@@ -3654,9 +3696,10 @@ function App() {
             if (response?.item) {
                 pushPromptHistoryItem(response.item);
             }
+            void refreshWalletBalance();
         } catch (error) {
             setGeneratedVideoUrl('');
-            const message = error instanceof Error ? error.message : '';
+            const message = formatUserFacingError(error, language);
             setVideoError(message || 'Не удалось сгенерировать видео.');
         } finally {
             setIsGeneratingVideo(false);
@@ -3708,9 +3751,10 @@ function App() {
             }
 
             setGeneratedAudioUrl(audioUrl);
+            void refreshWalletBalance();
         } catch (error) {
             setGeneratedAudioUrl('');
-            const message = error instanceof Error ? error.message : '';
+            const message = formatUserFacingError(error, language);
             setAudioError(message || (language === 'ru' ? 'Не удалось сгенерировать аудио.' : 'Failed to generate audio.'));
         } finally {
             setIsGeneratingAudio(false);
@@ -3855,9 +3899,10 @@ function App() {
             if (response?.item) {
                 pushPromptHistoryItem(response.item);
             }
+            void refreshWalletBalance();
         } catch (error) {
             setGeneratedThreeDUrl('');
-            const message = error instanceof Error ? error.message : '';
+            const message = formatUserFacingError(error, language);
             setThreeDError(message || (language === 'ru' ? 'Не удалось сгенерировать 3D.' : 'Failed to generate 3D model.'));
         } finally {
             setIsGeneratingThreeD(false);
@@ -4124,6 +4169,7 @@ function App() {
                     : message
             )));
             pendingAssistantIdRef.current = null;
+            void refreshWalletBalance();
         } catch (error) {
             if (error?.name === 'AbortError' || abortController.signal.aborted) {
                 return;
@@ -5322,7 +5368,7 @@ function App() {
             .join('')
             .slice(0, 2)
             .toUpperCase() || 'CM';
-        const cyberCoins = Number(walletData?.wallet?.balance ?? userData.balance ?? userData.tokens) || 0;
+        const tokenBalance = resolveGenerationTokenBalance(walletData, profile);
         const usageLimitRaw = walletData?.wallet?.monthlyLimit;
         const usageUsedRaw = walletData?.wallet?.usedThisMonth;
         const hasUsageQuota = usageLimitRaw != null && Number(usageLimitRaw) > 0;
@@ -5391,7 +5437,7 @@ function App() {
                         <div className="profile-concept__stat-label">{text.profileStatReferrals}</div>
                     </div>
                     <div className="profile-concept__stat">
-                        <div className="profile-concept__stat-val">{formatNumber(cyberCoins)}</div>
+                        <div className="profile-concept__stat-val">{formatNumber(tokenBalance)}</div>
                         <div className="profile-concept__stat-label">{text.profileStatCoins}</div>
                     </div>
                 </div>
@@ -5402,7 +5448,7 @@ function App() {
                             <div className="profile-concept__balance-label">{text.profileBalanceLabel}</div>
                             <div className="profile-concept__balance-amount">
                                 <span className="profile-concept__coin-icon">C</span>
-                                <span className="profile-concept__balance-num">{formatNumber(cyberCoins)}</span>
+                                <span className="profile-concept__balance-num">{formatNumber(tokenBalance)}</span>
                             </div>
                         </div>
                         <button type="button" className="profile-concept__topup-btn" onClick={() => setCurrentPage('wallet')}>
@@ -5567,8 +5613,8 @@ function App() {
     );
 
     const renderWalletScreen = () => {
-        const cyberCoins = Number(walletData?.wallet?.balance ?? userData.balance ?? 0) || 0;
-        const balanceAvailable = Number(walletData?.wallet?.balanceAvailable ?? cyberCoins) || 0;
+        const tokenBalance = resolveGenerationTokenBalance(walletData, profile);
+        const balanceAvailable = Number(walletData?.wallet?.balanceAvailable ?? tokenBalance) || 0;
         const totalEarned = Number(walletData?.wallet?.totalEarned ?? 0) || 0;
         const currentPlanId = userData.subscriptionPlanId;
 
@@ -5588,7 +5634,7 @@ function App() {
                             <span className="subscription-concept__balance-label">{text.walletBalanceTotal}</span>
                             <span className="subscription-concept__balance-value">
                                 <span className="profile-concept__coin-icon">C</span>
-                                {formatNumber(cyberCoins)}
+                                {formatNumber(tokenBalance)}
                             </span>
                         </div>
                         <div className="subscription-concept__balance-item">

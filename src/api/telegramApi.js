@@ -6,6 +6,7 @@ import {
 import { errorFromResponse } from './apiError.js';
 import { fetchReferralLink, fetchReferrals } from './referrals.js';
 import { apiFetch } from './httpClient.js';
+import { normalizeWalletResponse } from '../lib/walletBalance.js';
 
 function encodeBase64(value) {
     const bytes = new TextEncoder().encode(value);
@@ -166,8 +167,16 @@ export async function patchUserTheme(theme) {
 
 export async function getMyWallet() {
     const telegramId = getCurrentTelegramId();
+    const payload = await fetchTelegramResource(
+        `/v1/wallet/telegram/${telegramId}`,
+        'Failed to load wallet data.',
+    );
 
-    return fetchTelegramResource(`/v1/wallet/telegram/${telegramId}`, 'Failed to load wallet data.');
+    if (!payload) {
+        return { wallet: null, transactions: [] };
+    }
+
+    return normalizeWalletResponse(payload);
 }
 
 export async function getMyReferrals() {
@@ -944,6 +953,8 @@ export function normalizeProfileResponse(payload, telegramUser) {
         theme: profile?.theme === 'light' ? 'light' : 'dark',
         subscriptionPlan,
         verified: Boolean(profile?.verified),
+        tokens: profile?.tokens ?? profile?.token_balance ?? profile?.tokenBalance ?? profile?.balance ?? 0,
+        tokenBalance: profile?.token_balance ?? profile?.tokenBalance ?? profile?.tokens ?? profile?.balance ?? 0,
     };
 }
 
