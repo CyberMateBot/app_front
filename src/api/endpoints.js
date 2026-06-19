@@ -33,36 +33,37 @@ export const API_ENDPOINTS = {
         method: 'GET',
         path: '/v1/prompts/history/telegram/:telegramId',
         when: 'Профиль, История',
+        headers: 'X-Telegram-Init-Data: <initData>',
     },
     promptHistorySave: {
         method: 'POST',
         path: '/v1/prompts/history',
         when: 'После ответа в AI-чате',
-        body: '{ telegramId, prompt, category }',
+        body: '{ telegramId, initDataRaw: base64, prompt, category }',
     },
     generateText: {
         method: 'POST',
         path: '/v1/generate/text',
         when: 'Отправка сообщения в AI-чате',
-        body: '{ telegramId, prompt, category: "text", model: "yandexgpt"|"deepseek-v4-flash"|"gemini-2.5-flash"|..., messages?: [{ role, content }] }',
+        body: '{ telegramId, initDataRaw: base64, prompt, category: "text", model: "yandexgpt"|"deepseek-v4-flash"|"gemini-2.5-flash"|..., messages?: [{ role, content }] }',
     },
     generateImage: {
         method: 'POST',
         path: '/v1/generate/image',
         when: 'Генерация изображения (Nano Banana)',
-        body: '{ telegramId, prompt, category: "image", model: "nano-banana"|..., sourceImageUrl?: string, imageBase64?: string, imageMimeType?: string, aspect_ratio?, resolution?, quality?, output_format?, messages?: [{ role, content }] }',
+        body: '{ telegramId, initDataRaw: base64, prompt, category: "image", model: "nano-banana"|..., sourceImageUrl?: string, imageBase64?: string, imageMimeType?: string, aspect_ratio?, resolution?, quality?, output_format?, messages?: [{ role, content }] }',
     },
     generateVideo: {
         method: 'POST',
         path: '/v1/generate/video',
         when: 'Генерация видео (WaveSpeed / Kling)',
-        body: '{ telegramId, prompt, category: "video", model: "kling-v3-std"|"kling-v3-pro"|"seedance-*", aspect_ratio?, duration?: 3-15, negative_prompt?, sound?, camera_control?: { type, config? }, resolution?: "720p"|"1080p", sourceImageUrl?, sourceVideoUrl?, generate_audio?, camera_fixed?, messages?: [{ role, content }] }',
+        body: '{ telegramId, initDataRaw: base64, prompt, category: "video", model: "kling-v3-std"|"kling-v3-pro"|"seedance-*", aspect_ratio?, duration?: 3-15, negative_prompt?, sound?, camera_control?: { type, config? }, resolution?: "720p"|"1080p", sourceImageUrl?, sourceVideoUrl?, generate_audio?, camera_fixed?, messages?: [{ role, content }] }',
     },
     generateAudio: {
         method: 'POST',
         path: '/v1/generate/audio',
         when: 'Озвучка текста и клонирование голоса (Qwen3 TTS)',
-        body: '{ telegramId, prompt, category: "audio", model: "qwen3-tts", language?, voice?, style_instruction?, reference_text?, audioBase64?, audioMimeType?, sourceAudioUrl?, speed?, emotion?, duration?, number_of_songs?, output_format?, tags?, sessionId? }',
+        body: '{ telegramId, initDataRaw: base64, prompt, category: "audio", model: "qwen3-tts", language?, voice?, style_instruction?, reference_text?, audioBase64?, audioMimeType?, sourceAudioUrl?, speed?, emotion?, duration?, number_of_songs?, output_format?, tags?, sessionId? }',
     },
 };
 

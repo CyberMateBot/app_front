@@ -35,13 +35,50 @@ function buildInitDataFromUnsafe(tg) {
     return params.toString();
 }
 
-export async function registerTelegramUser() {
+function getTelegramInitData() {
     const tg = getTelegramWebApp();
     let initData = tg?.initData || buildInitDataFromUnsafe(tg);
 
     if (!initData) {
         initData = readLaunchInitData();
     }
+
+    return String(initData || '').trim();
+}
+
+function getInitDataRawBase64() {
+    const initData = getTelegramInitData();
+
+    if (!initData) {
+        throw new Error('Telegram initData not found. Open this Mini App inside Telegram or enable local mock mode.');
+    }
+
+    return encodeBase64(initData);
+}
+
+function withInitDataRaw(body) {
+    return {
+        ...body,
+        initDataRaw: getInitDataRawBase64(),
+    };
+}
+
+function getTelegramInitDataHeaders(extraHeaders = {}) {
+    const initData = getTelegramInitData();
+
+    if (!initData) {
+        throw new Error('Telegram initData not found. Open this Mini App inside Telegram or enable local mock mode.');
+    }
+
+    return {
+        ...extraHeaders,
+        'X-Telegram-Init-Data': initData,
+    };
+}
+
+export async function registerTelegramUser() {
+    const tg = getTelegramWebApp();
+    const initData = getTelegramInitData();
 
     if (!initData) {
         throw new Error('Telegram initData not found. Open this Mini App inside Telegram or enable local mock mode.');
@@ -150,7 +187,21 @@ export { fetchReferralLink, fetchReferrals, resolveReferralAvatarUrl } from './r
 export async function getMyPromptHistory() {
     const telegramId = getCurrentTelegramId();
 
-    return fetchTelegramResource(`/v1/prompts/history/telegram/${telegramId}`, 'Failed to load prompt history.');
+    const res = await apiFetch(`/v1/prompts/history/telegram/${telegramId}`, {
+        headers: getTelegramInitDataHeaders({
+            Accept: 'application/json',
+        }),
+    });
+
+    if (res.status === 404) {
+        return null;
+    }
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to load prompt history.');
+    }
+
+    return res.json();
 }
 
 export async function clearMyPromptHistory() {
@@ -158,7 +209,9 @@ export async function clearMyPromptHistory() {
 
     const res = await apiFetch(`/v1/prompts/history/telegram/${telegramId}`, {
         method: 'DELETE',
-        headers: { Accept: 'application/json' },
+        headers: getTelegramInitDataHeaders({
+            Accept: 'application/json',
+        }),
     });
 
     if (!res.ok) {
@@ -331,7 +384,7 @@ export async function generateText({
             'Content-Type': 'application/json',
             Accept: 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(withInitDataRaw(body)),
         signal,
     });
 
@@ -447,7 +500,7 @@ export async function generateImage({
             'Content-Type': 'application/json',
             Accept: 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(withInitDataRaw(body)),
     });
 
     if (!res.ok) {
@@ -595,7 +648,7 @@ export async function generateVideo({
             'Content-Type': 'application/json',
             Accept: 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(withInitDataRaw(body)),
     });
 
     if (!res.ok) {
@@ -701,7 +754,7 @@ export async function generateAudio({
             'Content-Type': 'application/json',
             Accept: 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(withInitDataRaw(body)),
     });
 
     if (!res.ok) {
@@ -816,7 +869,7 @@ export async function generate3D({
             'Content-Type': 'application/json',
             Accept: 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(withInitDataRaw(body)),
     });
 
     if (!res.ok) {
@@ -864,7 +917,7 @@ export async function savePromptHistory({
             'Content-Type': 'application/json',
             Accept: 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(withInitDataRaw(body)),
     });
 
     if (!res.ok) {

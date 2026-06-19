@@ -12,6 +12,17 @@
 
 **Локально:** скопируйте `.env.example` → `.env.development` (уже есть) и перезапустите `npm run dev`. Mock Telegram включён по умолчанию в dev.
 
+## Проверка Telegram initData
+
+Для защищённых ручек фронт передаёт подпись Telegram:
+
+| Ручки | Как передаётся |
+|-------|----------------|
+| `POST /v1/generate/*`, `POST /v1/prompts/history` | В теле: `telegramId`, `initDataRaw` (base64 от `Telegram.WebApp.initData`) |
+| `GET` / `DELETE /v1/prompts/history/telegram/{id}` | Заголовок `X-Telegram-Init-Data: <initData>` |
+
+Без `TELEGRAM_BOT_TOKEN` на бэкенде (локальная разработка) проверка init data отключена.
+
 ---
 
 ## Существующие ручки (используются сейчас)
@@ -81,12 +92,17 @@
 ### `GET /v1/prompts/history/telegram/{telegramId}`
 История промтов.
 
+Заголовок: `X-Telegram-Init-Data: <initData>`.
+
+`DELETE` на том же пути — очистка истории (тот же заголовок).
+
 ### `POST /v1/prompts/history`
 Сохранение промта после чата.
 
 ```json
 {
   "telegramId": "777000",
+  "initDataRaw": "<base64 initData>",
   "prompt": "текст",
   "category": "yandexgpt"
 }
@@ -98,6 +114,7 @@
 ```json
 {
   "telegramId": "777000",
+  "initDataRaw": "<base64 initData>",
   "prompt": "Привет",
   "category": "text",
   "model": "yandexgpt"
