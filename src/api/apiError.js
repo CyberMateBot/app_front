@@ -94,6 +94,10 @@ export function isInsufficientTokensError(error) {
         return false;
     }
 
+    if (message.includes('insufficient tokens')) {
+        return true;
+    }
+
     if (
         message.includes('insufficient')
         || message.includes('not enough')

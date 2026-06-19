@@ -1904,6 +1904,18 @@ function App() {
 
                 setProfile(normalizeProfileResponse(backendProfile, currentTelegramUser));
 
+                try {
+                    const walletPayload = await getMyWallet();
+
+                    if (isMounted) {
+                        setWalletData(walletPayload ?? { wallet: null, transactions: [] });
+                    }
+                } catch (walletError) {
+                    if (import.meta.env.DEV) {
+                        console.warn('[CyberMate] Failed to load wallet on bootstrap:', walletError);
+                    }
+                }
+
                 const { theme: bootstrapTheme, persist } = resolveBootstrapTheme({
                     apiTheme: extractProfileTheme(backendProfile),
                     tg: tgFresh ?? tg,

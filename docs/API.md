@@ -61,7 +61,21 @@
 Фронт: `localStorage` ключ `cybermate-ui-theme`, при ошибке PATCH локальная тема не откатывается.
 
 ### `GET /v1/wallet/telegram/{telegramId}`
-Баланс и транзакции.
+Баланс токенов (`wallets.balance_available`) и транзакции.
+
+```json
+{
+  "wallet": {
+    "balance": 1600,
+    "balance_available": 1600,
+    "tokens": 1600,
+    "total_earned": 0
+  },
+  "transactions": []
+}
+```
+
+`404` — профиль не найден.
 
 ### `GET /v1/users/telegram/{telegramId}/referrals`
 Список приглашённых пользователей.

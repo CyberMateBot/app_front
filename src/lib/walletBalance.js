@@ -21,6 +21,8 @@ export function resolveGenerationTokenBalance(walletPayload, profile) {
 
     return pickFiniteNumber(
         wallet.tokens,
+        wallet.balance_available,
+        wallet.balanceAvailable,
         wallet.token_balance,
         wallet.tokenBalance,
         wallet.ai_tokens,
@@ -29,8 +31,6 @@ export function resolveGenerationTokenBalance(walletPayload, profile) {
         profileData.token_balance,
         profileData.tokenBalance,
         wallet.balance,
-        wallet.balance_available,
-        wallet.balanceAvailable,
         profileData.balance,
         profileData.coins,
         profileData.points,
@@ -44,25 +44,33 @@ export function resolveGenerationTokenBalance(walletPayload, profile) {
 export function normalizeWalletResponse(payload) {
     const data = payload?.data ?? payload ?? {};
     const wallet = data.wallet ?? data ?? {};
-    const tokens = resolveGenerationTokenBalance({ wallet }, null);
+    const balanceAvailable = pickFiniteNumber(
+        wallet.balance_available,
+        wallet.balanceAvailable,
+        wallet.tokens,
+        wallet.token_balance,
+        wallet.tokenBalance,
+    );
+    const tokens = balanceAvailable ?? pickFiniteNumber(
+        wallet.tokens,
+        wallet.balance,
+        wallet.coins,
+        wallet.cyber_coins,
+    ) ?? 0;
     const balance = pickFiniteNumber(
         wallet.balance,
         wallet.coins,
         wallet.cyber_coins,
         tokens,
-    ) ?? 0;
+    ) ?? tokens;
 
     return {
         wallet: {
             ...wallet,
             tokens,
             balance,
-            balanceAvailable: pickFiniteNumber(
-                wallet.balance_available,
-                wallet.balanceAvailable,
-                tokens,
-                balance,
-            ) ?? balance,
+            balanceAvailable: balanceAvailable ?? tokens,
+            balance_available: balanceAvailable ?? tokens,
         },
         transactions: Array.isArray(data.transactions) ? data.transactions : [],
     };
