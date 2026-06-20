@@ -1,9 +1,9 @@
-const PAID_PLAN_IDS = new Set(['pro', 'ultra']);
+const PAID_PLAN_IDS = new Set(['basic', 'pro', 'max', 'ultra']);
 
 export function normalizeSubscriptionPlanId(raw) {
     const planId = String(raw ?? '').trim().toLowerCase();
 
-    if (planId === 'pro' || planId === 'ultra' || planId === 'free') {
+    if (['free', 'basic', 'pro', 'max', 'ultra'].includes(planId)) {
         return planId;
     }
 
@@ -21,11 +21,14 @@ export function deriveSubscriptionView(profile, text = {}) {
         ?? profile?.subscriptionStatus,
     );
 
-    const planNameKey = planId === 'pro'
-        ? 'planProName'
-        : planId === 'ultra'
-            ? 'planUltraName'
-            : 'planFreeName';
+    const planNameKeyMap = {
+        free: 'planFreeName',
+        basic: 'planBasicName',
+        pro: 'planProName',
+        max: 'planMaxName',
+        ultra: 'planUltraName',
+    };
+    const planNameKey = planNameKeyMap[planId] ?? 'planFreeName';
 
     const planName = text[planNameKey] ?? planId;
 

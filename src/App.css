@@ -1684,6 +1684,18 @@
   color: var(--cm-badge-new-fg);
 }
 
+.profile-concept__plan-badge--basic {
+  border-color: var(--cm-badge-new-border);
+  background: var(--cm-badge-new-bg);
+  color: var(--cm-badge-new-fg);
+}
+
+.profile-concept__plan-badge--max {
+  border-color: var(--cm-badge-pro-border);
+  background: var(--cm-badge-pro-bg);
+  color: var(--cm-badge-pro-fg);
+}
+
 .profile-concept__plan-badge--biz {
   border-color: var(--cm-badge-hot-border);
   background: var(--cm-badge-hot-bg);
@@ -2155,6 +2167,68 @@
 
 .subscription-concept__plans {
   margin-bottom: 14px;
+}
+
+.subscription-concept__coin-packs {
+  margin-bottom: 14px;
+}
+
+.subscription-concept__coin-packs-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.subscription-concept__coin-pack {
+  padding: 14px 16px;
+  border: 0.5px solid var(--cm-border);
+  border-radius: 16px;
+  background: var(--cm-surface);
+}
+
+.subscription-concept__coin-pack-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.subscription-concept__coin-pack-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cm-text);
+}
+
+.subscription-concept__coin-pack-coins {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--cm-text);
+}
+
+.subscription-concept__coin-pack-price {
+  text-align: right;
+}
+
+.subscription-concept__coin-pack-price span:last-child {
+  display: block;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--cm-text);
+}
+
+.subscription-concept__coin-pack-badge {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 0.5px solid var(--cm-badge-hot-border);
+  background: var(--cm-badge-hot-bg);
+  color: var(--cm-badge-hot-fg);
+  font-size: 10px;
+  font-weight: 500;
 }
 
 .subscription-concept__plan-btn {

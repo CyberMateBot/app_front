@@ -207,6 +207,12 @@ import { resolveGenerationTokenBalance } from './lib/walletBalance.js';
 import { APP_NAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
 import { deriveSubscriptionView } from './lib/subscriptionView.js';
 import {
+    fetchBillingCatalog,
+    formatPackPrice,
+    formatPlanPrice,
+    getFallbackBillingCatalog,
+} from './lib/billing.js';
+import {
     getTelegramWebApp,
     hydrateTelegramUser,
     initTelegramMiniAppAsync,
@@ -249,9 +255,11 @@ const historyFilterTabs = [
 ];
 
 const subscriptionPlanDefs = [
-    { id: 'free', nameKey: 'planFreeName', badgeKey: 'planFreeBadge', badgeClass: 'free', priceKey: 'planFreePrice', priceSubKey: 'planFreePriceSub' },
-    { id: 'pro', nameKey: 'planProName', badgeKey: 'planProBadge', badgeClass: 'popular', priceKey: 'planProPrice', priceSubKey: 'planProPriceSub', popular: true },
-    { id: 'ultra', nameKey: 'planUltraName', badgeKey: 'planUltraBadge', badgeClass: 'biz', priceKey: 'planUltraPrice', priceSubKey: 'planUltraPriceSub' },
+    { id: 'free',  nameKey: 'planFreeName',  badgeKey: 'planFreeBadge',  badgeClass: 'free',    priceKey: 'planFreePrice',  priceSubKey: 'planFreePriceSub' },
+    { id: 'basic', nameKey: 'planBasicName', badgeKey: 'planBasicBadge', badgeClass: 'basic',   priceKey: 'planBasicPrice', priceSubKey: 'planBasicPriceSub' },
+    { id: 'pro',   nameKey: 'planProName',   badgeKey: 'planProBadge',   badgeClass: 'popular', priceKey: 'planProPrice',   priceSubKey: 'planProPriceSub',   popular: true },
+    { id: 'max',   nameKey: 'planMaxName',   badgeKey: 'planMaxBadge',   badgeClass: 'max',     priceKey: 'planMaxPrice',   priceSubKey: 'planMaxPriceSub' },
+    { id: 'ultra', nameKey: 'planUltraName', badgeKey: 'planUltraBadge', badgeClass: 'biz',     priceKey: 'planUltraPrice', priceSubKey: 'planUltraPriceSub' },
 ];
 
 function formatTemplate(template, values) {
@@ -698,6 +706,10 @@ const translations = {
         walletBalanceEarned: 'Всего заработано',
         walletTransactionsTitle: 'Транзакции',
         walletTransactionsEmpty: 'Транзакций пока нет.',
+        walletCoinPacksTitle: 'Купить монеты',
+        walletCoinPacksSub: 'Разовая покупка CyberCoins',
+        walletCoinPackBuy: 'Купить',
+        walletCoinPackSoon: 'Оплата будет доступна в следующем обновлении.',
         planSelectButton: 'Выбрать план',
         planCurrentButton: 'Текущий план',
         languageLabel: 'Language:',
@@ -751,44 +763,67 @@ const translations = {
         profileMenuLanguage: 'Язык',
         profileMenuDarkTheme: 'Тёмная тема',
         profilePlansTitle: 'Планы подписки',
-        profilePlansSub: '3 уровня · внутренняя валюта CyberCoins',
-        planFreeName: 'Free',
+        profilePlansSub: '5 уровней · 1 CyberCoin = {rate} ₽',
+        planFreeName: 'Старт',
         planFreeBadge: 'Бесплатно',
         planFreePrice: '0 ₽',
         planFreePriceSub: 'навсегда',
-        planProName: 'Pro',
+        planBasicName: 'Базовый',
+        planBasicBadge: 'Доступный',
+        planBasicPrice: '149 ₽',
+        planBasicPriceSub: '/ месяц',
+        planProName: 'Про',
         planProBadge: 'Популярный',
-        planProPrice: '299 ₽',
+        planProPrice: '349 ₽',
         planProPriceSub: '/ месяц',
-        planUltraName: 'Ultra',
+        planMaxName: 'Максимум',
+        planMaxBadge: 'Выгодный',
+        planMaxPrice: '799 ₽',
+        planMaxPriceSub: '/ месяц',
+        planUltraName: 'Бизнес',
         planUltraBadge: 'Для бизнеса',
-        planUltraPrice: '799 ₽',
+        planUltraPrice: '1999 ₽',
         planUltraPriceSub: '/ месяц',
         planFreeFeatures: [
-            '50 запросов / месяц',
-            'AI Чат (GPT-3.5)',
-            '5 фото генераций',
+            '50 монет / месяц',
+            'Базовые чат-модели',
+            '10 изображений (FLUX)',
+            'TTS (базовый)',
         ],
         planFreeLocked: [
-            'Видео, музыка — нет',
-            'Приоритет — нет',
+            'Видео и музыка — нет',
+            'Премиум модели — нет',
+        ],
+        planBasicFeatures: [
+            '250 монет / месяц',
+            'Все fast-модели (Haiku, Flash)',
+            '25 изображений HD',
+            '3 видео (Kling Std)',
+            'Музыка и озвучка',
         ],
         planProFeatures: [
-            '1000 запросов / месяц',
-            'GPT-4o, Claude, Gemini',
-            '100 фото (HD)',
-            '20 видео генераций',
-            'Музыка + озвучка',
-            '+500 CyberCoins/мес',
+            '700 монет / месяц',
+            'Claude, Gemini, GPT-5.4',
+            '35 изображений (GPT Image 2)',
+            '8 видео (Kling/Seedance)',
+            'Музыка + 3D модели',
+            'Приоритетная очередь',
+        ],
+        planMaxFeatures: [
+            '2000 монет / месяц',
+            'Все PRO модели',
+            '100 изображений (4K)',
+            '25 видео HD',
+            'Все инструменты',
+            'Перенос 20% монет',
         ],
         planUltraFeatures: [
-            'Безлимит запросов',
-            'Все модели + GPT-o1',
-            '500 фото (4K)',
-            '100 видео (Runway, Kling)',
+            '6000 монет / месяц',
+            'Claude Opus, o3 и всё',
+            '300+ изображений',
+            '75 видео 4K',
             'API доступ',
-            '+2000 CyberCoins/мес',
-            'Приоритетная очередь',
+            'Перенос 50% монет',
         ],
         textGenerateTitle: 'Генерация текста',
         textModelLabel: 'Нейросеть',
@@ -1228,6 +1263,10 @@ const translations = {
         walletBalanceEarned: 'Total earned',
         walletTransactionsTitle: 'Transactions',
         walletTransactionsEmpty: 'No transactions yet.',
+        walletCoinPacksTitle: 'Buy coins',
+        walletCoinPacksSub: 'One-time CyberCoins purchase',
+        walletCoinPackBuy: 'Buy',
+        walletCoinPackSoon: 'Payments will be available in the next update.',
         planSelectButton: 'Choose plan',
         planCurrentButton: 'Current plan',
         languageLabel: 'Language:',
@@ -1281,44 +1320,67 @@ const translations = {
         profileMenuLanguage: 'Language',
         profileMenuDarkTheme: 'Dark theme',
         profilePlansTitle: 'Subscription plans',
-        profilePlansSub: '3 tiers · CyberCoins internal currency',
-        planFreeName: 'Free',
+        profilePlansSub: '5 tiers · 1 CyberCoin = {rate} ₽',
+        planFreeName: 'Start',
         planFreeBadge: 'Free',
         planFreePrice: '0 ₽',
         planFreePriceSub: 'forever',
+        planBasicName: 'Basic',
+        planBasicBadge: 'Affordable',
+        planBasicPrice: '149 ₽',
+        planBasicPriceSub: '/ month',
         planProName: 'Pro',
         planProBadge: 'Popular',
-        planProPrice: '299 ₽',
+        planProPrice: '349 ₽',
         planProPriceSub: '/ month',
-        planUltraName: 'Ultra',
+        planMaxName: 'Max',
+        planMaxBadge: 'Best value',
+        planMaxPrice: '799 ₽',
+        planMaxPriceSub: '/ month',
+        planUltraName: 'Business',
         planUltraBadge: 'For business',
-        planUltraPrice: '799 ₽',
+        planUltraPrice: '1999 ₽',
         planUltraPriceSub: '/ month',
         planFreeFeatures: [
-            '50 requests / month',
-            'AI Chat (GPT-3.5)',
-            '5 image generations',
+            '50 coins / month',
+            'Basic chat models',
+            '10 images (FLUX)',
+            'Basic TTS',
         ],
         planFreeLocked: [
-            'Video, music — unavailable',
-            'Priority — unavailable',
+            'Video & music — unavailable',
+            'Premium models — unavailable',
+        ],
+        planBasicFeatures: [
+            '250 coins / month',
+            'All fast models (Haiku, Flash)',
+            '25 HD images',
+            '3 videos (Kling Std)',
+            'Music & voiceover',
         ],
         planProFeatures: [
-            '1000 requests / month',
-            'GPT-4o, Claude, Gemini',
-            '100 images (HD)',
-            '20 video generations',
-            'Music + voiceover',
-            '+500 CyberCoins/mo',
+            '700 coins / month',
+            'Claude, Gemini, GPT-5.4',
+            '35 images (GPT Image 2)',
+            '8 videos (Kling/Seedance)',
+            'Music + 3D models',
+            'Priority queue',
+        ],
+        planMaxFeatures: [
+            '2000 coins / month',
+            'All PRO models',
+            '100 images (4K)',
+            '25 HD videos',
+            'All tools',
+            '20% coin rollover',
         ],
         planUltraFeatures: [
-            'Unlimited requests',
-            'All models + GPT-o1',
-            '500 images (4K)',
-            '100 videos (Runway, Kling)',
+            '6000 coins / month',
+            'Claude Opus, o3 and more',
+            '300+ images',
+            '75 4K videos',
             'API access',
-            '+2000 CyberCoins/mo',
-            'Priority queue',
+            '50% coin rollover',
         ],
         textGenerateTitle: 'Text generation',
         textModelLabel: 'Model',
@@ -1408,6 +1470,7 @@ function App() {
     const [currentPage, setCurrentPage] = useState('home');
     const [profile, setProfile] = useState(null);
     const [homeWidgetSlides, setHomeWidgetSlides] = useState(null);
+    const [billingCatalog, setBillingCatalog] = useState(() => getFallbackBillingCatalog());
     const [telegramUser, setTelegramUser] = useState(null);
     const [startParam, setStartParam] = useState('');
     const [appNotice, setAppNotice] = useState(null);
@@ -2160,8 +2223,9 @@ function App() {
                     Promise.allSettled([
                         getMyWallet(),
                         getMyProfile(),
+                        fetchBillingCatalog(),
                     ])
-                        .then(([walletResult, profileResult]) => {
+                        .then(([walletResult, profileResult, billingResult]) => {
                             if (isCancelled) {
                                 return;
                             }
@@ -2176,6 +2240,10 @@ function App() {
 
                             if (profileResult.status === 'fulfilled' && profileResult.value) {
                                 setProfile(normalizeProfileResponse(profileResult.value, telegramUser));
+                            }
+
+                            if (billingResult.status === 'fulfilled' && billingResult.value) {
+                                setBillingCatalog(billingResult.value);
                             }
                         })
                         .finally(() => {
@@ -4045,15 +4113,41 @@ function App() {
         />
     );
 
-    const renderSubscriptionPlanCards = (currentPlanId = 'pro') => (
-        subscriptionPlanDefs.map((plan) => {
-            const features = plan.id === 'free'
-                ? text.planFreeFeatures
-                : plan.id === 'pro'
-                    ? text.planProFeatures
-                    : text.planUltraFeatures;
-            const locked = plan.id === 'free' ? text.planFreeLocked : [];
+    const handleCoinPackPurchase = () => {
+        showAppNotice(text.walletCoinPackSoon);
+    };
+
+    const renderSubscriptionPlanCards = (currentPlanId = 'pro') => {
+        const plans = Array.isArray(billingCatalog?.plans) && billingCatalog.plans.length
+            ? billingCatalog.plans
+            : subscriptionPlanDefs.map((plan) => ({
+                id: plan.id,
+                name: text[plan.nameKey],
+                badge: text[plan.badgeKey],
+                badge_class: plan.badgeClass,
+                price_rub: Number(String(text[plan.priceKey] ?? '0').replace(/[^\d]/g, '')) || 0,
+                price_sub: text[plan.priceSubKey],
+                features: [],
+                locked: [],
+                popular: Boolean(plan.popular),
+            }));
+
+        return plans.map((plan) => {
+            const planFeaturesMap = {
+                free: text.planFreeFeatures,
+                basic: text.planBasicFeatures,
+                pro: text.planProFeatures,
+                max: text.planMaxFeatures,
+                ultra: text.planUltraFeatures,
+            };
+            const features = Array.isArray(plan.features) && plan.features.length
+                ? plan.features
+                : (planFeaturesMap[plan.id] ?? text.planProFeatures);
+            const locked = Array.isArray(plan.locked) && plan.locked.length
+                ? plan.locked
+                : (plan.id === 'free' ? text.planFreeLocked : []);
             const isCurrent = plan.id === currentPlanId;
+            const badgeClass = plan.badge_class || plan.badgeClass || 'free';
 
             return (
                 <article
@@ -4063,14 +4157,14 @@ function App() {
                     {plan.popular ? <span className="profile-concept__plan-glow" aria-hidden="true" /> : null}
                     <div className="profile-concept__plan-top">
                         <div>
-                            <div className="profile-concept__plan-name">{text[plan.nameKey]}</div>
-                            <span className={`profile-concept__plan-badge profile-concept__plan-badge--${plan.badgeClass}`}>
-                                {text[plan.badgeKey]}
+                            <div className="profile-concept__plan-name">{plan.name}</div>
+                            <span className={`profile-concept__plan-badge profile-concept__plan-badge--${badgeClass}`}>
+                                {plan.badge}
                             </span>
                         </div>
                         <div className="profile-concept__plan-price">
-                            <span>{text[plan.priceKey]}</span>
-                            <small>{text[plan.priceSubKey]}</small>
+                            <span>{formatPlanPrice(plan.price_rub, language)}</span>
+                            <small>{plan.price_sub}</small>
                         </div>
                     </div>
                     <div className="profile-concept__plan-features">
@@ -4091,13 +4185,43 @@ function App() {
                         type="button"
                         className={`subscription-concept__plan-btn ${isCurrent ? 'subscription-concept__plan-btn--current' : ''}`}
                         disabled={isCurrent}
+                        onClick={isCurrent ? undefined : handleCoinPackPurchase}
                     >
                         {isCurrent ? text.planCurrentButton : text.planSelectButton}
                     </button>
                 </article>
             );
-        })
-    );
+        });
+    };
+
+    const renderCoinPackCards = () => {
+        const packs = Array.isArray(billingCatalog?.coinPacks) ? billingCatalog.coinPacks : [];
+
+        return packs.map((pack) => (
+            <article key={pack.id} className="subscription-concept__coin-pack">
+                <div className="subscription-concept__coin-pack-top">
+                    <div>
+                        <div className="subscription-concept__coin-pack-name">{pack.name}</div>
+                        <div className="subscription-concept__coin-pack-coins">
+                            <span className="profile-concept__coin-icon">C</span>
+                            {formatNumber(pack.coins)}
+                        </div>
+                    </div>
+                    <div className="subscription-concept__coin-pack-price">
+                        {pack.badge ? <span className="subscription-concept__coin-pack-badge">{pack.badge}</span> : null}
+                        <span>{formatPackPrice(pack.price_rub)}</span>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    className="subscription-concept__plan-btn"
+                    onClick={handleCoinPackPurchase}
+                >
+                    {text.walletCoinPackBuy}
+                </button>
+            </article>
+        ));
+    };
 
     const handleStopChatGeneration = useCallback(() => {
         textGenerationAbortRef.current?.abort();
@@ -5739,8 +5863,20 @@ function App() {
 
                 <div className="profile-concept__plans subscription-concept__plans">
                     <h3 className="profile-concept__plans-title">{text.profilePlansTitle}</h3>
-                    <p className="profile-concept__plans-sub">{text.profilePlansSub}</p>
+                    <p className="profile-concept__plans-sub">
+                        {formatTemplate(text.profilePlansSub, {
+                            rate: String(billingCatalog?.coinRateRub ?? 1),
+                        })}
+                    </p>
                     {renderSubscriptionPlanCards(currentPlanId)}
+                </div>
+
+                <div className="subscription-concept__coin-packs">
+                    <h3 className="profile-concept__plans-title">{text.walletCoinPacksTitle}</h3>
+                    <p className="profile-concept__plans-sub">{text.walletCoinPacksSub}</p>
+                    <div className="subscription-concept__coin-packs-grid">
+                        {renderCoinPackCards()}
+                    </div>
                 </div>
 
                 <p className="profile-concept__section-lbl">{text.walletTransactionsTitle}</p>

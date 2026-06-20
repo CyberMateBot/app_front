@@ -91,7 +91,7 @@ export const API_ENDPOINTS_PLANNED = {
     },
     subscriptionPlans: {
         method: 'GET',
-        path: '/v1/subscriptions/plans',
-        when: 'Карточки тарифов Free/Pro/Ultra',
+        path: '/v1/billing/catalog',
+        when: 'Экран подписки — планы и пакеты монет',
     },
 };
