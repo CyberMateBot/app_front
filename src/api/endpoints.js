@@ -41,6 +41,12 @@ export const API_ENDPOINTS = {
         when: 'После ответа в AI-чате',
         body: '{ telegramId, initDataRaw: base64, prompt, category }',
     },
+    promptHistoryDeleteTopic: {
+        method: 'POST',
+        path: '/v1/prompts/history/delete',
+        when: 'История — удаление выбранных диалогов',
+        body: '{ telegramId, initDataRaw: base64, sessionId, ids?: number[] }',
+    },
     generateText: {
         method: 'POST',
         path: '/v1/generate/text',

@@ -8,6 +8,7 @@ export default function AppPageHeader({
     backLabel = 'Back',
     leading,
     trailing,
+    centerAddon,
 }) {
     return (
         <header className="app-page-header">
@@ -26,7 +27,10 @@ export default function AppPageHeader({
                 )}
             </div>
             <div className="app-page-header__center">
-                <h1 className="app-page-header__title">{title}</h1>
+                <div className="app-page-header__title-row">
+                    <h1 className="app-page-header__title">{title}</h1>
+                    {centerAddon ?? null}
+                </div>
                 {subtitle ? <p className="app-page-header__subtitle">{subtitle}</p> : null}
             </div>
             <div className="app-page-header__side app-page-header__side--end">

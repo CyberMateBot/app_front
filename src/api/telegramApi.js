@@ -230,6 +230,33 @@ export async function clearMyPromptHistory() {
     return res.json().catch(() => ({}));
 }
 
+export async function deletePromptHistoryTopic({ sessionId, ids = [] } = {}) {
+    const telegramId = getCurrentTelegramId();
+    const normalizedIds = Array.isArray(ids)
+        ? ids.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0)
+        : [];
+
+    const res = await apiFetch('/v1/prompts/history/delete', {
+        method: 'POST',
+        headers: getTelegramInitDataHeaders({
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({
+            telegramId,
+            initDataRaw: getInitDataRawBase64(),
+            sessionId: String(sessionId || '').trim(),
+            ids: normalizedIds,
+        }),
+    });
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to delete prompt history topic.');
+    }
+
+    return res.json().catch(() => ({}));
+}
+
 /** @deprecated use GET /v1/generate/models; kept for legacy history entries */
 export const LEGACY_TEXT_MODEL_IDS = ['gemini-flash', 'openai', 'gemini'];
 export const IMAGE_MODEL_IDS = [

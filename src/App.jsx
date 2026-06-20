@@ -29,7 +29,6 @@ import {
     Plus,
     Search,
     Settings,
-    SlidersHorizontal,
     Send,
     Square,
     Trash2,
@@ -44,9 +43,10 @@ import {
 } from 'lucide-react';
 import { FaInstagram } from 'react-icons/fa6';
 import {
+    clearMyPromptHistory,
+    deletePromptHistoryTopic,
     getMyProfile,
     getMyPromptHistory,
-    clearMyPromptHistory,
     getMyReferrals,
     fetchReferralLink,
     fetchReferrals,
@@ -130,6 +130,7 @@ import {
 } from './lib/theme.js';
 import AppNotice from './Components/AppNotice.jsx';
 import AppPageHeader from './Components/AppPageHeader.jsx';
+import CoinBalanceWidget from './Components/CoinBalanceWidget.jsx';
 import HomeNewsWidget from './Components/HomeNewsWidget.jsx';
 import AiVariantSelect from './Components/AiVariantSelect.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
@@ -221,6 +222,7 @@ import {
 
 const navigationItems = [
     { key: 'home', labelKey: 'navHome', icon: House },
+    { key: 'subscription', labelKey: 'navSubscription', icon: Crown },
     { key: 'catalog', labelKey: 'navCatalog', icon: LayoutGrid },
     { key: 'history', labelKey: 'navHistory', icon: History },
     { key: 'profile', labelKey: 'navProfile', icon: User },
@@ -262,6 +264,24 @@ const subscriptionPlanDefs = [
     { id: 'ultra', nameKey: 'planUltraName', badgeKey: 'planUltraBadge', badgeClass: 'biz',     priceKey: 'planUltraPrice', priceSubKey: 'planUltraPriceSub' },
 ];
 
+const subscriptionPlanEnglishNameKeys = {
+    free: 'planFreeName',
+    basic: 'planBasicName',
+    pro: 'planProName',
+    max: 'planMaxName',
+    ultra: 'planUltraName',
+};
+
+function getSubscriptionPlanEnglishName(planId, fallback = '') {
+    const nameKey = subscriptionPlanEnglishNameKeys[planId];
+
+    if (!nameKey) {
+        return fallback || planId;
+    }
+
+    return translations.en[nameKey] ?? (fallback || planId);
+}
+
 function formatTemplate(template, values) {
     return Object.entries(values).reduce(
         (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
@@ -277,6 +297,65 @@ function formatNumber(value) {
     }
 
     return new Intl.NumberFormat('ru-RU').format(numeric);
+}
+
+function removeHistoryTopicsFromPromptData(prev, topics) {
+    if (!Array.isArray(topics) || topics.length === 0) {
+        return prev;
+    }
+
+    const idsToRemove = new Set();
+    const sessionIds = new Set();
+    const legacyIds = new Set();
+
+    topics.forEach((topic) => {
+        const sessionId = String(topic?.sessionId || '').trim();
+
+        if (sessionId) {
+            sessionIds.add(sessionId);
+
+            if (sessionId.startsWith('legacy-')) {
+                const legacyId = Number(sessionId.replace('legacy-', ''));
+
+                if (Number.isFinite(legacyId) && legacyId > 0) {
+                    legacyIds.add(legacyId);
+                }
+            }
+        }
+
+        if (Array.isArray(topic?.items)) {
+            topic.items.forEach((item) => {
+                const itemId = Number(item.id);
+
+                if (Number.isFinite(itemId) && itemId > 0) {
+                    idsToRemove.add(itemId);
+                }
+            });
+        }
+    });
+
+    const items = Array.isArray(prev?.items) ? prev.items : [];
+    const nextItems = items.filter((item) => {
+        const itemId = Number(item.id);
+
+        if (idsToRemove.has(itemId)) {
+            return false;
+        }
+
+        const itemSessionId = String(item.sessionId || item.session_id || '').trim();
+
+        if (itemSessionId && sessionIds.has(itemSessionId)) {
+            return false;
+        }
+
+        if (legacyIds.has(itemId)) {
+            return false;
+        }
+
+        return true;
+    });
+
+    return { ...(prev ?? {}), items: nextItems };
 }
 
 const translations = {
@@ -430,6 +509,7 @@ const translations = {
         toolTextTitle: 'Текст & Код',
         toolTextSub: 'Рерайт, суммари',
         navHome: 'Главная',
+        navSubscription: 'Подписки',
         navCatalog: 'Каталог',
         navHistory: 'История',
         navProfile: 'Профиль',
@@ -660,6 +740,13 @@ const translations = {
         chatNewDialog: 'Новый диалог',
         chatGenerating: 'Generating',
         historyDeleteConfirm: 'Удалить всю историю промтов? Это действие нельзя отменить.',
+        historyTopicDeleteConfirm: 'Удалить этот диалог из истории?',
+        historyTopicDeleted: 'Диалог удалён.',
+        historyTopicDeleteFailed: 'Не удалось удалить диалог.',
+        historySelectModeHint: 'Выберите диалоги для удаления',
+        historyDeleteSelected: 'Удалить ({count})',
+        historyDeleteSelectedConfirm: 'Удалить выбранные диалоги ({count})?',
+        historyTopicsDeleted: 'Выбранные диалоги удалены.',
         historyDeleteConfirmAction: 'Удалить',
         historyDeleteCancel: 'Отмена',
         historyCleared: 'История очищена.',
@@ -686,6 +773,10 @@ const translations = {
         settingsSupportSub: 'Написать в Telegram',
         balanceTitle: 'Баланс',
         subscriptionTitle: 'Подписка',
+        subscriptionPageTitle: 'Подписки',
+        subscriptionPageSub: '5 уровней · 1 CyberCoin = {rate} ₽',
+        subscriptionCurrentPlan: 'Ваш план',
+        subscriptionCoinsPerMonth: 'монет / мес',
         referralProgramTitle: 'Реферальная программа',
         referralIntro: 'Приглашайте друзей в CyberMate и получайте CyberCoins за каждого активного пользователя.',
         referralStatFriends: 'Друзей',
@@ -699,7 +790,7 @@ const translations = {
         referralCopied: 'Ссылка скопирована',
         referralEmpty: 'Пока нет активных рефералов.',
         activeReferralsTitle: 'Мои рефералы',
-        walletPageTitle: 'Подписка',
+        walletPageTitle: 'Пополнить',
         walletCurrentPlan: 'Текущий план',
         walletBalanceTotal: 'Баланс',
         walletBalanceAvailable: 'Доступно',
@@ -987,6 +1078,7 @@ const translations = {
         toolTextTitle: 'Text & Code',
         toolTextSub: 'Rewrite, summary',
         navHome: 'Home',
+        navSubscription: 'Plans',
         navCatalog: 'Catalog',
         navHistory: 'History',
         navProfile: 'Profile',
@@ -1217,6 +1309,13 @@ const translations = {
         chatNewDialog: 'New chat',
         chatGenerating: 'Generating',
         historyDeleteConfirm: 'Delete all prompt history? This cannot be undone.',
+        historyTopicDeleteConfirm: 'Delete this conversation from history?',
+        historyTopicDeleted: 'Conversation deleted.',
+        historyTopicDeleteFailed: 'Failed to delete conversation.',
+        historySelectModeHint: 'Select conversations to delete',
+        historyDeleteSelected: 'Delete ({count})',
+        historyDeleteSelectedConfirm: 'Delete selected conversations ({count})?',
+        historyTopicsDeleted: 'Selected conversations deleted.',
         historyDeleteConfirmAction: 'Delete',
         historyDeleteCancel: 'Cancel',
         historyCleared: 'History cleared.',
@@ -1243,6 +1342,10 @@ const translations = {
         settingsSupportSub: 'Message on Telegram',
         balanceTitle: 'Balance',
         subscriptionTitle: 'Subscription',
+        subscriptionPageTitle: 'Plans',
+        subscriptionPageSub: '5 tiers · 1 CyberCoin = {rate} ₽',
+        subscriptionCurrentPlan: 'Your plan',
+        subscriptionCoinsPerMonth: 'coins / mo',
         referralProgramTitle: 'Referral program',
         referralIntro: 'Invite friends to CyberMate and earn CyberCoins for every active user.',
         referralStatFriends: 'Friends',
@@ -1256,7 +1359,7 @@ const translations = {
         referralCopied: 'Link copied',
         referralEmpty: 'No active referrals yet.',
         activeReferralsTitle: 'Active referrals',
-        walletPageTitle: 'Subscription',
+        walletPageTitle: 'Top up',
         walletCurrentPlan: 'Current plan',
         walletBalanceTotal: 'Balance',
         walletBalanceAvailable: 'Available',
@@ -1589,6 +1692,8 @@ function App() {
     const [catalogTab, setCatalogTab] = useState('all');
     const [catalogSearch, setCatalogSearch] = useState('');
     const [historyFilter, setHistoryFilter] = useState('all');
+    const [historySelectMode, setHistorySelectMode] = useState(false);
+    const [selectedHistoryTopicIds, setSelectedHistoryTopicIds] = useState([]);
 
     const effectiveTextModels = useMemo(
         () => resolveEffectiveTextModels(textModels),
@@ -2458,11 +2563,17 @@ function App() {
         [promptHistoryData],
     );
     const walletTransactions = Array.isArray(walletData?.transactions) ? walletData.transactions : [];
+    const tokenBalance = resolveGenerationTokenBalance(walletData, profile);
+
+    const openCoinTopUp = useCallback(() => {
+        setCurrentPage('wallet');
+    }, []);
     const activeNavKey = currentPage === 'settings' || currentPage === 'wallet' || currentPage === 'referrals'
         ? 'profile'
         : currentPage === 'ai-chat' || currentPage === 'ai-image' || currentPage === 'ai-video'
+            || currentPage === 'ai-voice' || currentPage === 'ai-3d'
             ? 'catalog'
-            : ['home', 'catalog', 'history', 'profile'].includes(currentPage)
+            : ['home', 'subscription', 'catalog', 'history', 'profile'].includes(currentPage)
                 ? currentPage
                 : 'home';
 
@@ -2682,6 +2793,32 @@ function App() {
 
         return groups;
     }, [historyTopics, text.historyToday, text.historyYesterday, language]);
+
+    useEffect(() => {
+        if (currentPage !== 'history') {
+            setHistorySelectMode(false);
+            setSelectedHistoryTopicIds([]);
+        }
+    }, [currentPage]);
+
+    const exitHistorySelectMode = useCallback(() => {
+        setHistorySelectMode(false);
+        setSelectedHistoryTopicIds([]);
+    }, []);
+
+    const toggleHistoryTopicSelected = useCallback((topicId) => {
+        setSelectedHistoryTopicIds((prev) => (
+            prev.includes(topicId)
+                ? prev.filter((id) => id !== topicId)
+                : [...prev, topicId]
+        ));
+    }, []);
+
+    const selectedHistoryTopics = useMemo(() => {
+        const selected = new Set(selectedHistoryTopicIds);
+
+        return historyTopicGroups.flatMap((group) => group.topics.filter((topic) => selected.has(topic.id)));
+    }, [historyTopicGroups, selectedHistoryTopicIds]);
 
     const formatHistoryTime = (createdAt) => {
         if (!createdAt) {
@@ -4094,13 +4231,24 @@ function App() {
         onBack,
         onNewDialog,
         newDialogDisabled = false,
+        showCoinWidget = true,
     }) => (
         <AppPageHeader
             title={title}
             subtitle={subtitle}
             onBack={onBack}
             backLabel={text.back}
-            trailing={(
+            centerAddon={showCoinWidget ? (
+                <CoinBalanceWidget
+                    balance={tokenBalance}
+                    onClick={openCoinTopUp}
+                    onTopUp={openCoinTopUp}
+                    compact
+                    showPlus
+                    topUpLabel={text.profileTopUp}
+                />
+            ) : null}
+            trailing={onNewDialog ? (
                 <button
                     type="button"
                     className="app-page-header__action app-page-header__action--text"
@@ -4108,7 +4256,9 @@ function App() {
                     disabled={newDialogDisabled}
                 >
                     {text.chatNewDialog}
-            </button>
+                </button>
+            ) : (
+                <span className="app-page-header__spacer" aria-hidden="true" />
             )}
         />
     );
@@ -4117,7 +4267,7 @@ function App() {
         showAppNotice(text.walletCoinPackSoon);
     };
 
-    const renderSubscriptionPlanCards = (currentPlanId = 'pro') => {
+    const renderSubscriptionPlanCards = (currentPlanId = 'pro', { variant = 'default' } = {}) => {
         const plans = Array.isArray(billingCatalog?.plans) && billingCatalog.plans.length
             ? billingCatalog.plans
             : subscriptionPlanDefs.map((plan) => ({
@@ -4127,12 +4277,13 @@ function App() {
                 badge_class: plan.badgeClass,
                 price_rub: Number(String(text[plan.priceKey] ?? '0').replace(/[^\d]/g, '')) || 0,
                 price_sub: text[plan.priceSubKey],
+                coins: 0,
                 features: [],
                 locked: [],
                 popular: Boolean(plan.popular),
             }));
 
-        return plans.map((plan) => {
+        return plans.map((plan, index) => {
             const planFeaturesMap = {
                 free: text.planFreeFeatures,
                 basic: text.planBasicFeatures,
@@ -4148,6 +4299,71 @@ function App() {
                 : (plan.id === 'free' ? text.planFreeLocked : []);
             const isCurrent = plan.id === currentPlanId;
             const badgeClass = plan.badge_class || plan.badgeClass || 'free';
+            const coins = Number(plan.coins) || 0;
+            const planDef = subscriptionPlanDefs.find((entry) => entry.id === plan.id);
+
+            if (variant === 'page') {
+                const displayName = getSubscriptionPlanEnglishName(plan.id, plan.name);
+                const displayBadge = planDef ? text[planDef.badgeKey] : plan.badge;
+                const displayPriceSub = planDef ? text[planDef.priceSubKey] : plan.price_sub;
+                const displayFeatures = planFeaturesMap[plan.id] ?? text.planProFeatures;
+                const displayLocked = plan.id === 'free' ? text.planFreeLocked : [];
+
+                return (
+                    <article
+                        key={plan.id}
+                        className={[
+                            'subscription-plan-card',
+                            `subscription-plan-card--${badgeClass}`,
+                            plan.popular ? 'subscription-plan-card--popular' : '',
+                            isCurrent ? 'subscription-plan-card--current' : '',
+                        ].filter(Boolean).join(' ')}
+                        style={{ '--card-index': index }}
+                    >
+                        <div className="subscription-plan-card__header">
+                            <div>
+                                <h3 className="subscription-plan-card__name">{displayName}</h3>
+                                <span className={`subscription-plan-card__badge subscription-plan-card__badge--${badgeClass}`}>
+                                    {displayBadge}
+                                </span>
+                            </div>
+                            <div className="subscription-plan-card__price-block">
+                                <span className="subscription-plan-card__price">{formatPlanPrice(plan.price_rub, language)}</span>
+                                <small>{displayPriceSub}</small>
+                            </div>
+                        </div>
+                        {coins > 0 ? (
+                            <div className="subscription-plan-card__coins">
+                                <span className="subscription-plan-card__coin-icon">C</span>
+                                <span className="subscription-plan-card__coin-value">{formatNumber(coins)}</span>
+                                <span className="subscription-plan-card__coin-label">{text.subscriptionCoinsPerMonth}</span>
+                            </div>
+                        ) : null}
+                        <ul className="subscription-plan-card__features">
+                            {displayFeatures.map((feature) => (
+                                <li key={feature} className="subscription-plan-card__feat">
+                                    <Check size={14} aria-hidden="true" />
+                                    <span>{feature}</span>
+                                </li>
+                            ))}
+                            {displayLocked.map((feature) => (
+                                <li key={feature} className="subscription-plan-card__feat subscription-plan-card__feat--locked">
+                                    <Lock size={14} aria-hidden="true" />
+                                    <span>{feature}</span>
+                                </li>
+                            ))}
+                        </ul>
+                        <button
+                            type="button"
+                            className={`subscription-plan-card__btn ${isCurrent ? 'subscription-plan-card__btn--current' : ''}`}
+                            disabled={isCurrent}
+                            onClick={isCurrent ? undefined : handleCoinPackPurchase}
+                        >
+                            {isCurrent ? text.planCurrentButton : text.planSelectButton}
+                        </button>
+                    </article>
+                );
+            }
 
             return (
                 <article
@@ -4283,6 +4499,50 @@ function App() {
                 }
             },
         });
+    };
+
+    const handleDeleteSelectedHistoryRequest = () => {
+        if (selectedHistoryTopics.length === 0) {
+            return;
+        }
+
+        setConfirmDialog({
+            message: formatTemplate(text.historyDeleteSelectedConfirm, {
+                count: selectedHistoryTopics.length,
+            }),
+            confirmLabel: text.historyDeleteConfirmAction,
+            cancelLabel: text.historyDeleteCancel,
+            onConfirm: async () => {
+                try {
+                    await Promise.all(selectedHistoryTopics.map((topic) => {
+                        const topicIds = Array.isArray(topic.items)
+                            ? topic.items.map((item) => Number(item.id)).filter((id) => Number.isFinite(id) && id > 0)
+                            : [];
+
+                        return deletePromptHistoryTopic({
+                            sessionId: topic.sessionId,
+                            ids: topicIds,
+                        });
+                    }));
+
+                    setPromptHistoryData((prev) => removeHistoryTopicsFromPromptData(prev, selectedHistoryTopics));
+                    exitHistorySelectMode();
+                    showAppNotice(text.historyTopicsDeleted, 'success');
+                } catch (error) {
+                    showAppNotice(error instanceof Error ? error.message : text.historyTopicDeleteFailed, 'error');
+                }
+            },
+        });
+    };
+
+    const handleHistoryDeleteAction = () => {
+        if (!historySelectMode) {
+            setHistorySelectMode(true);
+            setSelectedHistoryTopicIds([]);
+            return;
+        }
+
+        handleDeleteSelectedHistoryRequest();
     };
 
     const handleSendChatMessage = async () => {
@@ -4602,9 +4862,14 @@ function App() {
             <AppPageHeader
                 title={text.catalogTitle}
                 trailing={(
-                <button type="button" className="catalog-concept__filter" aria-label={text.catalogTitle}>
-                    <SlidersHorizontal size={17} aria-hidden="true" />
-                </button>
+                    <CoinBalanceWidget
+                        balance={tokenBalance}
+                        onClick={openCoinTopUp}
+                        onTopUp={openCoinTopUp}
+                        compact
+                        showPlus
+                        topUpLabel={text.profileTopUp}
+                    />
                 )}
             />
 
@@ -5662,7 +5927,7 @@ function App() {
                                 <span className="profile-concept__balance-num">{formatNumber(tokenBalance)}</span>
                             </div>
                         </div>
-                        <button type="button" className="profile-concept__topup-btn" onClick={() => setCurrentPage('wallet')}>
+                        <button type="button" className="profile-concept__topup-btn" onClick={openCoinTopUp}>
                             <Plus size={12} aria-hidden="true" />
                             {text.profileTopUp}
                         </button>
@@ -5682,7 +5947,7 @@ function App() {
 
                 <p className="profile-concept__section-lbl">{text.profileAccountSection}</p>
                 <div className="profile-concept__menu-list">
-                    <button type="button" className="profile-concept__menu-item" onClick={() => setCurrentPage('wallet')}>
+                    <button type="button" className="profile-concept__menu-item" onClick={() => setCurrentPage('subscription')}>
                         <span className="profile-concept__menu-ico profile-concept__menu-ico--violet"><Crown size={16} /></span>
                         <span className="profile-concept__menu-text">
                             <span className="profile-concept__menu-title">{text.profileMenuSubscription}</span>
@@ -5823,23 +6088,60 @@ function App() {
             </section>
         );
 
+    const renderSubscriptionScreen = () => {
+        const currentPlanId = userData.subscriptionPlanId;
+        const currentPlanEnglishName = getSubscriptionPlanEnglishName(
+            currentPlanId,
+            userData.subscriptionPlanName,
+        );
+
+        return (
+            <section className="subscription-page" aria-label={text.subscriptionPageTitle}>
+                <AppPageHeader
+                    title={text.subscriptionPageTitle}
+                    trailing={(
+                        <CoinBalanceWidget
+                            balance={tokenBalance}
+                            onClick={openCoinTopUp}
+                            onTopUp={openCoinTopUp}
+                            compact
+                            showPlus
+                            topUpLabel={text.profileTopUp}
+                        />
+                    )}
+                />
+
+                <div className="subscription-page__hero subscription-page__hero--animate">
+                    <p className="subscription-page__hero-label">{text.subscriptionCurrentPlan}</p>
+                    <div className="subscription-page__hero-plan">
+                        <Crown size={18} aria-hidden="true" />
+                        <span>{currentPlanEnglishName}</span>
+                    </div>
+                    <p className="subscription-page__hero-sub">
+                        {formatTemplate(text.subscriptionPageSub, {
+                            rate: String(billingCatalog?.coinRateRub ?? 1),
+                        })}
+                    </p>
+                </div>
+
+                <div className="subscription-page__plans-scroll">
+                    <div className="subscription-page__plans">
+                        {renderSubscriptionPlanCards(currentPlanId, { variant: 'page' })}
+                    </div>
+                </div>
+            </section>
+        );
+    };
+
     const renderWalletScreen = () => {
-        const tokenBalance = resolveGenerationTokenBalance(walletData, profile);
         const balanceAvailable = Number(walletData?.wallet?.balanceAvailable ?? tokenBalance) || 0;
         const totalEarned = Number(walletData?.wallet?.totalEarned ?? 0) || 0;
-        const currentPlanId = userData.subscriptionPlanId;
 
         return (
             <section className="wallet-screen wallet-screen--concept">
                 {renderConceptPageHeader(text.walletPageTitle, () => setCurrentPage('profile'))}
 
-                <p className="profile-concept__section-lbl">{text.walletCurrentPlan}</p>
-                <div className="subscription-concept__current">
-                    <Crown size={16} aria-hidden="true" />
-                    <span>{userData.subscriptionPlanName}</span>
-                </div>
-
-                <article className="profile-concept__balance-card subscription-concept__balance">
+                <article className="profile-concept__balance-card subscription-concept__balance subscription-page__hero--animate">
                     <div className="subscription-concept__balance-grid">
                         <div className="subscription-concept__balance-item">
                             <span className="subscription-concept__balance-label">{text.walletBalanceTotal}</span>
@@ -5860,16 +6162,6 @@ function App() {
                         </div>
                     </div>
                 </article>
-
-                <div className="profile-concept__plans subscription-concept__plans">
-                    <h3 className="profile-concept__plans-title">{text.profilePlansTitle}</h3>
-                    <p className="profile-concept__plans-sub">
-                        {formatTemplate(text.profilePlansSub, {
-                            rate: String(billingCatalog?.coinRateRub ?? 1),
-                        })}
-                    </p>
-                    {renderSubscriptionPlanCards(currentPlanId)}
-                </div>
 
                 <div className="subscription-concept__coin-packs">
                     <h3 className="profile-concept__plans-title">{text.walletCoinPacksTitle}</h3>
@@ -5901,23 +6193,45 @@ function App() {
     };
 
     const renderHistoryScreen = () => (
-        <section className="history-screen history-screen--concept">
+        <section className={`history-screen history-screen--concept ${historySelectMode ? 'history-screen--select-mode' : ''}`}>
             <AppPageHeader
                 title={text.historyTitle}
-                onBack={() => setCurrentPage(historyReturnPage)}
-                backLabel={text.back}
+                subtitle={historySelectMode ? text.historySelectModeHint : undefined}
+                onBack={() => {
+                    if (historySelectMode) {
+                        exitHistorySelectMode();
+                        return;
+                    }
+
+                    setCurrentPage(historyReturnPage);
+                }}
+                backLabel={historySelectMode ? text.historyDeleteCancel : text.back}
                 trailing={(
                 <div className="history-concept__actions">
-                    <button type="button" className="history-concept__action" aria-label="Download">
-                        <Download size={17} aria-hidden="true" />
-                    </button>
+                    {!historySelectMode ? (
+                        <button type="button" className="history-concept__action" aria-label="Download">
+                            <Download size={17} aria-hidden="true" />
+                        </button>
+                    ) : null}
+                    {historySelectMode ? (
+                        <button
+                            type="button"
+                            className="history-concept__action history-concept__action--text"
+                            onClick={exitHistorySelectMode}
+                        >
+                            {text.historyDeleteCancel}
+                        </button>
+                    ) : null}
                     <button
                         type="button"
-                        className="history-concept__action"
-                        aria-label="Delete"
-                        onClick={handleClearHistoryRequest}
+                        className={`history-concept__action ${historySelectMode ? 'history-concept__action--danger' : ''}`}
+                        aria-label={historySelectMode ? text.historyDeleteConfirmAction : text.historySelectModeHint}
+                        onClick={handleHistoryDeleteAction}
+                        disabled={historySelectMode && selectedHistoryTopics.length === 0}
                     >
-                        <Trash2 size={17} aria-hidden="true" />
+                        {historySelectMode
+                            ? formatTemplate(text.historyDeleteSelected, { count: selectedHistoryTopics.length })
+                            : <Trash2 size={17} aria-hidden="true" />}
                     </button>
                 </div>
                 )}
@@ -5974,20 +6288,48 @@ function App() {
                                 getAudioSelectorChipLabel,
                             }) || visual.toolName;
 
+                            const isTopicSelected = selectedHistoryTopicIds.includes(topic.id);
+
                             return (
                                 <article
                                     key={topic.id}
-                                    className="history-concept__item history-concept__item--clickable"
+                                    className={[
+                                        'history-concept__item',
+                                        historySelectMode ? 'history-concept__item--selectable' : 'history-concept__item--clickable',
+                                        isTopicSelected ? 'history-concept__item--selected' : '',
+                                    ].filter(Boolean).join(' ')}
                                     role="button"
                                     tabIndex={0}
-                                    onClick={() => openHistoryTopic(topic)}
+                                    aria-pressed={historySelectMode ? isTopicSelected : undefined}
+                                    onClick={() => {
+                                        if (historySelectMode) {
+                                            toggleHistoryTopicSelected(topic.id);
+                                            return;
+                                        }
+
+                                        openHistoryTopic(topic);
+                                    }}
                                     onKeyDown={(event) => {
                                         if (event.key === 'Enter' || event.key === ' ') {
                                             event.preventDefault();
+
+                                            if (historySelectMode) {
+                                                toggleHistoryTopicSelected(topic.id);
+                                                return;
+                                            }
+
                                             openHistoryTopic(topic);
                                         }
                                     }}
                                 >
+                                    {historySelectMode ? (
+                                        <span
+                                            className={`history-concept__checkbox ${isTopicSelected ? 'history-concept__checkbox--checked' : ''}`}
+                                            aria-hidden="true"
+                                        >
+                                            {isTopicSelected ? <Check size={13} /> : null}
+                                        </span>
+                                    ) : null}
                                     <div className={`history-concept__thumb history-concept__thumb--${visual.accent}`}>
                                         <ThumbIcon size={18} aria-hidden="true" />
                                     </div>
@@ -6185,7 +6527,9 @@ function App() {
             <main className="app-main">
                 {currentPage === 'home'
                     ? renderHomeScreen()
-                    : currentPage === 'catalog'
+                    : currentPage === 'subscription'
+                        ? renderSubscriptionScreen()
+                        : currentPage === 'catalog'
                         ? renderCatalogScreen()
                         : currentPage === 'profile'
                             ? renderProfileScreen()

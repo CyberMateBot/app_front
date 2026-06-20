@@ -32,8 +32,31 @@ function isMobileDevice() {
         || (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
 }
 
+function normalizeMediaKind(kind) {
+    const value = String(kind || '').trim().toLowerCase();
+
+    if (value === 'image' || value.startsWith('image-')) {
+        return 'image';
+    }
+
+    if (value === 'video' || value.startsWith('video-')) {
+        return 'video';
+    }
+
+    if (value === 'audio' || value.startsWith('audio-')) {
+        return 'audio';
+    }
+
+    if (value === '3d' || value.startsWith('3d-')) {
+        return '3d';
+    }
+
+    return value;
+}
+
 function isGalleryKind(kind) {
-    return kind === 'image' || kind === 'video';
+    const normalized = normalizeMediaKind(kind);
+    return normalized === 'image' || normalized === 'video';
 }
 
 function shouldSaveToGallery(kind) {
@@ -303,14 +326,18 @@ async function downloadGalleryBlob(blob, filename, kind) {
 }
 
 async function downloadBlobOnDevice(blob, filename, kind) {
-    if (shouldSaveToGallery(kind)) {
-        return downloadGalleryBlob(blob, filename, kind);
+    if (supportsTelegramDownload()) {
+        try {
+            const preparedUrl = await prepareDataDownloadUrl(blob, filename);
+            await tryTelegramDownload(preparedUrl, filename);
+            return { method: 'telegram' };
+        } catch {
+            // fall through to gallery / share / blob download
+        }
     }
 
-    if (supportsTelegramDownload()) {
-        const preparedUrl = await prepareDataDownloadUrl(blob, filename);
-        await tryTelegramDownload(preparedUrl, filename);
-        return { method: 'telegram' };
+    if (shouldSaveToGallery(kind)) {
+        return downloadGalleryBlob(blob, filename, kind);
     }
 
     if (isMobileDevice()) {
@@ -325,17 +352,29 @@ async function downloadBlobOnDevice(blob, filename, kind) {
     return { method: 'blob' };
 }
 
+async function tryTelegramProxyDownload(url, filename) {
+    const proxyUrl = buildProxyDownloadUrl(url, filename);
+
+    if (!supportsTelegramDownload() || !proxyUrl) {
+        return false;
+    }
+
+    try {
+        await tryTelegramDownload(proxyUrl, filename);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 async function downloadRemoteUrl(trimmed, safeFilename, kind) {
+    if (await tryTelegramProxyDownload(trimmed, safeFilename)) {
+        return { method: 'telegram' };
+    }
+
     if (shouldSaveToGallery(kind)) {
         const blob = await fetchViaProxy(trimmed, safeFilename);
         return downloadGalleryBlob(blob, safeFilename, kind);
-    }
-
-    const proxyUrl = buildProxyDownloadUrl(trimmed, safeFilename);
-
-    if (supportsTelegramDownload() && proxyUrl) {
-        await tryTelegramDownload(proxyUrl, safeFilename);
-        return { method: 'telegram' };
     }
 
     const blob = await fetchViaProxy(trimmed, safeFilename);
@@ -360,7 +399,7 @@ export async function downloadMediaUrl(url, filename = 'cybermate-media', option
     }
 
     const safeFilename = String(filename || 'cybermate-media').trim() || 'cybermate-media';
-    const kind = String(options.kind || '').trim();
+    const kind = normalizeMediaKind(options.kind);
 
     if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
         const blob = trimmed.startsWith('data:')
