@@ -10,6 +10,13 @@ const buildId = (
     || String(Date.now())
 ).slice(0, 12);
 
+function buildMetaPayload() {
+    return {
+        buildId,
+        builtAt: new Date().toISOString(),
+    };
+}
+
 function cybermateBuildMetaPlugin() {
     return {
         name: 'cybermate-build-meta',
@@ -19,14 +26,24 @@ function cybermateBuildMetaPlugin() {
                 `    <meta name="cm-build-id" content="${buildId}" />\n  </head>`,
             );
         },
+        configureServer(server) {
+            server.middlewares.use((req, res, next) => {
+                const path = req.url?.split('?')[0];
+                if (path !== '/build-meta.json') {
+                    next();
+                    return;
+                }
+
+                res.setHeader('Content-Type', 'application/json; charset=utf-8');
+                res.setHeader('Cache-Control', 'no-store');
+                res.end(`${JSON.stringify(buildMetaPayload())}\n`);
+            });
+        },
         closeBundle() {
             const outDir = resolve(process.cwd(), 'dist');
             writeFileSync(
                 resolve(outDir, 'build-meta.json'),
-                `${JSON.stringify({
-                    buildId,
-                    builtAt: new Date().toISOString(),
-                })}\n`,
+                `${JSON.stringify(buildMetaPayload())}\n`,
             );
         },
     };

@@ -40,7 +40,9 @@ import {
     Video,
     Wallet,
     Zap,
+    Play,
 } from 'lucide-react';
+import { FaInstagram } from 'react-icons/fa6';
 import {
     getMyProfile,
     getMyPromptHistory,
@@ -107,6 +109,13 @@ import {
     syncBackgroundTyping,
 } from './lib/backgroundTyping.js';
 import { getHistoryTopicLabel, resolveHistoryTopicModel as resolveHistoryTopicModelId } from './lib/historyLabels.js';
+import {
+    fetchHomeWidgets,
+    formatRelativeTime,
+    getHomeNewsSlides,
+    HOME_SOCIAL_LINKS,
+    openExternalLink,
+} from './lib/homeWidgets.js';
 import { getAiGroupTitle, getAiVariantOptions } from './lib/aiVariantOptions.js';
 import { openSupport, resolveSupportUrl } from './lib/openSupport.js';
 import {
@@ -121,6 +130,7 @@ import {
 } from './lib/theme.js';
 import AppNotice from './Components/AppNotice.jsx';
 import AppPageHeader from './Components/AppPageHeader.jsx';
+import HomeNewsWidget from './Components/HomeNewsWidget.jsx';
 import AiVariantSelect from './Components/AiVariantSelect.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
 import MediaMessageBubble from './Components/MediaMessageBubble.jsx';
@@ -157,13 +167,12 @@ import {
 } from './lib/threeDModels.js';
 import {
     buildCatalogTextTools,
-    buildTextModelGroupOptions,
     buildTextModelSelectorItems,
     DEFAULT_TEXT_MODELS,
-    getActiveTextModelGroupId,
     resolveEffectiveTextModels,
     findTextModel,
     getCatalogModelDescription,
+    getModelLabel,
     getSelectorItemForModelId,
     getStoredTextModelId,
     getTextModelVisual,
@@ -173,6 +182,7 @@ import {
     shouldShowCatalogBadge,
     textModelSupportsImage,
 } from './lib/textModels.js';
+import { catalogTabs, toolMatchesCatalogTab } from './lib/catalogFilters.js';
 import {
     buildCatalogAudioTools,
     buildCatalogImageTools,
@@ -208,13 +218,6 @@ const navigationItems = [
     { key: 'catalog', labelKey: 'navCatalog', icon: LayoutGrid },
     { key: 'history', labelKey: 'navHistory', icon: History },
     { key: 'profile', labelKey: 'navProfile', icon: User },
-];
-
-const catalogTabs = [
-    { id: 'all', labelKey: 'catalogTabAll' },
-    { id: 'chat', labelKey: 'catalogTabChat' },
-    { id: 'photo', labelKey: 'catalogTabPhoto' },
-    { id: 'code', labelKey: 'catalogTabCode' },
 ];
 
 const homeCategoryChips = [
@@ -279,6 +282,24 @@ const translations = {
         homeSearchPlaceholder: 'Поиск инструментов...',
         homeCategoriesLabel: 'Категории',
         homeToolsLabel: 'Инструменты',
+        homeBrandName: 'CyberMate',
+        homeSocialLabel: 'Мы в соцсетях',
+        homeSocialTiktok: 'TikTok',
+        homeSocialInstagram: 'Instagram',
+        homeSocialTelegram: 'Канал',
+        homeContinueWith: 'Продолжить с {model}',
+        homeContinueStart: 'Начать с {model}',
+        homeContinueSub: 'Последний диалог · {time}',
+        homeContinueEmptySub: 'Быстрый старт с выбранной моделью',
+        homeNews1Tag: 'Новинка',
+        homeNews1Title: 'Добавили Seedance — видео от ByteDance',
+        homeNews1Desc: 'Image-to-video и расширение клипов уже в каталоге',
+        homeNews2Tag: 'Акция',
+        homeNews2Title: 'Скидка 20% на пакет 1000 монет',
+        homeNews2Desc: 'Только до конца недели',
+        homeNews3Tag: 'Обновление',
+        homeNews3Title: 'Чаты теперь отвечают на 40% быстрее',
+        homeNews3Desc: 'Ускорили GPT и Claude',
         chipAll: 'Все',
         chipChats: 'Чаты',
         chipImages: 'Изображения',
@@ -407,8 +428,12 @@ const translations = {
         catalogTitle: 'Каталог',
         catalogSearchPlaceholder: 'Найти инструмент...',
         catalogTabAll: 'Все',
-        catalogTabChat: 'Чат',
-        catalogTabPhoto: 'Фото',
+        catalogTabChat: 'Чаты',
+        catalogTabPhoto: 'Изображения',
+        catalogTabVideo: 'Видео',
+        catalogTabMusic: 'Музыка',
+        catalogTabVoice: 'Голос',
+        catalogTab3d: '3D',
         catalogTabCode: 'Код',
         catalogSectionChat: 'Чат и текст',
         catalogSectionPhoto: 'Генерация изображений',
@@ -787,6 +812,24 @@ const translations = {
         homeSearchPlaceholder: 'Search tools...',
         homeCategoriesLabel: 'Categories',
         homeToolsLabel: 'Tools',
+        homeBrandName: 'CyberMate',
+        homeSocialLabel: 'Follow us',
+        homeSocialTiktok: 'TikTok',
+        homeSocialInstagram: 'Instagram',
+        homeSocialTelegram: 'Channel',
+        homeContinueWith: 'Continue with {model}',
+        homeContinueStart: 'Start with {model}',
+        homeContinueSub: 'Last chat · {time}',
+        homeContinueEmptySub: 'Quick start with your selected model',
+        homeNews1Tag: 'New',
+        homeNews1Title: 'Seedance video from ByteDance is here',
+        homeNews1Desc: 'Image-to-video and clip extension are in the catalog',
+        homeNews2Tag: 'Promo',
+        homeNews2Title: '20% off the 1000-coin pack',
+        homeNews2Desc: 'Only until the end of the week',
+        homeNews3Tag: 'Update',
+        homeNews3Title: 'Chats respond 40% faster',
+        homeNews3Desc: 'GPT and Claude are now faster',
         chipAll: 'All',
         chipChats: 'Chats',
         chipImages: 'Images',
@@ -915,8 +958,12 @@ const translations = {
         catalogTitle: 'Catalog',
         catalogSearchPlaceholder: 'Find a tool...',
         catalogTabAll: 'All',
-        catalogTabChat: 'Chat',
-        catalogTabPhoto: 'Photo',
+        catalogTabChat: 'Chats',
+        catalogTabPhoto: 'Images',
+        catalogTabVideo: 'Video',
+        catalogTabMusic: 'Music',
+        catalogTabVoice: 'Voice',
+        catalogTab3d: '3D',
         catalogTabCode: 'Code',
         catalogSectionChat: 'Chat & text',
         catalogSectionPhoto: 'Image generation',
@@ -1360,6 +1407,7 @@ function getInitialTextModelId() {
 function App() {
     const [currentPage, setCurrentPage] = useState('home');
     const [profile, setProfile] = useState(null);
+    const [homeWidgetSlides, setHomeWidgetSlides] = useState(null);
     const [telegramUser, setTelegramUser] = useState(null);
     const [startParam, setStartParam] = useState('');
     const [appNotice, setAppNotice] = useState(null);
@@ -1475,7 +1523,6 @@ function App() {
     const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
     const [isGeneratingThreeD, setIsGeneratingThreeD] = useState(false);
     const [mediaDownloadBusy, setMediaDownloadBusy] = useState(null);
-    const [homeCategoryChip, setHomeCategoryChip] = useState('all');
     const [catalogTab, setCatalogTab] = useState('all');
     const [catalogSearch, setCatalogSearch] = useState('');
     const [historyFilter, setHistoryFilter] = useState('all');
@@ -2206,7 +2253,7 @@ function App() {
                 pageDataInFlightRef.current.history = false;
             }
         };
-    }, [currentPage, telegramUser?.id, showAppNotice]);
+    }, [currentPage, telegramUser, showAppNotice]);
 
     useEffect(() => {
         if (!telegramUser?.id || currentPage !== 'referrals') {
@@ -2273,6 +2320,11 @@ function App() {
             subscriptionIsPaid: subscription.isPaid,
         };
     }, [profile, telegramUser, walletData, text]);
+
+    const homeGreetingText = useMemo(() => {
+        const firstName = userData.displayName.split(/\s+/)[0] || userData.displayName;
+        return formatTemplate(text.homeGreeting, { name: firstName });
+    }, [userData.displayName, text.homeGreeting]);
 
     const refreshWalletBalance = useCallback(async () => {
         if (!telegramUser?.id) {
@@ -2424,8 +2476,6 @@ function App() {
             tools: buildCatalogThreeDTools(THREE_D_MODEL_DEFINITIONS),
         },
     ], [effectiveTextModels]);
-
-    const toolMatchesCatalogTab = (tool, tab) => tab === 'all' || tool.tab === tab || tool.categories?.includes(tab);
 
     const catalogSearchQuery = catalogSearch.trim().toLowerCase();
 
@@ -2780,6 +2830,14 @@ function App() {
 
     const handleTextModelChange = (modelId) => {
         const resolvedModelId = resolveTextModelId(modelId, effectiveTextModels);
+        const lockedGroupItem = getSelectorItemForModelId(textModelSelectorItems, textModel);
+        const allowedModelIds = new Set(
+            getAiVariantOptions(lockedGroupItem, text, 'text').map((option) => option.id),
+        );
+
+        if (!allowedModelIds.has(resolvedModelId)) {
+            return;
+        }
 
         if (resolvedModelId === textModel) {
             return;
@@ -4236,58 +4294,116 @@ function App() {
         textGenerationAbortRef.current?.abort();
     }, []);
 
-    const homeGreetingName = userData.displayName.split(' ')[0] || userData.displayName;
-    const homeGreetingText = text.homeGreeting.replace('{name}', homeGreetingName);
-    const homeGreetingEmojiMatch = homeGreetingText.match(/👋/);
-    const homeGreetingLabel = homeGreetingText.replace(/\s*👋\s*/, '').trim();
+    useEffect(() => {
+        let cancelled = false;
 
-    const visibleToolCards = homeToolCards.filter((card) => (
-        homeCategoryChip === 'all' || card.categories.includes(homeCategoryChip)
-    ));
+        fetchHomeWidgets()
+            .then((slides) => {
+                if (!cancelled) {
+                    setHomeWidgetSlides(slides);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setHomeWidgetSlides(null);
+                }
+            });
 
-    const handleToolCardClick = (card) => {
-        if (card.id === 'images') {
-            openAiImage(imageModel, 'home');
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const homeNewsSlides = useMemo(() => {
+        if (Array.isArray(homeWidgetSlides) && homeWidgetSlides.length > 0) {
+            return homeWidgetSlides;
+        }
+
+        return getHomeNewsSlides(text);
+    }, [homeWidgetSlides, text]);
+
+    const homeContinueTopic = useMemo(
+        () => groupHistoryIntoTopics(historyItems)[0] ?? null,
+        [historyItems],
+    );
+
+    const homeHistoryLabelParams = useMemo(() => ({
+        effectiveTextModels,
+        textModelSelectorItems,
+        imageModelSelectorItems,
+        videoModelSelectorItems,
+        audioModelSelectorItems,
+        imageDefinitions: IMAGE_MODEL_DEFINITIONS,
+        videoDefinitions: VIDEO_MODEL_DEFINITIONS,
+        audioDefinitions: AUDIO_MODEL_DEFINITIONS,
+        text,
+        getImageSelectorChipLabel,
+        getVideoSelectorChipLabel,
+        getAudioSelectorChipLabel,
+    }), [
+        effectiveTextModels,
+        textModelSelectorItems,
+        imageModelSelectorItems,
+        videoModelSelectorItems,
+        audioModelSelectorItems,
+        text,
+    ]);
+
+    const homeContinueModelLabel = useMemo(() => {
+        if (homeContinueTopic) {
+            return getHistoryTopicLabel({
+                topic: homeContinueTopic,
+                ...homeHistoryLabelParams,
+            }) || text.chatTitle;
+        }
+
+        return getModelLabel(effectiveTextModels, textModel, textModelSelectorItems) || text.chatTitle;
+    }, [homeContinueTopic, homeHistoryLabelParams, effectiveTextModels, textModel, textModelSelectorItems, text.chatTitle]);
+
+    const homeContinueTitle = useMemo(() => {
+        const template = homeContinueTopic ? text.homeContinueWith : text.homeContinueStart;
+        return formatTemplate(template, { model: homeContinueModelLabel });
+    }, [homeContinueTopic, text.homeContinueWith, text.homeContinueStart, homeContinueModelLabel]);
+
+    const homeContinueSubtitle = useMemo(() => {
+        if (homeContinueTopic?.latestAt) {
+            return formatTemplate(text.homeContinueSub, {
+                time: formatRelativeTime(homeContinueTopic.latestAt, language),
+            });
+        }
+
+        return text.homeContinueEmptySub;
+    }, [homeContinueTopic, text.homeContinueSub, text.homeContinueEmptySub, language]);
+
+    const handleHomeContinueClick = () => {
+        if (homeContinueTopic) {
+            openHistoryTopic(homeContinueTopic);
             return;
         }
 
-        if (card.id === 'video') {
-            openAiVideo(videoModel, 'home');
-            return;
-        }
+        openAiChat(textModel, 'home');
+    };
 
-        if (card.id === 'voice' || card.page === 'ai-voice') {
-            openAiVoice(audioModel, 'home');
-            return;
-        }
-
-        if (card.id === 'music') {
-            openAiVoice('mureka-v9', 'home');
-            return;
-        }
-
-        if (card.id === '3d' || card.page === 'ai-3d') {
-            openAi3D(threeDModel, 'home');
-            return;
-        }
-
-        if (card.page === 'ai-chat' || card.id === 'chat' || card.id === 'text') {
-            openAiChat(textModel, 'home');
-        }
+    const handleHomeSocialTelegram = async () => {
+        const url = await resolveSupportUrl();
+        openSupport(url);
     };
 
     const renderHomeScreen = () => (
-        <section className="home-screen home-screen--concept" aria-label={text.navHome}>
-            <AppPageHeader
-                title={text.navHome}
-                leading={(
+        <section className="home-screen home-screen--concept home-screen--widgets" aria-label={text.navHome}>
+            <div className="home-concept__orb" aria-hidden="true" />
+
+            <header className="home-concept__header">
+                <div className="home-concept__hdr-logo">
                     <img
                         className="home-concept__logo-image home-concept__logo-image--header"
-                        src="/logo_white.png"
+                        src="/logo-cm.png"
                         alt=""
                     />
-                )}
-                trailing={(
+                    <span className="home-concept__logo-name">{text.homeBrandName}</span>
+                </div>
+                <div className="home-concept__header-right">
+                    <p className="home-concept__greeting-text">{homeGreetingText}</p>
                     <div className="home-concept__header-actions">
                         <button type="button" className="home-concept__icon-btn" aria-label="Уведомления">
                             <Bell size={18} />
@@ -4301,75 +4417,58 @@ function App() {
                             <Settings size={18} />
                         </button>
                     </div>
-                )}
-            />
+                </div>
+            </header>
 
-            <div className="home-concept__greeting">
-                <h2>
-                    <span className="home-concept__greeting-text">{homeGreetingLabel}</span>
-                    {homeGreetingEmojiMatch ? (
-                        <span className="home-concept__greeting-emoji" aria-hidden="true"> 👋</span>
-                    ) : null}
-                </h2>
-                <p>{text.homeGreetingSub}</p>
-            </div>
+            <HomeNewsWidget slides={homeNewsSlides} />
 
-            <div className="home-concept__search" role="search">
-                <Search size={16} aria-hidden="true" />
-                <span>{text.homeSearchPlaceholder}</span>
-            </div>
+            <button
+                type="button"
+                className="home-continue-card"
+                onClick={handleHomeContinueClick}
+            >
+                <span className="home-continue-card__ico" aria-hidden="true">
+                    <Play size={18} />
+                </span>
+                <span className="home-continue-card__text">
+                    <span className="home-continue-card__title">{homeContinueTitle}</span>
+                    <span className="home-continue-card__sub">{homeContinueSubtitle}</span>
+                </span>
+                <ChevronRight size={18} className="home-continue-card__arrow" aria-hidden="true" />
+            </button>
 
-            <p className="home-concept__section-label">{text.homeCategoriesLabel}</p>
-            <div className="home-concept__chips" role="tablist" aria-label={text.homeCategoriesLabel}>
-                {homeCategoryChips.map((chip) => {
-                    const { id, labelKey, icon: CategoryIcon } = chip;
-
-                    return (
-                        <button
-                            key={id}
-                            type="button"
-                            role="tab"
-                            aria-selected={homeCategoryChip === id}
-                            className={`home-concept__chip ${homeCategoryChip === id ? 'home-concept__chip--active' : ''}`}
-                            onClick={() => setHomeCategoryChip(id)}
-                        >
-                            <CategoryIcon size={14} aria-hidden="true" />
-                            {text[labelKey]}
-                        </button>
-                    );
-                })}
-            </div>
-
-            <p className="home-concept__section-label">{text.homeToolsLabel}</p>
-            <div className="home-concept__grid">
-                {visibleToolCards.map((card) => {
-                    const Icon = card.icon;
-                    const badgeLabel = card.badge === 'new'
-                        ? text.badgeNew
-                        : card.badge === 'hot'
-                            ? text.badgeHot
-                            : null;
-
-                    return (
-                        <button
-                            key={card.id}
-                            type="button"
-                            className={`home-concept__card home-concept__card--${card.accent}`}
-                            onClick={() => handleToolCardClick(card)}
-                        >
-                            {badgeLabel ? (
-                                <span className={`home-concept__badge home-concept__badge--${card.badge}`}>
-                                    {badgeLabel}
-                                </span>
-                            ) : null}
-                            <span className="home-concept__card-icon" aria-hidden="true">
-                                <Icon size={20} />
-                            </span>
-                            <span className="home-concept__card-title">{text[card.titleKey]}</span>
-                            <span className="home-concept__card-sub">{text[card.subKey]}</span>
-                        </button>
-                    );
-                })}
+            <p className="home-concept__section-label home-concept__section-label--widgets">{text.homeSocialLabel}</p>
+            <div className="home-social-row">
+                <button
+                    type="button"
+                    className="home-social-card"
+                    onClick={() => openExternalLink(HOME_SOCIAL_LINKS.tiktok)}
+                >
+                    <span className="home-social-card__ico home-social-card__ico--tiktok" aria-hidden="true">
+                        <Music2 size={16} />
+                    </span>
+                    <span className="home-social-card__label">{text.homeSocialTiktok}</span>
+                </button>
+                <button
+                    type="button"
+                    className="home-social-card"
+                    onClick={() => openExternalLink(HOME_SOCIAL_LINKS.instagram)}
+                >
+                    <span className="home-social-card__ico home-social-card__ico--instagram" aria-hidden="true">
+                        <FaInstagram size={16} />
+                    </span>
+                    <span className="home-social-card__label">{text.homeSocialInstagram}</span>
+                </button>
+                <button
+                    type="button"
+                    className="home-social-card"
+                    onClick={handleHomeSocialTelegram}
+                >
+                    <span className="home-social-card__ico home-social-card__ico--telegram" aria-hidden="true">
+                        <Send size={16} />
+                    </span>
+                    <span className="home-social-card__label">{text.homeSocialTelegram}</span>
+                </button>
             </div>
         </section>
     );
@@ -4466,11 +4565,6 @@ function App() {
             ? text.chatTitle
             : (activeModel?.description ?? text.chatTitle);
         const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'text');
-        const groupOptions = buildTextModelGroupOptions(
-            textModelSelectorItems,
-            (item) => getAiGroupTitle(item, text, (entry) => entry.label),
-        );
-        const activeGroupId = getActiveTextModelGroupId(activeSelectorItem);
         const supportsChatImage = textModelSupportsImage(activeModel);
 
         return (
@@ -4482,25 +4576,6 @@ function App() {
                     onNewDialog: handleNewChatDialog,
                     newDialogDisabled: isGeneratingText,
                 })}
-
-                {groupOptions.length > 1 ? (
-                    <AiVariantSelect
-                        id="ai-chat-group"
-                        label={text.mediaModelGroupLabel}
-                        value={activeGroupId}
-                        options={groupOptions.map((option) => ({
-                            id: option.id,
-                            label: option.label,
-                        }))}
-                        onChange={(groupId) => {
-                            const option = groupOptions.find((entry) => entry.id === groupId);
-                            if (option) {
-                                handleTextModelChange(option.modelId);
-                            }
-                        }}
-                        disabled={isGeneratingText}
-                    />
-                ) : null}
 
                 {variantOptions.length > 1 ? (
                     <AiVariantSelect

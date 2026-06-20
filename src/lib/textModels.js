@@ -1,4 +1,5 @@
 import { Bot, Brain, Code2, Feather, Hexagon, Sparkles, Zap } from 'lucide-react';
+import { getTextModelCatalogCategories } from './catalogFilters.js';
 import {
     buildGroupedSelectorItems,
     formatGroupIdLabel,
@@ -54,6 +55,31 @@ const MODEL_DISPLAY_TIER = {
 };
 
 const MODELS_WITHOUT_BADGE = new Set(['yandexgpt']);
+
+/** Text models that accept image_url in chat (vision). Keep in sync with backend SupportsImage. */
+const VISION_TEXT_MODEL_IDS = new Set([
+    'qwen3.6-35b',
+    'gemini-2.5-flash',
+    'gemini-2.5-pro',
+    'gemini',
+    'gemini-flash',
+    'gpt-4o',
+    'gpt-4o-mini',
+    'gpt-5.4',
+    'gpt-5.4-mini',
+    'gpt-4.1',
+    'gpt-4.1-mini',
+    'gpt-4.1-nano',
+    'claude-haiku-4.5',
+    'claude-sonnet-4.5',
+    'claude-opus-4.7',
+    'claude-opus-4.8',
+    'o4-mini',
+    'o3',
+    'o3-mini',
+    'o1',
+    'openai',
+]);
 
 const GROUP_ACCENTS = {
     Yandex: 'violet',
@@ -188,6 +214,7 @@ export const DEFAULT_TEXT_MODELS = [
         group: 'ChatGPT',
         description: CATALOG_DESCRIPTIONS.ru.ChatGPT,
         tier: 'fast',
+        supports_image: true,
     },
     {
         id: 'gpt-5.4',
@@ -313,19 +340,12 @@ export function textModelSupportsImage(model) {
         return false;
     }
 
-    // Primary source: backend capability flag.
     if (model.supports_image) {
         return true;
     }
 
-    // Fallback: allow-list for known multimodal models (in case backend is not updated yet).
-    // Keep this list small and explicit to avoid showing an upload UI that backend can't handle.
     const id = String(model.id || '').trim().toLowerCase();
-    return id === 'qwen3.6-35b'
-        || id === 'gemini-2.5-flash'
-        || id === 'gemini-2.5-pro'
-        || id === 'gpt-4o'
-        || id === 'gemini';
+    return VISION_TEXT_MODEL_IDS.has(id);
 }
 
 export function getTierLabelForModel(model, text) {
@@ -439,7 +459,7 @@ export function buildCatalogTextTools(models) {
                 sub: defaultVariant.description ?? '',
                 page: 'ai-chat',
                 tab: 'chat',
-                categories: ['chat', 'code'],
+                categories: getTextModelCatalogCategories(item.id),
                 displayTier,
                 tiered: true,
                 variants: item.variants,
@@ -453,7 +473,7 @@ export function buildCatalogTextTools(models) {
             sub: '',
             page: 'ai-chat',
             tab: 'chat',
-            categories: ['chat', 'code'],
+            categories: getTextModelCatalogCategories(item.model),
             displayTier: shouldShowModelBadge(item.model) ? getModelDisplayTier(item.model) : null,
             tiered: false,
             ...getTextModelVisual(item.model),
