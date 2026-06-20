@@ -2282,11 +2282,11 @@ function App() {
                     return;
                 }
 
-                setReferralLink('');
+                    setReferralLink('');
                 setReferralData({ referrals: [], total_count: 0 });
-                showAppNotice(
+                    showAppNotice(
                     error instanceof Error ? error.message : 'Не удалось загрузить реферальную программу.',
-                );
+                    );
             })
             .finally(() => {
                 if (!isCancelled) {
@@ -2734,11 +2734,11 @@ function App() {
         setStoredTextModelId(targetModelId);
 
         if (fromHistory) {
-            if (options.sessionId) {
-                setChatSessionId(options.sessionId);
-            }
-            setChatMessages(options.messages ?? []);
-            setChatTopicTitle(options.topicTitle ?? '');
+        if (options.sessionId) {
+            setChatSessionId(options.sessionId);
+        }
+        setChatMessages(options.messages ?? []);
+        setChatTopicTitle(options.topicTitle ?? '');
             setIsGeneratingText(false);
         } else {
             const restored = resolveChatSessionState({
@@ -2779,9 +2779,9 @@ function App() {
         const isVideoTopic = VIDEO_MODEL_IDS.includes(modelId);
         const isAudioTopic = AUDIO_MODEL_IDS.includes(modelId);
         const mediaSessionFromHistory = topic.sessionId
-            || topic.items?.[0]?.sessionId
-            || topic.items?.[0]?.session_id
-            || null;
+                || topic.items?.[0]?.sessionId
+                || topic.items?.[0]?.session_id
+                || null;
 
         if (isImageTopic) {
             openAiImage(modelId, 'history', {
@@ -2865,9 +2865,9 @@ function App() {
             setChatMessages(stored.messages ?? []);
             setChatTopicTitle(stored.topicTitle ?? '');
         } else {
-            startNewChatSession();
-            setChatMessages([]);
-            setChatTopicTitle('');
+        startNewChatSession();
+        setChatMessages([]);
+        setChatTopicTitle('');
         }
 
         setTextPrompt('');
@@ -2903,9 +2903,9 @@ function App() {
             setGeneratedImageUrl(stored.generatedImageUrl ?? '');
             setGeneratedImageUrls(Array.isArray(stored.generatedImageUrls) ? stored.generatedImageUrls : []);
         } else {
-            startNewImageSession();
-            setImageSessionMessages([]);
-            setGeneratedImageUrl('');
+        startNewImageSession();
+        setImageSessionMessages([]);
+        setGeneratedImageUrl('');
             setGeneratedImageUrls([]);
         }
 
@@ -3218,8 +3218,8 @@ function App() {
         applyImageModelOptions(targetModelId);
 
         if (fromHistory) {
-            if (options.sessionId) {
-                setImageSessionId(options.sessionId);
+        if (options.sessionId) {
+            setImageSessionId(options.sessionId);
             }
 
             const restoredMessages = options.messages ?? [];
@@ -3250,12 +3250,12 @@ function App() {
                 setGeneratedImageUrls(restored.generatedImageUrls);
                 setIsGeneratingImage(restored.isGenerating);
             } else {
-                startNewImageSession();
+            startNewImageSession();
                 setImageSessionMessages([]);
                 setGeneratedImageUrl('');
                 setGeneratedImageUrls([]);
                 setIsGeneratingImage(false);
-            }
+        }
         }
 
         setImagePrompt('');
@@ -3706,7 +3706,7 @@ function App() {
                 : undefined;
 
             const response = await generateVideo({
-                prompt: trimmedPrompt,
+                    prompt: trimmedPrompt,
                 model: videoModel,
                 messages: contextMessages,
                 sessionId: videoSessionId,
@@ -3866,7 +3866,7 @@ function App() {
             const compressed = await compressImageFile(file);
             setThreeDAttachment(compressed);
             setThreeDError('');
-        } catch {
+            } catch {
             setThreeDError(language === 'ru' ? 'Не удалось обработать изображение.' : 'Failed to process image.');
         }
     };
@@ -4040,7 +4040,7 @@ function App() {
                     disabled={newDialogDisabled}
                 >
                     {text.chatNewDialog}
-                </button>
+            </button>
             )}
         />
     );
@@ -4381,7 +4381,7 @@ function App() {
             return;
         }
 
-        openAiChat(textModel, 'home');
+            openAiChat(textModel, 'home');
     };
 
     const handleHomeSocialTelegram = async () => {
@@ -4394,36 +4394,36 @@ function App() {
             <div className="home-concept__orb" aria-hidden="true" />
 
             <header className="home-concept__header">
-                <div className="home-concept__hdr-logo">
-                    <img
-                        className="home-concept__logo-image home-concept__logo-image--header"
-                        src="/logo-cm.png"
-                        alt=""
-                    />
-                    <span className="home-concept__logo-name">{text.homeBrandName}</span>
-                </div>
-                <div className="home-concept__header-right">
-                    <p className="home-concept__greeting-text">{homeGreetingText}</p>
-                    <div className="home-concept__header-actions">
-                        <button type="button" className="home-concept__icon-btn" aria-label="Уведомления">
-                            <Bell size={18} />
-                        </button>
-                        <button
-                            type="button"
-                            className="home-concept__icon-btn"
-                            aria-label={text.settingsTitle}
-                            onClick={() => setCurrentPage('settings')}
-                        >
-                            <Settings size={18} />
-                        </button>
+                <div className="home-concept__header-left">
+                    <div className="home-concept__hdr-logo">
+                        <img
+                            className="home-concept__logo-image home-concept__logo-image--header"
+                            src="/logo-cm.png"
+                            alt=""
+                        />
+                        <span className="home-concept__logo-name">{text.homeBrandName}</span>
                     </div>
+                    <p className="home-concept__greeting-text">{homeGreetingText}</p>
+                </div>
+                <div className="home-concept__header-actions">
+                    <button type="button" className="home-concept__icon-btn" aria-label="Уведомления">
+                        <Bell size={18} />
+                    </button>
+                    <button
+                        type="button"
+                        className="home-concept__icon-btn"
+                        aria-label={text.settingsTitle}
+                        onClick={() => setCurrentPage('settings')}
+                    >
+                        <Settings size={18} />
+                    </button>
                 </div>
             </header>
 
             <HomeNewsWidget slides={homeNewsSlides} />
 
-            <button
-                type="button"
+                    <button
+                        type="button"
                 className="home-continue-card"
                 onClick={handleHomeContinueClick}
             >
@@ -4435,18 +4435,18 @@ function App() {
                     <span className="home-continue-card__sub">{homeContinueSubtitle}</span>
                 </span>
                 <ChevronRight size={18} className="home-continue-card__arrow" aria-hidden="true" />
-            </button>
+                    </button>
 
             <p className="home-concept__section-label home-concept__section-label--widgets">{text.homeSocialLabel}</p>
             <div className="home-social-row">
-                <button
-                    type="button"
+                        <button
+                            type="button"
                     className="home-social-card"
                     onClick={() => openExternalLink(HOME_SOCIAL_LINKS.tiktok)}
-                >
+                        >
                     <span className="home-social-card__ico home-social-card__ico--tiktok" aria-hidden="true">
                         <Music2 size={16} />
-                    </span>
+                                </span>
                     <span className="home-social-card__label">{text.homeSocialTiktok}</span>
                 </button>
                 <button
@@ -4456,9 +4456,9 @@ function App() {
                 >
                     <span className="home-social-card__ico home-social-card__ico--instagram" aria-hidden="true">
                         <FaInstagram size={16} />
-                    </span>
+                            </span>
                     <span className="home-social-card__label">{text.homeSocialInstagram}</span>
-                </button>
+                        </button>
                 <button
                     type="button"
                     className="home-social-card"
@@ -4478,9 +4478,9 @@ function App() {
             <AppPageHeader
                 title={text.catalogTitle}
                 trailing={(
-                    <button type="button" className="catalog-concept__filter" aria-label={text.catalogTitle}>
-                        <SlidersHorizontal size={17} aria-hidden="true" />
-                    </button>
+                <button type="button" className="catalog-concept__filter" aria-label={text.catalogTitle}>
+                    <SlidersHorizontal size={17} aria-hidden="true" />
+                </button>
                 )}
             />
 
@@ -4584,7 +4584,7 @@ function App() {
                         value={textModel}
                         options={variantOptions}
                         onChange={handleTextModelChange}
-                        disabled={isGeneratingText}
+                                    disabled={isGeneratingText}
                     />
                 ) : null}
 
@@ -4762,17 +4762,17 @@ function App() {
                                 <div className="ai-image__result-header">
                                     <p className="ai-image__result-label">{text.imageResultTitle}</p>
                                     {generatedImageUrls.length <= 1 ? (
-                                        <button
-                                            type="button"
+                    <button
+                        type="button"
                                             className="ai-media__download"
                                             onClick={() => handleMediaDownload('image', generatedImageUrl, 'image.png')}
                                             disabled={mediaDownloadBusy === 'image'}
                                         >
                                             <Download size={14} aria-hidden="true" />
                                             {mediaDownloadBusy === 'image' ? text.mediaDownloading : text.mediaDownloadButton}
-                                        </button>
+                    </button>
                                     ) : null}
-                                </div>
+                        </div>
                                 {generatedImageUrls.length > 1 ? (
                                     <div className="ai-image__gallery">
                                         {generatedImageUrls.map((url, index) => (
@@ -4782,15 +4782,15 @@ function App() {
                                                     src={url}
                                                     alt={`${text.imageGenerateTitle} ${index + 1}`}
                                                 />
-                                                <button
-                                                    type="button"
+                    <button
+                        type="button"
                                                     className="ai-media__download"
                                                     onClick={() => handleMediaDownload(`image-${index}`, url, `image-${index + 1}.png`)}
                                                     disabled={mediaDownloadBusy === `image-${index}`}
                                                 >
                                                     <Download size={14} aria-hidden="true" />
                                                     {mediaDownloadBusy === `image-${index}` ? text.mediaDownloading : text.mediaDownloadButton}
-                                                </button>
+                    </button>
                                             </div>
                                         ))}
                                     </div>
@@ -4826,15 +4826,15 @@ function App() {
                         />
                     ) : null}
                     {supportsSourceUpload ? (
-                        <button
-                            type="button"
+                            <button
+                                type="button"
                             className="ai-chat__attach"
                             aria-label={text.imageAttachPhoto}
-                            disabled={isGeneratingImage}
+                                disabled={isGeneratingImage}
                             onClick={() => imagePhotoInputRef.current?.click()}
-                        >
+                            >
                             <Paperclip size={18} aria-hidden="true" />
-                        </button>
+                            </button>
                     ) : null}
                     <div className="ai-chat__composer-field">
                         {supportsSourceUpload && imageAttachment ? (
@@ -4848,18 +4848,18 @@ function App() {
                                 >
                                     ×
                                 </button>
-                            </div>
+                </div>
                         ) : null}
-                        <textarea
-                            id="ai-image-prompt"
+                    <textarea
+                        id="ai-image-prompt"
                             className="ai-chat__input"
-                            value={imagePrompt}
-                            onChange={(event) => setImagePrompt(event.target.value)}
+                        value={imagePrompt}
+                        onChange={(event) => setImagePrompt(event.target.value)}
                             onKeyDown={handleImageComposerKeyDown}
                             placeholder={promptPlaceholder}
                             rows={2}
-                            disabled={isGeneratingImage}
-                        />
+                        disabled={isGeneratingImage}
+                    />
                     </div>
                     <button
                         type="button"
@@ -4971,7 +4971,7 @@ function App() {
 
                 {isUnifiedEdit ? (
                     <p className="ai-video__edit-hint">{text.videoEditTurboHint}</p>
-                ) : null}
+                    ) : null}
 
                 {requiresImage ? (
                     <label className="ai-video__source-field" htmlFor="ai-video-source-image">
@@ -5029,15 +5029,15 @@ function App() {
                         <section className="ai-image__result ai-video__result" aria-label={text.videoResultTitle}>
                             <div className="ai-image__result-header">
                                 <p className="ai-image__result-label">{text.videoResultTitle}</p>
-                                <button
-                                    type="button"
+                    <button
+                        type="button"
                                     className="ai-media__download"
                                     onClick={() => handleMediaDownload('video', generatedVideoUrl, 'video.mp4')}
                                     disabled={mediaDownloadBusy === 'video'}
                                 >
                                     <Download size={14} aria-hidden="true" />
                                     {mediaDownloadBusy === 'video' ? text.mediaDownloading : text.mediaDownloadButton}
-                                </button>
+                    </button>
                             </div>
                             <video
                                 key={generatedVideoUrl}
@@ -5186,11 +5186,11 @@ function App() {
                                     </button>
                                 </div>
                                 <audio
-                                    className="ai-image__preview"
+                                className="ai-image__preview"
                                     src={generatedAudioUrl}
                                     controls
-                                />
-                            </section>
+                            />
+                        </section>
                         ) : (
                             <p className="ai-chat__empty">{promptPlaceholder}</p>
                         )}
@@ -5477,28 +5477,28 @@ function App() {
                     onBack={() => setCurrentPage('home')}
                     backLabel={text.back}
                     trailing={(
-                        <button
-                            type="button"
+                    <button
+                        type="button"
                             className="app-page-header__action"
-                            aria-label={text.settingsTitle}
-                            onClick={() => setCurrentPage('settings')}
-                        >
-                            <MoreHorizontal size={18} aria-hidden="true" />
-                        </button>
+                        aria-label={text.settingsTitle}
+                        onClick={() => setCurrentPage('settings')}
+                    >
+                        <MoreHorizontal size={18} aria-hidden="true" />
+                    </button>
                     )}
                 />
 
                 <div className="profile-concept__avatar-section">
                     <div className="profile-concept__avatar-outer">
                         <div className="profile-concept__avatar-inner">
-                            {userData.avatarUrl ? (
-                                <img src={userData.avatarUrl} alt={userData.displayName} />
-                            ) : (
-                                <span>{profileInitials}</span>
-                            )}
-                            {userData.subscriptionIsPaid ? (
-                                <span className="profile-concept__avatar-crown" aria-hidden="true">👑</span>
-                            ) : null}
+                        {userData.avatarUrl ? (
+                            <img src={userData.avatarUrl} alt={userData.displayName} />
+                        ) : (
+                            <span>{profileInitials}</span>
+                        )}
+                        {userData.subscriptionIsPaid ? (
+                            <span className="profile-concept__avatar-crown" aria-hidden="true">👑</span>
+                        ) : null}
                         </div>
                     </div>
                     <h3 className="profile-concept__user-name">{userData.displayName}</h3>
@@ -5689,15 +5689,15 @@ function App() {
                         <p className="referral-concept__empty">{text.referralEmpty}</p>
                     ) : null}
                     {referralItems.map((item) => (
-                        <div key={item.id} className="referral-concept__friend">
+                            <div key={item.id} className="referral-concept__friend">
                             <ReferralFriendAvatar name={item.name} avatarUrl={item.avatarUrl} />
-                            <span className="referral-concept__friend-name">{item.name}</span>
-                            <span className="referral-concept__friend-reward">{item.reward}</span>
-                        </div>
+                                <span className="referral-concept__friend-name">{item.name}</span>
+                                <span className="referral-concept__friend-reward">{item.reward}</span>
+                            </div>
                     ))}
                 </div>
             </section>
-    );
+        );
 
     const renderWalletScreen = () => {
         const tokenBalance = resolveGenerationTokenBalance(walletData, profile);
@@ -5771,19 +5771,19 @@ function App() {
                 onBack={() => setCurrentPage(historyReturnPage)}
                 backLabel={text.back}
                 trailing={(
-                    <div className="history-concept__actions">
-                        <button type="button" className="history-concept__action" aria-label="Download">
-                            <Download size={17} aria-hidden="true" />
-                        </button>
-                        <button
-                            type="button"
-                            className="history-concept__action"
-                            aria-label="Delete"
-                            onClick={handleClearHistoryRequest}
-                        >
-                            <Trash2 size={17} aria-hidden="true" />
-                        </button>
-                    </div>
+                <div className="history-concept__actions">
+                    <button type="button" className="history-concept__action" aria-label="Download">
+                        <Download size={17} aria-hidden="true" />
+                    </button>
+                    <button
+                        type="button"
+                        className="history-concept__action"
+                        aria-label="Delete"
+                        onClick={handleClearHistoryRequest}
+                    >
+                        <Trash2 size={17} aria-hidden="true" />
+                    </button>
+                </div>
                 )}
             />
 
@@ -6071,7 +6071,7 @@ function App() {
                                                             ? renderAiVoiceScreen()
                                                             : currentPage === 'ai-3d'
                                                                 ? renderAiThreeDScreen()
-                                                                : renderInfoScreen()}
+                                                    : renderInfoScreen()}
             </main>
 
             {showBottomNav ? (
