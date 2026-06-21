@@ -231,7 +231,7 @@ export async function clearMyPromptHistory() {
 }
 
 export async function deletePromptHistoryTopic({ sessionId, ids = [] } = {}) {
-    const telegramId = getCurrentTelegramId();
+    const telegramId = String(getCurrentTelegramId());
     const normalizedIds = Array.isArray(ids)
         ? ids.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0)
         : [];

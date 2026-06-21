@@ -124,34 +124,62 @@
   .profile-screen--concept,
   .settings-screen--concept,
   .referral-screen--concept,
-  .wallet-screen--concept {
+  .wallet-screen--concept,
+  .subscription-page,
+  .ai-chat-screen--concept,
+  .ai-image-screen--concept,
+  .ai-video-screen--concept,
+  .ai-voice-screen--concept,
+  .ai-3d-screen--concept {
     animation: mp-page-in 0.32s ease-out both;
   }
 
   .home-concept__grid > *,
-  .catalog-concept__grid > * {
+  .catalog-concept__grid > *,
+  .subscription-page__plans .subscription-plan-card,
+  .history-concept__item,
+  .profile-concept__balance-card,
+  .profile-concept__menu-item,
+  .subscription-concept__coin-pack,
+  .home-news-widget,
+  .home-social-card {
     content-visibility: auto;
     contain-intrinsic-size: auto 92px;
-    animation: mp-card-in 0.3s ease-out both;
+    animation: mp-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .home-concept__grid > *:nth-child(1),
-  .catalog-concept__grid > *:nth-child(1) { animation-delay: 0.02s; }
+  .catalog-concept__grid > *:nth-child(1),
+  .subscription-page__plans .subscription-plan-card:nth-child(1),
+  .history-concept__item:nth-child(1) { animation-delay: 0.02s; }
   .home-concept__grid > *:nth-child(2),
-  .catalog-concept__grid > *:nth-child(2) { animation-delay: 0.05s; }
+  .catalog-concept__grid > *:nth-child(2),
+  .subscription-page__plans .subscription-plan-card:nth-child(2),
+  .history-concept__item:nth-child(2) { animation-delay: 0.05s; }
   .home-concept__grid > *:nth-child(3),
-  .catalog-concept__grid > *:nth-child(3) { animation-delay: 0.08s; }
+  .catalog-concept__grid > *:nth-child(3),
+  .subscription-page__plans .subscription-plan-card:nth-child(3),
+  .history-concept__item:nth-child(3) { animation-delay: 0.08s; }
   .home-concept__grid > *:nth-child(4),
-  .catalog-concept__grid > *:nth-child(4) { animation-delay: 0.11s; }
+  .catalog-concept__grid > *:nth-child(4),
+  .subscription-page__plans .subscription-plan-card:nth-child(4),
+  .history-concept__item:nth-child(4) { animation-delay: 0.11s; }
   .home-concept__grid > *:nth-child(5),
-  .catalog-concept__grid > *:nth-child(5) { animation-delay: 0.14s; }
+  .catalog-concept__grid > *:nth-child(5),
+  .subscription-page__plans .subscription-plan-card:nth-child(5),
+  .history-concept__item:nth-child(5) { animation-delay: 0.14s; }
   .home-concept__grid > *:nth-child(6),
-  .catalog-concept__grid > *:nth-child(6) { animation-delay: 0.17s; }
+  .catalog-concept__grid > *:nth-child(6),
+  .subscription-page__plans .subscription-plan-card:nth-child(6),
+  .history-concept__item:nth-child(6) { animation-delay: 0.17s; }
   .home-concept__grid > *:nth-child(n + 7),
-  .catalog-concept__grid > *:nth-child(n + 7) { animation-delay: 0.17s; }
+  .catalog-concept__grid > *:nth-child(n + 7),
+  .subscription-page__plans .subscription-plan-card:nth-child(n + 7),
+  .history-concept__item:nth-child(n + 7) { animation-delay: 0.17s; }
 
-  .home-concept__promo {
-    animation: mp-card-in 0.32s ease-out both;
+  .home-concept__promo,
+  .subscription-page__hero--animate {
+    animation: mp-card-in 0.45s ease-out both;
     animation-delay: 0.03s;
   }
 }

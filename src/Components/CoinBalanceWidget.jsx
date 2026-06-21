@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
+import CoinIcon from './CoinIcon.jsx';
 
 function formatBalance(value) {
     const numeric = Number(value);
@@ -21,6 +22,7 @@ export default function CoinBalanceWidget({
     topUpLabel = 'Top up coins',
 }) {
     const topUpHandler = onTopUp ?? onClick;
+    const iconSize = compact ? 16 : 18;
 
     const balanceControl = typeof onClick === 'function' ? (
         <button
@@ -29,12 +31,12 @@ export default function CoinBalanceWidget({
             onClick={onClick}
             aria-label={`${formatBalance(balance)} CyberCoins`}
         >
-            <span className="coin-widget__icon" aria-hidden="true">C</span>
+            <CoinIcon size={iconSize} className="coin-widget__icon" />
             <span className="coin-widget__value">{formatBalance(balance)}</span>
         </button>
     ) : (
         <span className={`coin-widget coin-widget--static ${compact ? 'coin-widget--compact' : ''}`.trim()}>
-            <span className="coin-widget__icon" aria-hidden="true">C</span>
+            <CoinIcon size={iconSize} className="coin-widget__icon" />
             <span className="coin-widget__value">{formatBalance(balance)}</span>
         </span>
     );
@@ -48,7 +50,7 @@ export default function CoinBalanceWidget({
                     onClick={onClick}
                     aria-label={`${formatBalance(balance)} CyberCoins · ${topUpLabel}`}
                 >
-                    <span className="coin-widget__icon" aria-hidden="true">C</span>
+                    <CoinIcon size={iconSize} className="coin-widget__icon" />
                     <span className="coin-widget__value">{formatBalance(balance)}</span>
                     <Plus className="coin-widget__plus" size={12} aria-hidden="true" />
                 </button>

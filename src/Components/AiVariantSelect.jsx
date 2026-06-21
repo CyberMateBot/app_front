@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import CoinIcon from './CoinIcon.jsx';
 
 export default function AiVariantSelect({
     id,
@@ -36,6 +37,12 @@ export default function AiVariantSelect({
                 >
                     <span className="media-picker__label">{label}</span>
                     <span className="media-picker__summary">{summary}</span>
+                    {activeOption?.priceCoins ? (
+                        <span className="media-picker__price">
+                            <CoinIcon size={13} />
+                            {activeOption.priceCoins}
+                        </span>
+                    ) : null}
                     <ChevronDown size={14} className="media-picker__chevron" aria-hidden="true" />
                 </button>
                 {open ? (
@@ -54,7 +61,13 @@ export default function AiVariantSelect({
                                             disabled={disabled}
                                             aria-pressed={isActive}
                                         >
-                                            {option.label}
+                                            <span className="media-options__chip-label">{option.label}</span>
+                                            {option.priceCoins ? (
+                                                <span className="media-options__chip-price">
+                                                    <CoinIcon size={12} />
+                                                    {option.priceCoins}
+                                                </span>
+                                            ) : null}
                                         </button>
                                     );
                                 })}

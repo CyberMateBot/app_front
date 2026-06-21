@@ -43,7 +43,6 @@ import {
 } from 'lucide-react';
 import { FaInstagram } from 'react-icons/fa6';
 import {
-    clearMyPromptHistory,
     deletePromptHistoryTopic,
     getMyProfile,
     getMyPromptHistory,
@@ -131,6 +130,7 @@ import {
 import AppNotice from './Components/AppNotice.jsx';
 import AppPageHeader from './Components/AppPageHeader.jsx';
 import CoinBalanceWidget from './Components/CoinBalanceWidget.jsx';
+import CoinIcon from './Components/CoinIcon.jsx';
 import HomeNewsWidget from './Components/HomeNewsWidget.jsx';
 import AiVariantSelect from './Components/AiVariantSelect.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
@@ -214,6 +214,10 @@ import {
     getFallbackBillingCatalog,
 } from './lib/billing.js';
 import {
+    formatCatalogPriceLabel,
+    getCatalogToolPriceRange,
+} from './lib/modelPrices.js';
+import {
     getTelegramWebApp,
     hydrateTelegramUser,
     initTelegramMiniAppAsync,
@@ -226,26 +230,6 @@ const navigationItems = [
     { key: 'catalog', labelKey: 'navCatalog', icon: LayoutGrid },
     { key: 'history', labelKey: 'navHistory', icon: History },
     { key: 'profile', labelKey: 'navProfile', icon: User },
-];
-
-const homeCategoryChips = [
-    { id: 'all', labelKey: 'chipAll', icon: LayoutGrid },
-    { id: 'chats', labelKey: 'chipChats', icon: MessageSquare },
-    { id: 'images', labelKey: 'chipImages', icon: ImageIcon },
-    { id: 'video', labelKey: 'chipVideo', icon: Video },
-    { id: 'music', labelKey: 'chipMusic', icon: Music2 },
-    { id: 'voice', labelKey: 'chipVoice', icon: Mic },
-    { id: '3d', labelKey: 'chip3d', icon: Box },
-];
-
-const homeToolCards = [
-    { id: 'chat', categories: ['chats'], titleKey: 'toolChatTitle', subKey: 'toolChatSub', icon: Bot, accent: 'c1', badge: 'new' },
-    { id: 'images', categories: ['images'], titleKey: 'toolImagesTitle', subKey: 'toolImagesSub', icon: ImageIcon, accent: 'c2', badge: 'hot' },
-    { id: 'video', categories: ['video'], titleKey: 'toolVideoTitle', subKey: 'toolVideoSub', icon: Video, accent: 'c3' },
-    { id: 'music', categories: ['music'], titleKey: 'toolMusicTitle', subKey: 'toolMusicSub', icon: Music2, accent: 'c4' },
-    { id: 'voice', categories: ['voice'], titleKey: 'toolVoiceTitle', subKey: 'toolVoiceSub', icon: Mic, accent: 'c5', page: 'ai-voice' },
-    { id: '3d', categories: ['3d'], titleKey: 'tool3dTitle', subKey: 'tool3dSub', icon: Box, accent: 'c7', badge: 'new', page: 'ai-3d' },
-    { id: 'text', categories: ['chats'], titleKey: 'toolTextTitle', subKey: 'toolTextSub', icon: FileText, accent: 'c6', page: 'ai-chat' },
 ];
 
 const historyFilterTabs = [
@@ -1694,6 +1678,7 @@ function App() {
     const [historyFilter, setHistoryFilter] = useState('all');
     const [historySelectMode, setHistorySelectMode] = useState(false);
     const [selectedHistoryTopicIds, setSelectedHistoryTopicIds] = useState([]);
+    const subscriptionPlansScrollRef = useRef(null);
 
     const effectiveTextModels = useMemo(
         () => resolveEffectiveTextModels(textModels),
@@ -2800,6 +2785,56 @@ function App() {
             setSelectedHistoryTopicIds([]);
         }
     }, [currentPage]);
+
+    useEffect(() => {
+        const scrollEl = subscriptionPlansScrollRef.current;
+        if (!scrollEl || currentPage !== 'subscription') {
+            return undefined;
+        }
+
+        const onWheel = (event) => {
+            if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+                return;
+            }
+
+            event.preventDefault();
+            scrollEl.scrollBy({ left: event.deltaY, behavior: 'smooth' });
+        };
+
+        scrollEl.addEventListener('wheel', onWheel, { passive: false });
+        return () => scrollEl.removeEventListener('wheel', onWheel);
+    }, [currentPage]);
+
+    const scrollSubscriptionPlan = useCallback((direction) => {
+        const el = subscriptionPlansScrollRef.current;
+        if (!el) {
+            return;
+        }
+
+        const cards = Array.from(el.querySelectorAll('.subscription-plan-card'));
+        if (cards.length === 0) {
+            return;
+        }
+
+        const viewportCenter = el.scrollLeft + el.clientWidth / 2;
+        let activeIndex = 0;
+        let minDistance = Infinity;
+
+        cards.forEach((card, index) => {
+            const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+            const distance = Math.abs(cardCenter - viewportCenter);
+            if (distance < minDistance) {
+                minDistance = distance;
+                activeIndex = index;
+            }
+        });
+
+        const nextIndex = Math.min(cards.length - 1, Math.max(0, activeIndex + direction));
+        const target = cards[nextIndex];
+        const targetLeft = target.offsetLeft - (el.clientWidth - target.offsetWidth) / 2;
+
+        el.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
+    }, []);
 
     const exitHistorySelectMode = useCallback(() => {
         setHistorySelectMode(false);
@@ -4231,7 +4266,7 @@ function App() {
         onBack,
         onNewDialog,
         newDialogDisabled = false,
-        showCoinWidget = true,
+        showCoinWidget = false,
     }) => (
         <AppPageHeader
             title={title}
@@ -4334,7 +4369,7 @@ function App() {
                         </div>
                         {coins > 0 ? (
                             <div className="subscription-plan-card__coins">
-                                <span className="subscription-plan-card__coin-icon">C</span>
+                                <CoinIcon size={16} className="subscription-plan-card__coin-icon" />
                                 <span className="subscription-plan-card__coin-value">{formatNumber(coins)}</span>
                                 <span className="subscription-plan-card__coin-label">{text.subscriptionCoinsPerMonth}</span>
                             </div>
@@ -4419,7 +4454,7 @@ function App() {
                     <div>
                         <div className="subscription-concept__coin-pack-name">{pack.name}</div>
                         <div className="subscription-concept__coin-pack-coins">
-                            <span className="profile-concept__coin-icon">C</span>
+                            <CoinIcon size={15} className="profile-concept__coin-icon" />
                             {formatNumber(pack.coins)}
                         </div>
                     </div>
@@ -4481,24 +4516,6 @@ function App() {
             setChatError('');
         };
         reader.readAsDataURL(file);
-    };
-
-    const handleClearHistoryRequest = () => {
-        setConfirmDialog({
-            message: text.historyDeleteConfirm,
-            confirmLabel: text.historyDeleteConfirmAction,
-            cancelLabel: text.historyDeleteCancel,
-            onConfirm: async () => {
-                try {
-                    await clearMyPromptHistory();
-                    setPromptHistoryData({ items: [] });
-                    pageDataLoadedRef.current.history = true;
-                    showAppNotice(text.historyCleared, 'success');
-                } catch (error) {
-                    showAppNotice(error instanceof Error ? error.message : 'Не удалось очистить историю.');
-                }
-            },
-        });
     };
 
     const handleDeleteSelectedHistoryRequest = () => {
@@ -4916,6 +4933,8 @@ function App() {
                             const badgeLabel = shouldShowCatalogBadge(tool)
                                 ? getCatalogBadgeLabel(badgeTier)
                                 : '';
+                            const priceRange = getCatalogToolPriceRange(tool);
+                            const priceLabel = formatCatalogPriceLabel(priceRange, language);
 
                             return (
                                 <button
@@ -4937,6 +4956,12 @@ function App() {
                                     </span>
                                     <span className="catalog-concept__name">{getCatalogToolLabel(tool)}</span>
                                     <span className="catalog-concept__sub">{getCatalogToolSub(tool)}</span>
+                                    {!tool.locked ? (
+                                        <span className="catalog-concept__price" aria-label={`${priceLabel} coins`}>
+                                            <CoinIcon size={12} />
+                                            {priceLabel}
+                                        </span>
+                                    ) : null}
                                 </button>
                             );
                         })}
@@ -5923,7 +5948,7 @@ function App() {
                         <div>
                             <div className="profile-concept__balance-label">{text.profileBalanceLabel}</div>
                             <div className="profile-concept__balance-amount">
-                                <span className="profile-concept__coin-icon">C</span>
+                                <CoinIcon size={16} className="profile-concept__coin-icon" />
                                 <span className="profile-concept__balance-num">{formatNumber(tokenBalance)}</span>
                             </div>
                         </div>
@@ -6124,10 +6149,28 @@ function App() {
                     </p>
                 </div>
 
-                <div className="subscription-page__plans-scroll">
-                    <div className="subscription-page__plans">
-                        {renderSubscriptionPlanCards(currentPlanId, { variant: 'page' })}
+                <div className="subscription-page__plans-carousel">
+                    <button
+                        type="button"
+                        className="subscription-page__plans-nav subscription-page__plans-nav--prev"
+                        aria-label={language === 'ru' ? 'Предыдущий план' : 'Previous plan'}
+                        onClick={() => scrollSubscriptionPlan(-1)}
+                    >
+                        <ChevronLeft size={20} aria-hidden="true" />
+                    </button>
+                    <div className="subscription-page__plans-scroll">
+                        <div className="subscription-page__plans" ref={subscriptionPlansScrollRef}>
+                            {renderSubscriptionPlanCards(currentPlanId, { variant: 'page' })}
+                        </div>
                     </div>
+                    <button
+                        type="button"
+                        className="subscription-page__plans-nav subscription-page__plans-nav--next"
+                        aria-label={language === 'ru' ? 'Следующий план' : 'Next plan'}
+                        onClick={() => scrollSubscriptionPlan(1)}
+                    >
+                        <ChevronRight size={20} aria-hidden="true" />
+                    </button>
                 </div>
             </section>
         );
@@ -6146,7 +6189,7 @@ function App() {
                         <div className="subscription-concept__balance-item">
                             <span className="subscription-concept__balance-label">{text.walletBalanceTotal}</span>
                             <span className="subscription-concept__balance-value">
-                                <span className="profile-concept__coin-icon">C</span>
+                                <CoinIcon size={16} className="profile-concept__coin-icon" />
                                 {formatNumber(tokenBalance)}
                             </span>
                         </div>

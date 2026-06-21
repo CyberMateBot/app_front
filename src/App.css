@@ -432,7 +432,8 @@
   margin: 0 0 14px;
   border-radius: 18px;
   overflow: hidden;
-  height: 170px;
+  height: clamp(210px, 34vw, 260px);
+  min-height: 210px;
 }
 
 .home-news-widget__dots {
@@ -497,6 +498,8 @@
   position: absolute;
   inset: 0;
   z-index: 0;
+  background-size: cover;
+  background-position: center top;
 }
 
 .home-news-widget__slide-overlay {
@@ -1400,15 +1403,18 @@
 }
 
 .profile-concept__coin-icon {
+  display: inline-flex;
+  flex-shrink: 0;
   width: 20px;
   height: 20px;
-  border-radius: 50%;
-  border: 1px solid var(--cm-coin-border);
-  background: var(--cm-coin-bg);
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  color: var(--cm-coin-fg);
+  object-fit: contain;
+}
+
+.coin-icon {
+  display: block;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: transparent;
 }
 
 .profile-concept__balance-num {
@@ -1840,15 +1846,9 @@
 
 .coin-widget__icon {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  flex-shrink: 0;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ffd54a 0%, #ffb300 100%);
-  color: #1a1200;
-  font-size: 10px;
-  font-weight: 800;
 }
 
 .coin-widget__value {
@@ -1868,7 +1868,6 @@
 .coin-widget--compact .coin-widget__icon {
   width: 16px;
   height: 16px;
-  font-size: 9px;
 }
 
 .coin-widget-row {
@@ -1943,7 +1942,16 @@
   color: var(--cm-text-dim);
 }
 
+.subscription-page__plans-carousel {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
 .subscription-page__plans-scroll {
+  flex: 1;
+  min-width: 0;
   margin: 0 calc(-1 * var(--page-pad-x, 16px));
   overflow: hidden;
 }
@@ -1955,10 +1963,55 @@
   gap: 12px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scroll-snap-type: x proximity;
-  padding: 4px var(--page-pad-x, 16px) 14px;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scroll-padding-inline: max(calc(50% - clamp(252px, 78vw, 292px) / 2), var(--page-pad-x, 16px));
+  padding: 4px max(calc(50% - clamp(252px, 78vw, 292px) / 2), var(--page-pad-x, 16px)) 14px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
+.subscription-page__plans-nav {
+  display: none;
+  flex-shrink: 0;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-top: 24px;
+  padding: 0;
+  border: 0.5px solid var(--cm-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-surface) 88%, transparent);
+  color: var(--cm-text-secondary);
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+
+.subscription-page__plans-nav:hover {
+  color: var(--cm-text);
+  background: var(--cm-surface);
+}
+
+.subscription-page__plans-nav:active {
+  transform: scale(0.94);
+}
+
+@media (min-width: 768px) {
+  .subscription-page__plans-carousel {
+    gap: 12px;
+    margin: 0;
+  }
+
+  .subscription-page__plans-scroll {
+    margin: 0;
+  }
+
+  .subscription-page__plans-nav {
+    display: inline-flex;
+  }
 }
 
 .subscription-page__plans::-webkit-scrollbar {
@@ -1967,7 +2020,8 @@
 
 .subscription-page__plans .subscription-plan-card {
   flex: 0 0 clamp(252px, 78vw, 292px);
-  scroll-snap-align: start;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
   min-height: 100%;
 }
 
@@ -2010,8 +2064,6 @@
   border: 0.5px solid var(--cm-border);
   border-radius: 18px;
   background: var(--cm-surface);
-  animation: subscription-plan-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(0.08s + (var(--card-index, 0) * 0.07s));
 }
 
 .subscription-plan-card--popular {
@@ -2116,15 +2168,10 @@
 
 .subscription-plan-card__coin-icon {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  flex-shrink: 0;
   width: 22px;
   height: 22px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ffd54a 0%, #ffb300 100%);
-  color: #1a1200;
-  font-size: 11px;
-  font-weight: 800;
+  object-fit: contain;
 }
 
 .subscription-plan-card__coin-value {
@@ -3546,12 +3593,13 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 12px 10px;
+  padding: 12px 10px 30px;
   border-radius: 14px;
   border: 0.5px solid var(--cm-border);
   background: var(--cm-surface);
   text-align: left;
   cursor: pointer;
+  min-height: 108px;
 }
 
 :root[data-theme='light'] .catalog-concept__card {
@@ -3679,6 +3727,35 @@
   font-size: 10px;
   line-height: 1.3;
   color: var(--cm-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  padding-right: 36px;
+}
+
+.catalog-concept__price {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: calc(100% - 16px);
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-bg) 72%, transparent);
+  border: 0.5px solid var(--cm-border);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--cm-text-secondary);
+  white-space: nowrap;
+}
+
+.catalog-concept__price img {
+  width: 12px;
+  height: 12px;
 }
 
 .catalog-concept__empty {
@@ -4802,7 +4879,7 @@
 .media-picker__trigger {
   width: 100%;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
@@ -4812,6 +4889,21 @@
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+.media-picker__price {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-bg) 70%, transparent);
+  border: 0.5px solid var(--cm-border);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--cm-text-secondary);
+  white-space: nowrap;
 }
 
 .media-picker__label {
@@ -4907,6 +4999,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 5px;
   min-height: 28px;
   padding: 5px 10px;
   border-radius: 16px;
@@ -4919,6 +5012,25 @@
   white-space: nowrap;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.media-options__chip-label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.media-options__chip-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-bg) 70%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--cm-text-secondary);
 }
 
 .media-options__chip--active {
