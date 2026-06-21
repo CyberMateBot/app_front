@@ -434,7 +434,6 @@
   overflow: hidden;
   width: 100%;
   aspect-ratio: 16 / 10;
-  min-height: clamp(240px, 56vw, 340px);
   max-height: 380px;
 }
 
@@ -550,6 +549,21 @@
   font-size: 11px;
   color: rgba(255, 255, 255, 0.6);
   line-height: 1.4;
+}
+
+@media (max-width: 767px) {
+  .home-news-widget {
+    aspect-ratio: 3 / 2;
+    max-height: none;
+  }
+
+  .home-news-widget__slide-image {
+    object-position: center top;
+  }
+
+  .home-news-widget__slide-bg {
+    background-position: center top;
+  }
 }
 
 .home-continue-card {
