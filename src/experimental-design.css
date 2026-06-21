@@ -455,8 +455,8 @@
 }
 
 :root:not([data-theme='light']) .profile-concept__coin-icon {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
 }
 
 :root:not([data-theme='light']) .profile-concept__balance-num {

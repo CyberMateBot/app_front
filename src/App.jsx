@@ -5948,7 +5948,7 @@ function App() {
                         <div>
                             <div className="profile-concept__balance-label">{text.profileBalanceLabel}</div>
                             <div className="profile-concept__balance-amount">
-                                <CoinIcon size={16} className="profile-concept__coin-icon" />
+                                <CoinIcon size={30} className="profile-concept__coin-icon" />
                                 <span className="profile-concept__balance-num">{formatNumber(tokenBalance)}</span>
                             </div>
                         </div>
@@ -6251,11 +6251,6 @@ function App() {
                 backLabel={historySelectMode ? text.historyDeleteCancel : text.back}
                 trailing={(
                 <div className="history-concept__actions">
-                    {!historySelectMode ? (
-                        <button type="button" className="history-concept__action" aria-label="Download">
-                            <Download size={17} aria-hidden="true" />
-                        </button>
-                    ) : null}
                     {historySelectMode ? (
                         <button
                             type="button"
@@ -6267,14 +6262,14 @@ function App() {
                     ) : null}
                     <button
                         type="button"
-                        className={`history-concept__action ${historySelectMode ? 'history-concept__action--danger' : ''}`}
+                        className={`history-concept__action history-concept__action--icon ${historySelectMode ? 'history-concept__action--danger' : ''}`}
                         aria-label={historySelectMode ? text.historyDeleteConfirmAction : text.historySelectModeHint}
                         onClick={handleHistoryDeleteAction}
                         disabled={historySelectMode && selectedHistoryTopics.length === 0}
                     >
                         {historySelectMode
                             ? formatTemplate(text.historyDeleteSelected, { count: selectedHistoryTopics.length })
-                            : <Trash2 size={17} aria-hidden="true" />}
+                            : <Trash2 size={22} aria-hidden="true" />}
                     </button>
                 </div>
                 )}

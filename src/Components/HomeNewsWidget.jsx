@@ -2,18 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 const SLIDE_DURATION_MS = 4000
 
-function slideBackgroundStyle(slide) {
-    if (slide.imageUrl) {
-        return {
-            backgroundImage: `url(${slide.imageUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-        };
-    }
-
-    return { background: slide.background };
-}
-
 export default function HomeNewsWidget({ slides }) {
     const [current, setCurrent] = useState(0)
     const timerRef = useRef(null)
@@ -110,7 +98,16 @@ export default function HomeNewsWidget({ slides }) {
                     className={`home-news-widget__slide${index === current ? ' home-news-widget__slide--active' : ''}`}
                     aria-hidden={index !== current}
                 >
-                    <div className="home-news-widget__slide-bg" style={slideBackgroundStyle(slide)} />
+                    {slide.imageUrl ? (
+                        <img
+                            className="home-news-widget__slide-image"
+                            src={slide.imageUrl}
+                            alt=""
+                            draggable={false}
+                        />
+                    ) : (
+                        <div className="home-news-widget__slide-bg" style={{ background: slide.background }} />
+                    )}
                     <div className="home-news-widget__slide-overlay" />
                     <div className="home-news-widget__slide-content">
                         <span
