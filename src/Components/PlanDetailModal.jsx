@@ -1,6 +1,8 @@
-import React, { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+
+const CLOSE_ANIMATION_MS = 300;
 
 export default function PlanDetailModal({
     open = false,
@@ -10,6 +12,9 @@ export default function PlanDetailModal({
     language = 'ru',
     onClose,
 }) {
+    const [shouldRender, setShouldRender] = useState(open);
+    const [isVisible, setIsVisible] = useState(false);
+
     useEffect(() => {
         if (!open) {
             return undefined;
@@ -31,12 +36,29 @@ export default function PlanDetailModal({
         };
     }, [open, onClose]);
 
-    if (!open || typeof document === 'undefined') {
+    useEffect(() => {
+        if (open) {
+            setShouldRender(true);
+            const frame = window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => setIsVisible(true));
+            });
+            return () => window.cancelAnimationFrame(frame);
+        }
+
+        setIsVisible(false);
+        const timer = window.setTimeout(() => setShouldRender(false), CLOSE_ANIMATION_MS);
+        return () => window.clearTimeout(timer);
+    }, [open]);
+
+    if (!shouldRender || typeof document === 'undefined') {
         return null;
     }
 
     return createPortal(
-        <div className="plan-detail-modal" role="presentation">
+        <div
+            className={`plan-detail-modal${isVisible ? ' plan-detail-modal--visible' : ''}`}
+            role="presentation"
+        >
             <button
                 type="button"
                 className="plan-detail-modal__backdrop"
@@ -67,14 +89,22 @@ export default function PlanDetailModal({
                 </div>
 
                 <div className="plan-detail-modal__body">
-                    {sections.length ? sections.map((section) => (
-                        <section key={section.id} className="plan-detail-modal__section">
+                    {sections.length ? sections.map((section, index) => (
+                        <section
+                            key={section.id}
+                            className="plan-detail-modal__section"
+                            style={{ '--section-index': index }}
+                        >
                             <h4 className="plan-detail-modal__section-title">
                                 {text[section.labelKey] ?? section.id}
                             </h4>
                             <ul className="plan-detail-modal__models">
-                                {section.models.map((model) => (
-                                    <li key={model.id} className="plan-detail-modal__model">
+                                {section.models.map((model, modelIndex) => (
+                                    <li
+                                        key={model.id}
+                                        className="plan-detail-modal__model"
+                                        style={{ '--model-index': modelIndex }}
+                                    >
                                         {model.label}
                                     </li>
                                 ))}

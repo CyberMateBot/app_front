@@ -2296,10 +2296,16 @@
   font-weight: 600;
   text-align: left;
   cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .subscription-plan-card__details:hover {
   text-decoration: underline;
+}
+
+.subscription-plan-card__details:active {
+  opacity: 0.75;
+  transform: scale(0.98);
 }
 
 .subscription-plan-card__btn {
@@ -6562,6 +6568,12 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.plan-detail-modal--visible .plan-detail-modal__backdrop {
+  opacity: 1;
 }
 
 .plan-detail-modal__panel {
@@ -6577,6 +6589,16 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   -webkit-backdrop-filter: blur(22px) saturate(1.45);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
   overflow: hidden;
+  opacity: 0;
+  transform: translateY(28px) scale(0.96);
+  transition:
+    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.plan-detail-modal--visible .plan-detail-modal__panel {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .plan-detail-modal__head {
@@ -6586,6 +6608,16 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   gap: 12px;
   padding: 16px 16px 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--cm-text) 8%, transparent);
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1) 0.06s,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1) 0.06s;
+}
+
+.plan-detail-modal--visible .plan-detail-modal__head {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .plan-detail-modal__eyebrow {
@@ -6617,6 +6649,20 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   padding: 12px 16px 18px;
 }
 
+.plan-detail-modal__section {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(0.1s + var(--section-index, 0) * 0.05s);
+}
+
+.plan-detail-modal--visible .plan-detail-modal__section {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .plan-detail-modal__section + .plan-detail-modal__section {
   margin-top: 16px;
 }
@@ -6644,6 +6690,17 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   background: color-mix(in srgb, var(--cm-text) 5%, transparent);
   font-size: 13px;
   line-height: 1.35;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(0.14s + var(--section-index, 0) * 0.05s + var(--model-index, 0) * 0.03s);
+}
+
+.plan-detail-modal--visible .plan-detail-modal__model {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .plan-detail-modal__empty {

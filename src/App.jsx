@@ -286,6 +286,24 @@ function getSubscriptionPlanEnglishName(planId, fallback = '') {
     return translations.en[nameKey] ?? (fallback || planId);
 }
 
+function getSubscriptionPlanDisplayName(planId, { language, text, fallbackName = '', catalogPlans = [] } = {}) {
+    const planDef = subscriptionPlanDefs.find((plan) => plan.id === planId);
+    const catalogPlan = catalogPlans.find((plan) => plan.id === planId);
+
+    if (language === 'en') {
+        return getSubscriptionPlanEnglishName(
+            planId,
+            catalogPlan?.name ?? (planDef ? text[planDef.nameKey] : fallbackName),
+        );
+    }
+
+    if (planDef?.nameKey && text[planDef.nameKey]) {
+        return text[planDef.nameKey];
+    }
+
+    return catalogPlan?.name ?? fallbackName ?? planId;
+}
+
 function formatTemplate(template, values) {
     return Object.entries(values).reduce(
         (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
@@ -4518,9 +4536,12 @@ function App() {
             const badgeClass = plan.badge_class || plan.badgeClass || 'free';
             const coins = Number(plan.coins) || 0;
             const planDef = subscriptionPlanDefs.find((entry) => entry.id === plan.id);
-            const displayName = language === 'en'
-                ? getSubscriptionPlanEnglishName(plan.id, plan.name)
-                : (plan.name || (planDef ? text[planDef.nameKey] : plan.id));
+            const displayName = getSubscriptionPlanDisplayName(plan.id, {
+                language,
+                text,
+                fallbackName: plan.name,
+                catalogPlans: billingCatalog?.plans ?? [],
+            });
             const displayBadge = plan.badge || (planDef ? text[planDef.badgeKey] : '');
             const displayPriceSub = plan.price_sub || (planDef ? text[planDef.priceSubKey] : '');
 
@@ -5051,12 +5072,12 @@ function App() {
                     <div className="subscription-page__hero-plan">
                         <Crown size={18} aria-hidden="true" />
                         <span className="subscription-page__hero-plan-name">
-                            {language === 'en'
-                                ? getSubscriptionPlanEnglishName(
-                                    userData.subscriptionPlanId,
-                                    userData.subscriptionPlanName,
-                                )
-                                : userData.subscriptionPlanName}
+                            {getSubscriptionPlanDisplayName(userData.subscriptionPlanId, {
+                                language,
+                                text,
+                                fallbackName: userData.subscriptionPlanName,
+                                catalogPlans: billingCatalog?.plans ?? [],
+                            })}
                         </span>
                         {userData.subscriptionTimeLeft ? (
                             <span className={`subscription-page__hero-time${userData.subscriptionExpiringSoon ? ' subscription-page__hero-time--warn' : ''}`}>
@@ -6366,10 +6387,12 @@ function App() {
 
     const renderSubscriptionScreen = () => {
         const currentPlanId = userData.subscriptionPlanId;
-        const currentPlanEnglishName = getSubscriptionPlanEnglishName(
-            currentPlanId,
-            userData.subscriptionPlanName,
-        );
+        const currentPlanDisplayName = getSubscriptionPlanDisplayName(currentPlanId, {
+            language,
+            text,
+            fallbackName: userData.subscriptionPlanName,
+            catalogPlans: billingCatalog?.plans ?? [],
+        });
 
         return (
             <section className="subscription-page" aria-label={text.subscriptionPageTitle}>
@@ -6391,7 +6414,7 @@ function App() {
                     <p className="subscription-page__hero-label">{text.subscriptionCurrentPlan}</p>
                     <div className="subscription-page__hero-plan">
                         <Crown size={18} aria-hidden="true" />
-                        <span className="subscription-page__hero-plan-name">{currentPlanEnglishName}</span>
+                        <span className="subscription-page__hero-plan-name">{currentPlanDisplayName}</span>
                         {userData.subscriptionIsPaid && userData.subscriptionTimeLeft ? (
                             <span className={`subscription-page__hero-time${userData.subscriptionExpiringSoon ? ' subscription-page__hero-time--warn' : ''}`}>
                                 {userData.subscriptionTimeLeft}
@@ -6909,20 +6932,13 @@ function App() {
 
             <PlanDetailModal
                 open={Boolean(planDetailPlanId)}
-                planName={(() => {
-                    if (!planDetailPlanId) {
-                        return '';
-                    }
-                    const catalogPlan = billingCatalog?.plans?.find((plan) => plan.id === planDetailPlanId);
-                    const planDef = subscriptionPlanDefs.find((plan) => plan.id === planDetailPlanId);
-                    if (language === 'en') {
-                        return getSubscriptionPlanEnglishName(
-                            planDetailPlanId,
-                            catalogPlan?.name ?? (planDef ? text[planDef.nameKey] : planDetailPlanId),
-                        );
-                    }
-                    return catalogPlan?.name ?? (planDef ? text[planDef.nameKey] : planDetailPlanId);
-                })()}
+                planName={planDetailPlanId
+                    ? getSubscriptionPlanDisplayName(planDetailPlanId, {
+                        language,
+                        text,
+                        catalogPlans: billingCatalog?.plans ?? [],
+                    })
+                    : ''}
                 sections={planModelSectionsByPlan[planDetailPlanId] ?? []}
                 text={text}
                 language={language}
