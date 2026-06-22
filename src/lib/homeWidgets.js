@@ -2,7 +2,7 @@ import { resolveApiUrl } from '../api/httpClient.js';
 
 export const HOME_SOCIAL_LINKS = {
     tiktok: 'https://www.tiktok.com/@cybermate',
-    instagram: 'https://www.instagram.com/cybermate',
+    instagram: 'https://www.instagram.com/cybermate.ai?igsh=aTJsY2hoNmFqeTVk',
 };
 
 export function mapHomeWidgetToSlide(widget) {

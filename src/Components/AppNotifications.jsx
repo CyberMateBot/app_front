@@ -1,48 +1,71 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, Crown, X } from 'lucide-react';
+import { Bell, Coins, Crown, ShoppingBag, X } from 'lucide-react';
 
-function getPanelPosition(triggerEl) {
+const BOTTOM_NAV_RESERVE_PX = 92;
+
+function getPanelLayout(triggerEl) {
     if (!triggerEl || typeof window === 'undefined') {
         return null;
     }
 
     const rect = triggerEl.getBoundingClientRect();
+    const top = rect.bottom + 8;
+    const maxHeight = Math.max(180, window.innerHeight - top - BOTTOM_NAV_RESERVE_PX);
+
     return {
-        top: rect.bottom + 8,
+        top,
         right: Math.max(12, window.innerWidth - rect.right),
         width: Math.min(320, window.innerWidth - 24),
+        maxHeight,
     };
+}
+
+function NotificationIcon({ type }) {
+    if (type === 'coins') {
+        return <Coins size={16} />;
+    }
+
+    if (type === 'subscription-purchase') {
+        return <ShoppingBag size={16} />;
+    }
+
+    return <Crown size={16} />;
 }
 
 export default function AppNotifications({
     notifications = [],
     language = 'ru',
     onOpenSubscription,
+    onOpenWallet,
+    onMarkRead,
 }) {
     const [open, setOpen] = useState(false);
-    const [panelPosition, setPanelPosition] = useState(null);
+    const [panelLayout, setPanelLayout] = useState(null);
     const triggerRef = useRef(null);
     const panelRef = useRef(null);
+    const notificationsRef = useRef(notifications);
     const unreadCount = notifications.filter((item) => item.unread !== false).length;
+
+    notificationsRef.current = notifications;
 
     useLayoutEffect(() => {
         if (!open) {
-            setPanelPosition(null);
+            setPanelLayout(null);
             return undefined;
         }
 
-        const updatePosition = () => {
-            setPanelPosition(getPanelPosition(triggerRef.current));
+        const updateLayout = () => {
+            setPanelLayout(getPanelLayout(triggerRef.current));
         };
 
-        updatePosition();
-        window.addEventListener('resize', updatePosition);
-        window.addEventListener('scroll', updatePosition, true);
+        updateLayout();
+        window.addEventListener('resize', updateLayout);
+        window.addEventListener('scroll', updateLayout, true);
 
         return () => {
-            window.removeEventListener('resize', updatePosition);
-            window.removeEventListener('scroll', updatePosition, true);
+            window.removeEventListener('resize', updateLayout);
+            window.removeEventListener('scroll', updateLayout, true);
         };
     }, [open]);
 
@@ -50,6 +73,8 @@ export default function AppNotifications({
         if (!open) {
             return undefined;
         }
+
+        onMarkRead?.(notificationsRef.current.map((item) => item.id));
 
         const handlePointerDown = (event) => {
             const target = event.target;
@@ -61,18 +86,19 @@ export default function AppNotifications({
 
         document.addEventListener('pointerdown', handlePointerDown);
         return () => document.removeEventListener('pointerdown', handlePointerDown);
-    }, [open]);
+    }, [open, onMarkRead]);
 
-    const panel = open && panelPosition ? (
+    const panel = open && panelLayout ? (
         <div
             ref={panelRef}
             className="app-notifications__panel app-notifications__panel--portal"
             role="dialog"
             aria-label={language === 'ru' ? 'Уведомления' : 'Notifications'}
             style={{
-                top: panelPosition.top,
-                right: panelPosition.right,
-                width: panelPosition.width,
+                top: panelLayout.top,
+                right: panelLayout.right,
+                width: panelLayout.width,
+                maxHeight: panelLayout.maxHeight,
             }}
         >
             <div className="app-notifications__panel-head">
@@ -93,16 +119,18 @@ export default function AppNotifications({
                         <li key={item.id}>
                             <button
                                 type="button"
-                                className="app-notifications__item"
+                                className={`app-notifications__item${item.unread === false ? ' app-notifications__item--read' : ''}`}
                                 onClick={() => {
                                     setOpen(false);
                                     if (item.action === 'subscription') {
                                         onOpenSubscription?.();
+                                    } else if (item.action === 'wallet') {
+                                        onOpenWallet?.();
                                     }
                                 }}
                             >
                                 <span className="app-notifications__item-ico" aria-hidden="true">
-                                    <Crown size={14} />
+                                    <NotificationIcon type={item.type} />
                                 </span>
                                 <span className="app-notifications__item-body">
                                     <span className="app-notifications__item-title">{item.title}</span>
@@ -130,7 +158,7 @@ export default function AppNotifications({
                 aria-expanded={open}
                 onClick={() => setOpen((prev) => !prev)}
             >
-                <Bell size={18} />
+                <Bell size={22} />
                 {unreadCount ? (
                     <span className="app-notifications__badge" aria-hidden="true">
                         {unreadCount > 9 ? '9+' : unreadCount}

@@ -40,7 +40,7 @@ import {
     Zap,
     Play,
 } from 'lucide-react';
-import { FaInstagram } from 'react-icons/fa6';
+import { FaInstagram, FaTelegram } from 'react-icons/fa6';
 import {
     deletePromptHistoryTopic,
     getMyProfile,
@@ -115,7 +115,13 @@ import {
     openExternalLink,
 } from './lib/homeWidgets.js';
 import { getAiGroupTitle, getAiVariantOptions } from './lib/aiVariantOptions.js';
-import { buildAppNotifications } from './lib/appNotifications.js';
+import {
+    applyReadState,
+    buildAppNotifications,
+    loadReadNotificationIds,
+    markNotificationsRead,
+} from './lib/appNotifications.js';
+import { buildPlanModelSections } from './lib/planModelsCatalog.js';
 import { fetchUserSubscription } from './api/subscription.js';
 import {
     annotateCatalogTool as annotateCatalogToolGating,
@@ -137,6 +143,7 @@ import {
 } from './lib/theme.js';
 import AppNotice from './Components/AppNotice.jsx';
 import AppNotifications from './Components/AppNotifications.jsx';
+import PlanDetailModal from './Components/PlanDetailModal.jsx';
 import SubscriptionTimeBadge from './Components/SubscriptionTimeBadge.jsx';
 import TelegramDesktopExpand from './Components/TelegramDesktopExpand.jsx';
 import AppPageHeader from './Components/AppPageHeader.jsx';
@@ -370,7 +377,7 @@ const translations = {
         homeSocialLabel: 'Мы в соцсетях',
         homeSocialTiktok: 'TikTok',
         homeSocialInstagram: 'Instagram',
-        homeSocialTelegram: 'Канал',
+        homeSocialTelegram: 'Telegram',
         homeContinueWith: 'Продолжить с {model}',
         homeContinueStart: 'Начать с {model}',
         homeContinueSub: 'Последний диалог · {time}',
@@ -773,6 +780,7 @@ const translations = {
         subscriptionPageTitle: 'Подписки',
         subscriptionPageSub: '5 уровней · 1 CyberCoin = {rate} ₽',
         subscriptionCurrentPlan: 'Ваш план',
+        planDetailButton: 'Подробное описание плана',
         subscriptionCoinsPerMonth: 'монет / мес',
         subscriptionTimeLeft: 'Осталось',
         subscriptionRenewHint: 'Продлить подписку',
@@ -907,7 +915,7 @@ const translations = {
         homeSocialLabel: 'Follow us',
         homeSocialTiktok: 'TikTok',
         homeSocialInstagram: 'Instagram',
-        homeSocialTelegram: 'Channel',
+        homeSocialTelegram: 'Telegram',
         homeContinueWith: 'Continue with {model}',
         homeContinueStart: 'Start with {model}',
         homeContinueSub: 'Last chat · {time}',
@@ -1310,6 +1318,7 @@ const translations = {
         subscriptionPageTitle: 'Plans',
         subscriptionPageSub: '5 tiers · 1 CyberCoin = {rate} ₽',
         subscriptionCurrentPlan: 'Your plan',
+        planDetailButton: 'Plan details',
         subscriptionCoinsPerMonth: 'coins / mo',
         subscriptionTimeLeft: 'Time left',
         subscriptionRenewHint: 'Renew subscription',
@@ -1519,6 +1528,8 @@ function App() {
     const [tgLayoutMode, setTgLayoutMode] = useState(() => resolveTelegramLayoutMode(getTelegramWebApp()));
     const [walletData, setWalletData] = useState(null);
     const [subscriptionState, setSubscriptionState] = useState(null);
+    const [readNotificationIds, setReadNotificationIds] = useState(() => loadReadNotificationIds());
+    const [planDetailPlanId, setPlanDetailPlanId] = useState(null);
     const [referralData, setReferralData] = useState(null);
     const [referralLink, setReferralLink] = useState('');
     const [referralLinkLoading, setReferralLinkLoading] = useState(false);
@@ -2494,10 +2505,39 @@ function App() {
         };
     }, [profile, subscriptionState, telegramUser, walletData, text, language]);
 
-    const appNotifications = useMemo(
-        () => buildAppNotifications(subscriptionState, text, language),
-        [subscriptionState, text, language],
-    );
+    const handleMarkNotificationsRead = useCallback((ids = []) => {
+        if (!ids.length) {
+            return;
+        }
+        setReadNotificationIds(markNotificationsRead(ids));
+    }, []);
+
+    const planModelCatalogs = useMemo(() => ({
+        textModels: effectiveTextModels,
+        imageDefinitions: IMAGE_MODEL_DEFINITIONS,
+        videoDefinitions: VIDEO_MODEL_DEFINITIONS,
+        audioDefinitions: AUDIO_MODEL_DEFINITIONS,
+        threeDDefinitions: THREE_D_MODEL_DEFINITIONS,
+    }), [effectiveTextModels]);
+
+    const planModelSectionsByPlan = useMemo(() => {
+        const resolveLabel = (tool, modelId) => {
+            if (tool?.tiered && Array.isArray(tool.variants)) {
+                const variant = tool.variants.find((entry) => entry.id === modelId);
+                if (variant?.label) {
+                    return variant.label;
+                }
+            }
+            return tool?.label ?? text[tool?.nameKey] ?? modelId;
+        };
+
+        return Object.fromEntries(
+            subscriptionPlanDefs.map((plan) => [
+                plan.id,
+                buildPlanModelSections(plan.id, planModelCatalogs, resolveLabel),
+            ]),
+        );
+    }, [planModelCatalogs, text]);
 
     const handleLockedModelSelect = useCallback((option) => {
         const requiredPlan = text[option?.requiredPlanLabelKey] ?? option?.requiredPlan ?? '';
@@ -2581,6 +2621,15 @@ function App() {
         [promptHistoryData],
     );
     const walletTransactions = Array.isArray(walletData?.transactions) ? walletData.transactions : [];
+    const appNotifications = useMemo(() => {
+        const items = buildAppNotifications({
+            subscription: subscriptionState,
+            walletTransactions,
+            text,
+            language,
+        });
+        return applyReadState(items, readNotificationIds);
+    }, [subscriptionState, walletTransactions, text, language, readNotificationIds]);
     const tokenBalance = resolveGenerationTokenBalance(walletData, profile);
 
     const openCoinTopUp = useCallback(() => {
@@ -4508,6 +4557,13 @@ function App() {
                         </ul>
                         <button
                             type="button"
+                            className="subscription-plan-card__details"
+                            onClick={() => setPlanDetailPlanId(plan.id)}
+                        >
+                            {text.planDetailButton}
+                        </button>
+                        <button
+                            type="button"
                             className={`subscription-plan-card__btn ${isCurrent ? 'subscription-plan-card__btn--current' : ''}`}
                             disabled={isCurrent}
                             onClick={isCurrent ? undefined : handleCoinPackPurchase}
@@ -4931,6 +4987,8 @@ function App() {
                         notifications={appNotifications}
                         language={language}
                         onOpenSubscription={() => setCurrentPage('subscription')}
+                        onOpenWallet={() => setCurrentPage('wallet')}
+                        onMarkRead={handleMarkNotificationsRead}
                     />
                     <button
                         type="button"
@@ -4938,10 +4996,27 @@ function App() {
                         aria-label={text.settingsTitle}
                         onClick={() => setCurrentPage('settings')}
                     >
-                        <Settings size={18} />
+                        <Settings size={22} />
                     </button>
                 </div>
             </header>
+
+            <HomeNewsWidget slides={homeNewsSlides} />
+
+            <button
+                type="button"
+                className="home-continue-card"
+                onClick={handleHomeContinueClick}
+            >
+                <span className="home-continue-card__ico" aria-hidden="true">
+                    <Play size={18} />
+                </span>
+                <span className="home-continue-card__text">
+                    <span className="home-continue-card__title">{homeContinueTitle}</span>
+                    <span className="home-continue-card__sub">{homeContinueSubtitle}</span>
+                </span>
+                <ChevronRight size={18} className="home-continue-card__arrow" aria-hidden="true" />
+            </button>
 
             {userData.subscriptionIsPaid ? (
                 <div className="home-subscription-widget">
@@ -4950,6 +5025,7 @@ function App() {
                         expiryDateLabel={userData.subscriptionExpiryDate}
                         expiringSoon={userData.subscriptionExpiringSoon}
                         language={language}
+                        inline
                     />
                     {userData.subscriptionExpiringSoon ? (
                         <button
@@ -4962,23 +5038,6 @@ function App() {
                     ) : null}
                 </div>
             ) : null}
-
-            <HomeNewsWidget slides={homeNewsSlides} />
-
-                    <button
-                        type="button"
-                className="home-continue-card"
-                onClick={handleHomeContinueClick}
-            >
-                <span className="home-continue-card__ico" aria-hidden="true">
-                    <Play size={18} />
-                </span>
-                <span className="home-continue-card__text">
-                    <span className="home-continue-card__title">{homeContinueTitle}</span>
-                    <span className="home-continue-card__sub">{homeContinueSubtitle}</span>
-                </span>
-                <ChevronRight size={18} className="home-continue-card__arrow" aria-hidden="true" />
-                    </button>
 
             <p className="home-concept__section-label home-concept__section-label--widgets">{text.homeSocialLabel}</p>
             <div className="home-social-row">
@@ -5008,7 +5067,7 @@ function App() {
                     onClick={handleHomeSocialTelegram}
                 >
                     <span className="home-social-card__ico home-social-card__ico--telegram" aria-hidden="true">
-                        <Send size={16} />
+                        <FaTelegram size={16} />
                     </span>
                     <span className="home-social-card__label">{text.homeSocialTelegram}</span>
                 </button>
@@ -6295,16 +6354,20 @@ function App() {
                     <p className="subscription-page__hero-label">{text.subscriptionCurrentPlan}</p>
                     <div className="subscription-page__hero-plan">
                         <Crown size={18} aria-hidden="true" />
-                        <span>{currentPlanEnglishName}</span>
+                        <span className="subscription-page__hero-plan-name">{currentPlanEnglishName}</span>
+                        {userData.subscriptionIsPaid && userData.subscriptionTimeLeft ? (
+                            <span className={`subscription-page__hero-time${userData.subscriptionExpiringSoon ? ' subscription-page__hero-time--warn' : ''}`}>
+                                {userData.subscriptionTimeLeft}
+                                {userData.subscriptionExpiryDate ? (
+                                    <span className="subscription-page__hero-time-sub">
+                                        {language === 'ru'
+                                            ? ` · до ${userData.subscriptionExpiryDate}`
+                                            : ` · until ${userData.subscriptionExpiryDate}`}
+                                    </span>
+                                ) : null}
+                            </span>
+                        ) : null}
                     </div>
-                    {userData.subscriptionIsPaid ? (
-                        <SubscriptionTimeBadge
-                            timeLeftLabel={userData.subscriptionTimeLeft}
-                            expiryDateLabel={userData.subscriptionExpiryDate}
-                            expiringSoon={userData.subscriptionExpiringSoon}
-                            language={language}
-                        />
-                    ) : null}
                     <p className="subscription-page__hero-sub">
                         {formatTemplate(text.subscriptionPageSub, {
                             rate: String(billingCatalog?.coinRateRub ?? 1),
@@ -6806,6 +6869,28 @@ function App() {
             ) : null}
 
             <AppNotice notice={appNotice} onDismiss={clearAppNotice} />
+
+            <PlanDetailModal
+                open={Boolean(planDetailPlanId)}
+                planName={(() => {
+                    if (!planDetailPlanId) {
+                        return '';
+                    }
+                    const catalogPlan = billingCatalog?.plans?.find((plan) => plan.id === planDetailPlanId);
+                    const planDef = subscriptionPlanDefs.find((plan) => plan.id === planDetailPlanId);
+                    if (language === 'en') {
+                        return getSubscriptionPlanEnglishName(
+                            planDetailPlanId,
+                            catalogPlan?.name ?? (planDef ? text[planDef.nameKey] : planDetailPlanId),
+                        );
+                    }
+                    return catalogPlan?.name ?? (planDef ? text[planDef.nameKey] : planDetailPlanId);
+                })()}
+                sections={planModelSectionsByPlan[planDetailPlanId] ?? []}
+                text={text}
+                language={language}
+                onClose={() => setPlanDetailPlanId(null)}
+            />
 
             {confirmDialog ? (
                 <div className="app-confirm" role="dialog" aria-modal="true">
