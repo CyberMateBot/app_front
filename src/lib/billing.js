@@ -1,4 +1,5 @@
 import { resolveApiUrl } from '../api/httpClient.js';
+import { BILLING_PLAN_FEATURES_RU } from './planFeatureCopy.js';
 
 export const DEFAULT_COIN_PACKS = [
     { id: 'pack-100', name: '100 монет', coins: 100, price_rub: 99, badge: '', sort_order: 1 },
@@ -10,31 +11,31 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
     {
         id: 'free', name: 'Старт', badge: 'Бесплатно', badge_class: 'free',
         price_rub: 0, price_sub: 'навсегда', coins: 10, popular: false, sort_order: 1,
-        features: ['10 монет / месяц', '3 базовые чат-модели', 'FLUX (картинки)', 'Озвучка (базовая)'],
-        locked: ['Видео — нет', '3D — нет', 'Премиум модели — нет'],
+        features: BILLING_PLAN_FEATURES_RU.free,
+        locked: BILLING_PLAN_FEATURES_RU.freeLocked,
     },
     {
         id: 'basic', name: 'Базовый', badge: 'Доступный', badge_class: 'basic',
         price_rub: 149, price_sub: '/ месяц', coins: 40, popular: false, sort_order: 2,
-        features: ['40 монет / месяц', 'Fast-модели + GPT-4o mini', 'Alice AI, Nano Banana', 'Kling Standard', 'ElevenLabs, 3D rapid'],
-        locked: ['Pro/Max видео и 3D — нет'],
+        features: BILLING_PLAN_FEATURES_RU.basic,
+        locked: BILLING_PLAN_FEATURES_RU.basicLocked,
     },
     {
         id: 'pro', name: 'Про', badge: 'Популярный', badge_class: 'popular',
         price_rub: 349, price_sub: '/ месяц', coins: 100, popular: true, sort_order: 3,
-        features: ['100 монет / месяц', 'Claude Sonnet, GPT-5.4', 'GPT Image 2', 'Kling Pro, Seedance', 'Mureka, Tripo 3D'],
+        features: BILLING_PLAN_FEATURES_RU.pro,
         locked: [],
     },
     {
         id: 'max', name: 'Максимум', badge: 'Выгодный', badge_class: 'max',
         price_rub: 799, price_sub: '/ месяц', coins: 250, popular: false, sort_order: 4,
-        features: ['250 монет / месяц', 'GPT-4o, Gemini 2.5 Pro', 'Claude Opus 4.7', 'Kling 4K', 'Rodin 3D'],
+        features: BILLING_PLAN_FEATURES_RU.max,
         locked: [],
     },
     {
         id: 'ultra', name: 'Бизнес', badge: 'Для бизнеса', badge_class: 'biz',
         price_rub: 1999, price_sub: '/ месяц', coins: 600, popular: false, sort_order: 5,
-        features: ['600 монет / месяц', 'Все модели', 'Claude Opus 4.8, o1', 'Максимальный приоритет'],
+        features: BILLING_PLAN_FEATURES_RU.ultra,
         locked: [],
     },
 ];
@@ -56,14 +57,31 @@ export async function fetchBillingCatalog() {
         throw new Error(`billing catalog ${response.status}`);
     }
     const payload = await response.json();
+    const plans = Array.isArray(payload?.plans) ? payload.plans.map(normalizePlan) : [];
+    const coinPacks = Array.isArray(payload?.coin_packs) ? payload.coin_packs.map(normalizePack) : [];
     return {
         coinRateRub: Number(payload?.coin_rate_rub ?? 1) || 1,
-        plans: Array.isArray(payload?.plans) && payload.plans.length
-            ? payload.plans
-            : DEFAULT_SUBSCRIPTION_PLANS,
-        coinPacks: Array.isArray(payload?.coin_packs) && payload.coin_packs.length
-            ? payload.coin_packs
-            : DEFAULT_COIN_PACKS,
+        plans: plans.length ? plans : DEFAULT_SUBSCRIPTION_PLANS,
+        coinPacks: coinPacks.length ? coinPacks : DEFAULT_COIN_PACKS,
+    };
+}
+
+function normalizePlan(plan) {
+    return {
+        ...plan,
+        price_rub: Number(plan?.price_rub ?? 0) || 0,
+        coins: Number(plan?.coins ?? 0) || 0,
+        popular: Boolean(plan?.popular),
+        enabled: plan?.enabled !== false,
+    };
+}
+
+function normalizePack(pack) {
+    return {
+        ...pack,
+        coins: Number(pack?.coins ?? 0) || 0,
+        price_rub: Number(pack?.price_rub ?? 0) || 0,
+        enabled: pack?.enabled !== false,
     };
 }
 

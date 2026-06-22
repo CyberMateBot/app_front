@@ -118,11 +118,11 @@ import { getAiGroupTitle, getAiVariantOptions } from './lib/aiVariantOptions.js'
 import { buildAppNotifications } from './lib/appNotifications.js';
 import { fetchUserSubscription } from './api/subscription.js';
 import {
-    minPlanForModel,
-    planLabelKey,
+    annotateCatalogTool as annotateCatalogToolGating,
     planUnlocksModel,
     pickFirstUnlockedModelId,
 } from './lib/planGating.js';
+import { PLAN_FEATURE_COPY } from './lib/planFeatureCopy.js';
 import { openSupport, resolveSupportUrl } from './lib/openSupport.js';
 import { getActiveBuildId } from './lib/appUpdate.js';
 import {
@@ -875,47 +875,12 @@ const translations = {
         planUltraBadge: 'Для бизнеса',
         planUltraPrice: '1999 ₽',
         planUltraPriceSub: '/ месяц',
-        planFreeFeatures: [
-            '50 монет / месяц',
-            'Базовые чат-модели',
-            '10 изображений (FLUX)',
-            'TTS (базовый)',
-        ],
-        planFreeLocked: [
-            'Видео и музыка — нет',
-            'Премиум модели — нет',
-        ],
-        planBasicFeatures: [
-            '250 монет / месяц',
-            'Все fast-модели (Haiku, Flash)',
-            '25 изображений HD',
-            '3 видео (Kling Std)',
-            'Музыка и озвучка',
-        ],
-        planProFeatures: [
-            '700 монет / месяц',
-            'Claude, Gemini, GPT-5.4',
-            '35 изображений (GPT Image 2)',
-            '8 видео (Kling/Seedance)',
-            'Музыка + 3D модели',
-            'Приоритетная очередь',
-        ],
-        planMaxFeatures: [
-            '2000 монет / месяц',
-            'Все PRO модели',
-            '100 изображений (4K)',
-            '25 видео HD',
-            'Все инструменты',
-            'Перенос 20% монет',
-        ],
-        planUltraFeatures: [
-            '6000 монет / месяц',
-            'Claude Opus, o3 и всё',
-            '300+ изображений',
-            '75 видео 4K',
-            'API доступ',
-            'Перенос 50% монет',
-        ],
+        planFreeFeatures: PLAN_FEATURE_COPY.ru.free,
+        planFreeLocked: PLAN_FEATURE_COPY.ru.freeLocked,
+        planBasicFeatures: PLAN_FEATURE_COPY.ru.basic,
+        planProFeatures: PLAN_FEATURE_COPY.ru.pro,
+        planMaxFeatures: PLAN_FEATURE_COPY.ru.max,
+        planUltraFeatures: PLAN_FEATURE_COPY.ru.ultra,
         textGenerateTitle: 'Генерация текста',
         textModelLabel: 'Нейросеть',
         tierLite: 'Lite',
@@ -1447,47 +1412,12 @@ const translations = {
         planUltraBadge: 'For business',
         planUltraPrice: '1999 ₽',
         planUltraPriceSub: '/ month',
-        planFreeFeatures: [
-            '50 coins / month',
-            'Basic chat models',
-            '10 images (FLUX)',
-            'Basic TTS',
-        ],
-        planFreeLocked: [
-            'Video & music — unavailable',
-            'Premium models — unavailable',
-        ],
-        planBasicFeatures: [
-            '250 coins / month',
-            'All fast models (Haiku, Flash)',
-            '25 HD images',
-            '3 videos (Kling Std)',
-            'Music & voiceover',
-        ],
-        planProFeatures: [
-            '700 coins / month',
-            'Claude, Gemini, GPT-5.4',
-            '35 images (GPT Image 2)',
-            '8 videos (Kling/Seedance)',
-            'Music + 3D models',
-            'Priority queue',
-        ],
-        planMaxFeatures: [
-            '2000 coins / month',
-            'All PRO models',
-            '100 images (4K)',
-            '25 HD videos',
-            'All tools',
-            '20% coin rollover',
-        ],
-        planUltraFeatures: [
-            '6000 coins / month',
-            'Claude Opus, o3 and more',
-            '300+ images',
-            '75 4K videos',
-            'API access',
-            '50% coin rollover',
-        ],
+        planFreeFeatures: PLAN_FEATURE_COPY.en.free,
+        planFreeLocked: PLAN_FEATURE_COPY.en.freeLocked,
+        planBasicFeatures: PLAN_FEATURE_COPY.en.basic,
+        planProFeatures: PLAN_FEATURE_COPY.en.pro,
+        planMaxFeatures: PLAN_FEATURE_COPY.en.max,
+        planUltraFeatures: PLAN_FEATURE_COPY.en.ultra,
         textGenerateTitle: 'Text generation',
         textModelLabel: 'Model',
         tierLite: 'Lite',
@@ -2309,6 +2239,52 @@ function App() {
         }
 
         let isCancelled = false;
+
+        const loadBillingCatalog = () => {
+            fetchBillingCatalog()
+                .then((catalog) => {
+                    if (!isCancelled && catalog) {
+                        setBillingCatalog(catalog);
+                    }
+                })
+                .catch(() => {
+                    // Keep fallback catalog on failure.
+                });
+        };
+
+        loadBillingCatalog();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [telegramUser?.id]);
+
+    useEffect(() => {
+        if (!telegramUser?.id || currentPage !== 'subscription') {
+            return undefined;
+        }
+
+        let isCancelled = false;
+
+        fetchBillingCatalog()
+            .then((catalog) => {
+                if (!isCancelled && catalog) {
+                    setBillingCatalog(catalog);
+                }
+            })
+            .catch(() => {});
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [currentPage, telegramUser?.id]);
+
+    useEffect(() => {
+        if (!telegramUser?.id) {
+            return undefined;
+        }
+
+        let isCancelled = false;
         let needWallet = false;
         let needReferrals = false;
         let needHistory = false;
@@ -2532,16 +2508,9 @@ function App() {
         setCurrentPage('subscription');
     }, [text, showAppNotice]);
 
-    const annotateCatalogTool = useCallback((tool, category, planId) => {
-        const unlocked = planUnlocksModel(planId, tool.id, category);
-        const requiredPlan = minPlanForModel(tool.id, category);
-        return {
-            ...tool,
-            locked: !unlocked,
-            requiredPlan,
-            requiredPlanLabelKey: planLabelKey(requiredPlan),
-        };
-    }, []);
+    const annotateCatalogTool = useCallback((tool, category, planId) => (
+        annotateCatalogToolGating(tool, planId, category)
+    ), []);
 
     const homeGreetingText = useMemo(() => {
         const firstName = userData.displayName.split(/\s+/)[0] || userData.displayName;
@@ -4467,24 +4436,23 @@ function App() {
                 max: text.planMaxFeatures,
                 ultra: text.planUltraFeatures,
             };
-            const features = Array.isArray(plan.features) && plan.features.length
+            const displayFeatures = (Array.isArray(plan.features) && plan.features.length)
                 ? plan.features
                 : (planFeaturesMap[plan.id] ?? text.planProFeatures);
-            const locked = Array.isArray(plan.locked) && plan.locked.length
+            const displayLocked = (Array.isArray(plan.locked) && plan.locked.length)
                 ? plan.locked
                 : (plan.id === 'free' ? text.planFreeLocked : []);
             const isCurrent = plan.id === currentPlanId;
             const badgeClass = plan.badge_class || plan.badgeClass || 'free';
             const coins = Number(plan.coins) || 0;
             const planDef = subscriptionPlanDefs.find((entry) => entry.id === plan.id);
+            const displayName = language === 'en'
+                ? getSubscriptionPlanEnglishName(plan.id, plan.name)
+                : (plan.name || (planDef ? text[planDef.nameKey] : plan.id));
+            const displayBadge = plan.badge || (planDef ? text[planDef.badgeKey] : '');
+            const displayPriceSub = plan.price_sub || (planDef ? text[planDef.priceSubKey] : '');
 
             if (variant === 'page') {
-                const displayName = getSubscriptionPlanEnglishName(plan.id, plan.name);
-                const displayBadge = planDef ? text[planDef.badgeKey] : plan.badge;
-                const displayPriceSub = planDef ? text[planDef.priceSubKey] : plan.price_sub;
-                const displayFeatures = planFeaturesMap[plan.id] ?? text.planProFeatures;
-                const displayLocked = plan.id === 'free' ? text.planFreeLocked : [];
-
                 return (
                     <article
                         key={plan.id}
@@ -4560,24 +4528,24 @@ function App() {
                     {plan.popular ? <span className="profile-concept__plan-glow" aria-hidden="true" /> : null}
                     <div className="profile-concept__plan-top">
                         <div>
-                            <div className="profile-concept__plan-name">{plan.name}</div>
+                            <div className="profile-concept__plan-name">{displayName}</div>
                             <span className={`profile-concept__plan-badge profile-concept__plan-badge--${badgeClass}`}>
-                                {plan.badge}
+                                {displayBadge}
                             </span>
                         </div>
                         <div className="profile-concept__plan-price">
                             <span>{formatPlanPrice(plan.price_rub, language)}</span>
-                            <small>{plan.price_sub}</small>
+                            <small>{displayPriceSub}</small>
                         </div>
                     </div>
                     <div className="profile-concept__plan-features">
-                        {features.map((feature) => (
+                        {displayFeatures.map((feature) => (
                             <div key={feature} className="profile-concept__feat">
                                 <Check size={13} aria-hidden="true" />
                                 {feature}
                             </div>
                         ))}
-                        {locked.map((feature) => (
+                        {displayLocked.map((feature) => (
                             <div key={feature} className="profile-concept__feat profile-concept__feat--muted">
                                 <Lock size={13} aria-hidden="true" />
                                 {feature}

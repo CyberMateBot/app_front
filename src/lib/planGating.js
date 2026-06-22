@@ -33,10 +33,23 @@ const MODEL_MIN_PLAN_RANK = {
     'nano-banana': 1,
     'gpt-image-1.5': 2, 'gpt-image-2': 2, 'nano-banana-2': 2,
     'nano-banana-pro': 3,
+    'seedream-v4.5': 1, 'seedream-v5.0-lite': 1,
+    'qwen-image': 1, 'qwen-image-2512': 1, 'qwen-image-2.0': 1,
+    'qwen-image-2.0-pro': 2,
+    'z-image-base': 1, 'z-image-turbo': 1,
+    'grok-imagine-edit': 2,
     'kling-v3-std': 1,
     'kling-v3-pro': 2, 'seedance-v1-pro-i2v': 2, 'seedance-v1.5-i2v-fast': 2,
     'seedance-v1.5-t2v-fast': 2, 'seedance-v1.5-i2v-spicy': 2,
     'kling-v3-4k': 3, 'seedance-v2-video-edit': 3, 'seedance-v2-video-extend': 3,
+    'wan-2.5-t2v': 2, 'wan-2.6-i2v': 2, 'wan-2.7-t2v': 2, 'wan-2.2-spicy-i2v': 2,
+    'wan-2.7-flf': 3, 'wan-2.7-grid': 3, 'wan-2.7-edit': 3,
+    'happyhorse-t2v': 2, 'happyhorse-i2v': 2, 'happyhorse-ref2v': 2,
+    'happyhorse-video-edit': 3, 'happyhorse-video-extend': 3,
+    'sora-2-t2v': 3, 'sora-2-i2v': 3, 'sora-2-t2v-pro': 4,
+    'veo-3.1-extend': 3,
+    'vidu-q3-i2v-spicy': 2,
+    'hailuo-2.3-t2v': 1, 'hailuo-2.3-i2v-fast': 2, 'hailuo-2.3-i2v-pro': 3,
     omnivoice: 0, 'minimax-speech-2.6': 0, 'qwen3-tts': 0,
     'elevenlabs-v3': 1,
     'mureka-v9': 2, mureka: 2, 'ace-step-1.5': 2,
@@ -86,6 +99,44 @@ export function planUnlocksModel(planId, modelId, category = 'text') {
 
 export function planLabelKey(requiredPlanId) {
     return PLAN_LABEL_KEYS[normalizePlanId(requiredPlanId)] ?? 'planBasicName';
+}
+
+/** Model ids represented by a catalog card (tiered groups include all variants). */
+export function catalogToolModelIds(tool) {
+    if (tool?.tiered && Array.isArray(tool.variants) && tool.variants.length) {
+        return tool.variants.map((variant) => variant.id);
+    }
+    return tool?.id ? [tool.id] : [];
+}
+
+/** True when the user can open the catalog card (any variant unlocked). */
+export function catalogToolUnlocks(planId, tool, category = 'text') {
+    const ids = catalogToolModelIds(tool);
+    if (!ids.length) {
+        return true;
+    }
+    return ids.some((id) => planUnlocksModel(planId, id, category));
+}
+
+/** Minimum plan required to use at least one variant on the catalog card. */
+export function minPlanForCatalogTool(tool, category = 'text') {
+    const ids = catalogToolModelIds(tool);
+    if (!ids.length) {
+        return minPlanForModel('', category);
+    }
+    const minRank = Math.min(...ids.map((id) => minPlanRankForModel(id, category)));
+    return planIdForRank(minRank);
+}
+
+export function annotateCatalogTool(tool, planId, category = 'text') {
+    const unlocked = catalogToolUnlocks(planId, tool, category);
+    const requiredPlan = minPlanForCatalogTool(tool, category);
+    return {
+        ...tool,
+        locked: !unlocked,
+        requiredPlan,
+        requiredPlanLabelKey: planLabelKey(requiredPlan),
+    };
 }
 
 export function annotateModelOption(option, planId, category = 'text') {

@@ -699,6 +699,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 4px 4px 8px;
+  position: relative;
+  z-index: 30;
 }
 
 .home-concept__logo-area {
@@ -6339,6 +6341,7 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
 
 .app-notifications {
   position: relative;
+  z-index: 1;
 }
 
 .app-notifications__trigger {
