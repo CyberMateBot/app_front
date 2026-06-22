@@ -5,6 +5,8 @@ const DESKTOP_PLATFORMS = new Set(['tdesktop', 'macos', 'web', 'weba', 'unigram'
 const EMBEDDED_CHAT_MAX_WIDTH = 440;
 const EMBEDDED_CHAT_MAX_HEIGHT = 960;
 const LAUNCH_HASH_STORAGE_KEY = 'cybermate.tg_launch_hash';
+const FULLSCREEN_RELAUNCH_KEY = 'cybermate.tg_fullscreen_relaunch_attempted';
+const EXPAND_DISMISS_KEY = 'cybermate.tg_expand_dismissed';
 
 const layoutListeners = new Set();
 let desktopFullscreenUnsupported = false;
@@ -102,6 +104,159 @@ function persistLaunchHash() {
 
 export function readLaunchParam(name) {
     return readLaunchParams().get(name) ?? '';
+}
+
+/** True when Telegram launched the Mini App already in fullscreen (Main Mini App / mode=fullscreen). */
+export function readLaunchFullscreenFlag() {
+    const value = String(readLaunchParam('tgWebAppFullscreen') ?? '').toLowerCase();
+    return value === '1' || value === 'true';
+}
+
+/** True when launch URL requested compact mode (half-height panel). */
+export function readLaunchCompactFlag() {
+    const mode = String(readLaunchParam('tgWebAppMode') ?? readLaunchParam('mode') ?? '').toLowerCase();
+    return mode === 'compact';
+}
+
+/** initData fields present when opened from a bot chat context (menu / attachment). */
+export function hasBotChatContext(tg) {
+    const unsafe = tg?.initDataUnsafe ?? {};
+    if (unsafe.chat?.id) {
+        return true;
+    }
+    if (unsafe.chat_type) {
+        return true;
+    }
+    if (unsafe.chat_instance) {
+        return true;
+    }
+
+    const initData = String(tg?.initData ?? '');
+    if (!initData) {
+        return false;
+    }
+
+    const params = new URLSearchParams(initData);
+    return Boolean(params.get('chat_type') || params.get('chat_instance') || params.get('chat'));
+}
+
+/**
+ * Deep link that asks Telegram Desktop to open the Main Mini App in fullscreen.
+ * https://core.telegram.org/api/bots/webapps#main-mini-apps
+ */
+export function buildMainMiniAppFullscreenLink(botUsername, startParam = '') {
+    const username = String(botUsername ?? '').replace(/^@/, '').trim();
+    if (!username) {
+        return '';
+    }
+
+    const base = `https://t.me/${username}?startapp`;
+    const param = String(startParam ?? '').trim();
+    if (param) {
+        return `${base}=${encodeURIComponent(param)}&mode=fullscreen`;
+    }
+    return `${base}&mode=fullscreen`;
+}
+
+/** Opens Main Mini App via t.me deep link (fullscreen flag for Telegram Desktop). */
+export function openMainMiniAppFullscreen(urlOrUsername) {
+    const tg = getTelegramWebApp();
+    const startParam = tg?.initDataUnsafe?.start_param ?? '';
+    const target = String(urlOrUsername ?? '').includes('t.me/')
+        ? urlOrUsername
+        : buildMainMiniAppFullscreenLink(urlOrUsername, startParam);
+
+    if (!target) {
+        return false;
+    }
+
+    if (typeof tg?.openTelegramLink === 'function') {
+        tg.openTelegramLink(target);
+        return true;
+    }
+
+    window.open(target, '_blank', 'noopener,noreferrer');
+    return true;
+}
+
+function readExpandDismissed() {
+    try {
+        return sessionStorage.getItem(EXPAND_DISMISS_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
+function hasAttemptedFullscreenRelaunch() {
+    try {
+        return sessionStorage.getItem(FULLSCREEN_RELAUNCH_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
+function markFullscreenRelaunchAttempted() {
+    try {
+        sessionStorage.setItem(FULLSCREEN_RELAUNCH_KEY, '1');
+    } catch {
+        // Ignore storage errors.
+    }
+}
+
+/**
+ * Auto-relaunch only in Telegram Web external shell (chat picker iframe) where
+ * requestFullscreen is unavailable but mode=fullscreen deep link works.
+ */
+function maybeAutoRelaunchFullscreen(tg) {
+    if (typeof window === 'undefined' || !tg || hasAttemptedFullscreenRelaunch()) {
+        return;
+    }
+
+    if (!isDesktopTelegramPlatform(tg)) {
+        return;
+    }
+
+    if (tg.isFullscreen || readLaunchFullscreenFlag()) {
+        return;
+    }
+
+    if (!isTelegramExternalShellFrame()) {
+        return;
+    }
+
+    if (hasBotChatContext(tg) || readLaunchCompactFlag()) {
+        return;
+    }
+
+    if (!isNarrowDesktopViewport(tg)) {
+        return;
+    }
+
+    markFullscreenRelaunchAttempted();
+    window.setTimeout(() => {
+        openMainMiniAppFullscreen();
+    }, 900);
+}
+
+/** Show banner when Desktop still uses a phone-sized host window (chat list path). */
+export function shouldShowDesktopExpandPrompt(tg) {
+    if (!isDesktopTelegramPlatform(tg)) {
+        return false;
+    }
+
+    if (tg?.isFullscreen || readLaunchFullscreenFlag()) {
+        return false;
+    }
+
+    if (readLaunchCompactFlag()) {
+        return false;
+    }
+
+    if (hasBotChatContext(tg)) {
+        return false;
+    }
+
+    return isNarrowDesktopViewport(tg);
 }
 
 /** Reads tgWebAppData from launch URL (Telegram Desktop / deep links). */
@@ -207,13 +362,25 @@ function shouldUseMiniPcLayout(tg) {
     if (!isDesktopTelegramPlatform(tg)) {
         return false;
     }
-    if (tg?.isFullscreen) {
+    if (tg?.isFullscreen || readLaunchFullscreenFlag()) {
         return false;
     }
-    if (isTelegramExternalShellFrame()) {
+    if (isTelegramExternalShellFrame() && !isNarrowDesktopViewport(tg)) {
         return false;
     }
-    return desktopFullscreenUnsupported && isNarrowDesktopViewport(tg);
+    if (readLaunchCompactFlag()) {
+        return true;
+    }
+    if (hasBotChatContext(tg) && isNarrowDesktopViewport(tg)) {
+        return true;
+    }
+    if (readExpandDismissed() && isNarrowDesktopViewport(tg)) {
+        return true;
+    }
+    if (desktopFullscreenUnsupported && isNarrowDesktopViewport(tg) && hasBotChatContext(tg)) {
+        return true;
+    }
+    return false;
 }
 
 function normalizeFullscreenError(payload) {
@@ -412,6 +579,14 @@ function postTelegramWebEvent(eventType, payload = {}) {
 
 function requestDesktopFullscreen(tg) {
     if (!tg || !isDesktopTelegramPlatform(tg)) {
+        return;
+    }
+
+    if (readLaunchCompactFlag()) {
+        return;
+    }
+
+    if (hasBotChatContext(tg) && isNarrowDesktopViewport(tg)) {
         return;
     }
 
@@ -732,6 +907,7 @@ export function initTelegramMiniApp() {
     tg?.disableVerticalSwipes?.();
     syncTelegramViewport(tg);
     scheduleDesktopFullscreen(tg);
+    maybeAutoRelaunchFullscreen(tg);
     bindTelegramMiniAppEvents(tg);
 
     return applyLaunchParamsToWebApp(tg);
@@ -772,6 +948,7 @@ export async function initTelegramMiniAppAsync(options = {}) {
 
     syncTelegramViewport(tg);
     scheduleDesktopFullscreen(tg);
+    maybeAutoRelaunchFullscreen(tg);
     bindTelegramMiniAppEvents(tg);
 
     return applyLaunchParamsToWebApp(tg);

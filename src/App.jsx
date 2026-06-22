@@ -128,6 +128,7 @@ import {
     resolveBootstrapTheme,
 } from './lib/theme.js';
 import AppNotice from './Components/AppNotice.jsx';
+import TelegramDesktopExpand from './Components/TelegramDesktopExpand.jsx';
 import AppPageHeader from './Components/AppPageHeader.jsx';
 import CoinBalanceWidget from './Components/CoinBalanceWidget.jsx';
 import CoinIcon from './Components/CoinIcon.jsx';
@@ -6572,6 +6573,7 @@ function App() {
                 <span className="app-shell__orb app-shell__orb--4" />
             </div>
             <main className="app-main">
+                <TelegramDesktopExpand language={language} />
                 {currentPage === 'home'
                     ? renderHomeScreen()
                     : currentPage === 'subscription'

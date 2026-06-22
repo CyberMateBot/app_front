@@ -63,6 +63,11 @@
           return;
         }
 
+        var launchMode = String(params.get('tgWebAppMode') || params.get('mode') || '').toLowerCase();
+        if (launchMode === 'compact') {
+          return;
+        }
+
         if (typeof tg.requestFullscreen === 'function') {
           try { tg.requestFullscreen(); } catch (e) {}
         }
