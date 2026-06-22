@@ -387,9 +387,14 @@
   z-index: 0;
 }
 
-.home-screen--widgets > :not(.home-concept__orb) {
+.home-screen--widgets > :not(.home-concept__orb):not(.home-concept__header) {
   position: relative;
   z-index: 1;
+}
+
+.home-screen--widgets > .home-concept__header {
+  position: relative;
+  z-index: 100;
 }
 
 .home-concept__hdr {
@@ -700,7 +705,6 @@
   gap: 12px;
   padding: 4px 4px 8px;
   position: relative;
-  z-index: 30;
 }
 
 .home-concept__logo-area {
@@ -6341,7 +6345,6 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
 
 .app-notifications {
   position: relative;
-  z-index: 1;
 }
 
 .app-notifications__trigger {
@@ -6381,6 +6384,11 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
+}
+
+.app-notifications__panel.app-notifications__panel--portal {
+  position: fixed;
+  z-index: 1100;
 }
 
 .app-notifications__panel-head {
