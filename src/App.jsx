@@ -121,7 +121,7 @@ import {
     loadReadNotificationIds,
     markNotificationsRead,
 } from './lib/appNotifications.js';
-import { buildPlanModelSections } from './lib/planModelsCatalog.js';
+import { buildPlanFeatureBullets, buildPlanModelSections } from './lib/planModelsCatalog.js';
 import { fetchUserSubscription } from './api/subscription.js';
 import {
     annotateCatalogTool as annotateCatalogToolGating,
@@ -2711,6 +2711,23 @@ function App() {
             });
     }, [currentPage, telegramUser?.id]);
 
+    useEffect(() => {
+        if (currentPage !== 'home' || !telegramUser?.id) {
+            return;
+        }
+
+        void refreshWalletBalance();
+        fetchUserSubscription(telegramUser.id)
+            .then((payload) => {
+                if (payload) {
+                    setSubscriptionState(payload);
+                }
+            })
+            .catch(() => {
+                // Keep previous subscription state visible.
+            });
+    }, [currentPage, telegramUser?.id, refreshWalletBalance]);
+
     const catalogSections = useMemo(() => {
         const planId = userData.subscriptionPlanId;
         return [
@@ -4478,22 +4495,21 @@ function App() {
             }));
 
         return plans.map((plan, index) => {
-            const planFeaturesMap = {
-                free: text.planFreeFeatures,
-                basic: text.planBasicFeatures,
-                pro: text.planProFeatures,
-                max: text.planMaxFeatures,
-                ultra: text.planUltraFeatures,
-            };
-            const displayFeatures = (Array.isArray(plan.features) && plan.features.length)
-                ? plan.features
-                : (planFeaturesMap[plan.id] ?? text.planProFeatures);
             const displayLocked = (Array.isArray(plan.locked) && plan.locked.length)
                 ? plan.locked
                 : (plan.id === 'free' ? text.planFreeLocked : []);
             const isCurrent = plan.id === currentPlanId;
             const badgeClass = plan.badge_class || plan.badgeClass || 'free';
             const coins = Number(plan.coins) || 0;
+            const generatedFeatures = buildPlanFeatureBullets(plan.id, planModelCatalogs, text, {
+                coins,
+                language,
+            });
+            const displayFeatures = generatedFeatures.length
+                ? generatedFeatures
+                : (Array.isArray(plan.features) && plan.features.length
+                    ? plan.features
+                    : text.planProFeatures);
             const planDef = subscriptionPlanDefs.find((entry) => entry.id === plan.id);
             const displayName = language === 'en'
                 ? getSubscriptionPlanEnglishName(plan.id, plan.name)
@@ -5019,26 +5035,39 @@ function App() {
             </button>
 
             {userData.subscriptionIsPaid ? (
-                <div className="home-subscription-widget">
-                    <SubscriptionTimeBadge
-                        timeLeftLabel={userData.subscriptionTimeLeft}
-                        expiryDateLabel={userData.subscriptionExpiryDate}
-                        expiringSoon={userData.subscriptionExpiringSoon}
-                        language={language}
-                        inline
-                    />
-                    {userData.subscriptionExpiringSoon ? (
-                        <button
-                            type="button"
-                            className="home-subscription-widget__renew"
-                            onClick={() => setCurrentPage('subscription')}
-                        >
-                            {text.subscriptionRenewHint}
-                        </button>
-                    ) : null}
-                </div>
+                <button
+                    type="button"
+                    className="subscription-page__hero home-subscription-widget"
+                    onClick={() => setCurrentPage('subscription')}
+                >
+                    <p className="subscription-page__hero-label">{text.subscriptionCurrentPlan}</p>
+                    <div className="subscription-page__hero-plan">
+                        <Crown size={18} aria-hidden="true" />
+                        <span className="subscription-page__hero-plan-name">
+                            {language === 'en'
+                                ? getSubscriptionPlanEnglishName(
+                                    userData.subscriptionPlanId,
+                                    userData.subscriptionPlanName,
+                                )
+                                : userData.subscriptionPlanName}
+                        </span>
+                        {userData.subscriptionTimeLeft ? (
+                            <span className={`subscription-page__hero-time${userData.subscriptionExpiringSoon ? ' subscription-page__hero-time--warn' : ''}`}>
+                                {userData.subscriptionTimeLeft}
+                                {userData.subscriptionExpiryDate ? (
+                                    <span className="subscription-page__hero-time-sub">
+                                        {language === 'ru'
+                                            ? ` · до ${userData.subscriptionExpiryDate}`
+                                            : ` · until ${userData.subscriptionExpiryDate}`}
+                                    </span>
+                                ) : null}
+                            </span>
+                        ) : null}
+                    </div>
+                </button>
             ) : null}
 
+            <div className="home-social-block">
             <p className="home-concept__section-label home-concept__section-label--widgets">{text.homeSocialLabel}</p>
             <div className="home-social-row">
                         <button
@@ -5071,6 +5100,7 @@ function App() {
                     </span>
                     <span className="home-social-card__label">{text.homeSocialTelegram}</span>
                 </button>
+            </div>
             </div>
         </section>
     );

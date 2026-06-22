@@ -77,7 +77,7 @@ function isSubscriptionWalletTransaction(tx) {
         || haystack.includes('plan');
 }
 
-function buildWalletNotifications(walletTransactions = [], language = 'ru') {
+function buildWalletNotifications(walletTransactions = [], language = 'ru', text = {}) {
     const items = [];
 
     walletTransactions.forEach((tx, index) => {
@@ -87,16 +87,37 @@ function buildWalletNotifications(walletTransactions = [], language = 'ru') {
         }
 
         const amount = Number(tx?.amount ?? 0);
-        const description = String(tx?.description ?? tx?.reason ?? '').trim();
+        const reason = String(tx?.reason ?? tx?.description ?? '').trim();
         const id = `wallet-${walletTransactionId(tx, index)}`;
 
         if (amount > 0) {
+            const subscriptionPlanMatch = reason.match(/^subscription:(\w+)$/i);
+            if (subscriptionPlanMatch) {
+                const planId = subscriptionPlanMatch[1];
+                const planKey = `plan${planId.charAt(0).toUpperCase()}${planId.slice(1)}Name`;
+                const planName = text[planKey] ?? planId;
+                items.push({
+                    id,
+                    type: 'coins',
+                    title: language === 'ru' ? 'Начисление коинов' : 'Coins credited',
+                    message: language === 'ru'
+                        ? `+${amount} коинов по подписке «${planName}».`
+                        : `+${amount} coins credited for the "${planName}" plan.`,
+                    action: 'wallet',
+                    unread: true,
+                });
+                return;
+            }
+
             items.push({
                 id,
                 type: 'coins',
                 title: language === 'ru' ? 'Начисление коинов' : 'Coins credited',
-                message: description
-                    || (language === 'ru'
+                message: reason
+                    ? (language === 'ru'
+                        ? `+${amount} коинов · ${reason}`
+                        : `+${amount} coins · ${reason}`)
+                    : (language === 'ru'
                         ? `На баланс зачислено +${amount} коинов.`
                         : `+${amount} coins were added to your balance.`),
                 action: 'wallet',
@@ -110,7 +131,7 @@ function buildWalletNotifications(walletTransactions = [], language = 'ru') {
                 id,
                 type: 'subscription-purchase',
                 title: language === 'ru' ? 'Покупка подписки' : 'Subscription purchase',
-                message: description
+                message: reason
                     || (language === 'ru'
                         ? 'Подписка успешно оформлена.'
                         : 'Your subscription purchase was successful.'),
@@ -167,17 +188,17 @@ export function buildAppNotifications({
             items.push({
                 id: `subscription-started-${subscription.plan_id}-${subscription.started_at}`,
                 type: 'subscription-purchase',
-                title: language === 'ru' ? 'Подписка оформлена' : 'Subscription activated',
+                title: language === 'ru' ? 'Подписка активирована' : 'Subscription activated',
                 message: language === 'ru'
-                    ? `План «${planName}» активен. Доступны модели и коины по тарифу.`
-                    : `Your "${planName}" plan is active. Plan models and coins are unlocked.`,
+                    ? `Вам выдан план «${planName}». Доступны модели и коины по тарифу.`
+                    : `You received the "${planName}" plan. Plan models and coins are unlocked.`,
                 action: 'subscription',
                 unread: true,
             });
         }
     }
 
-    items.push(...buildWalletNotifications(walletTransactions, language));
+    items.push(...buildWalletNotifications(walletTransactions, language, text));
 
     return items;
 }

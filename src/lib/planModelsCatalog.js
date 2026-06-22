@@ -99,3 +99,45 @@ export function buildPlanModelSections(planId, catalogs, resolveLabel = resolveM
         }))
         .filter((section) => section.models.length > 0);
 }
+
+function resolveCatalogModelLabel(tool, modelId, text = {}) {
+    if (tool?.tiered && Array.isArray(tool.variants)) {
+        const variant = tool.variants.find((entry) => entry.id === modelId);
+        if (variant?.label) {
+            return variant.label;
+        }
+        if (variant?.nameKey && text[variant.nameKey]) {
+            return text[variant.nameKey];
+        }
+    }
+
+    if (tool?.nameKey && text[tool.nameKey]) {
+        return text[tool.nameKey];
+    }
+
+    return tool?.label ?? modelId;
+}
+
+/**
+ * Marketing bullets for subscription cards — lists concrete model versions per category.
+ */
+export function buildPlanFeatureBullets(planId, catalogs, text = {}, { coins = 0, language = 'ru' } = {}) {
+    const resolveLabel = (tool, modelId) => resolveCatalogModelLabel(tool, modelId, text);
+    const sections = buildPlanModelSections(planId, catalogs, resolveLabel);
+    const bullets = [];
+    const coinAmount = Number(coins) || 0;
+
+    if (coinAmount > 0) {
+        bullets.push(language === 'ru' ? `${coinAmount} монет / месяц` : `${coinAmount} coins / month`);
+    } else if (planId === 'free') {
+        bullets.push(language === 'ru' ? '10 монет / месяц' : '10 coins / month');
+    }
+
+    sections.forEach((section) => {
+        const prefix = text[section.labelKey] ?? section.id;
+        const models = section.models.map((model) => model.label).join(', ');
+        bullets.push(`${prefix}: ${models}`);
+    });
+
+    return bullets;
+}
