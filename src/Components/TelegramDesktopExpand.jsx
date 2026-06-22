@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { API_BASE_URL } from '../config/env.js';
+import { API_BASE_URL, BOT_USERNAME } from '../config/env.js';
 import {
+    buildMainMiniAppFullscreenLink,
     getTelegramWebApp,
     openMainMiniAppFullscreen,
     shouldShowDesktopExpandPrompt,
+    subscribeTelegramLayout,
 } from '../lib/telegramWebApp.js';
 
 const DISMISS_KEY = 'cybermate.tg_expand_dismissed';
@@ -25,38 +27,44 @@ function writeDismissed() {
 }
 
 async function resolveFullscreenLink() {
-    if (!API_BASE_URL) {
-        return null;
+    if (API_BASE_URL) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/v1/app/links`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data?.mini_app_fullscreen_url) {
+                    return data.mini_app_fullscreen_url;
+                }
+            }
+        } catch {
+            // Fall through to env default.
+        }
     }
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/v1/app/links`);
-        if (!response.ok) {
-            return null;
-        }
-        const data = await response.json();
-        return data?.mini_app_fullscreen_url || null;
-    } catch {
-        return null;
-    }
+    const tg = getTelegramWebApp();
+    const startParam = tg?.initDataUnsafe?.start_param ?? '';
+    return buildMainMiniAppFullscreenLink(BOT_USERNAME, startParam);
 }
 
 export default function TelegramDesktopExpand({ language = 'ru' }) {
     const [visible, setVisible] = useState(false);
-    const [fullscreenUrl, setFullscreenUrl] = useState(null);
+    const [fullscreenUrl, setFullscreenUrl] = useState(() => {
+        const tg = getTelegramWebApp();
+        return buildMainMiniAppFullscreenLink(BOT_USERNAME, tg?.initDataUnsafe?.start_param ?? '');
+    });
 
     useEffect(() => {
         if (readDismissed()) {
             return undefined;
         }
 
-        const tg = getTelegramWebApp();
         const sync = () => {
-            setVisible(shouldShowDesktopExpandPrompt(tg));
+            setVisible(shouldShowDesktopExpandPrompt(getTelegramWebApp()));
         };
 
         sync();
-        const intervalId = window.setInterval(sync, 800);
+        const unsubscribe = subscribeTelegramLayout(sync);
+        const intervalId = window.setInterval(sync, 600);
 
         resolveFullscreenLink().then((url) => {
             if (url) {
@@ -65,6 +73,7 @@ export default function TelegramDesktopExpand({ language = 'ru' }) {
         });
 
         return () => {
+            unsubscribe();
             window.clearInterval(intervalId);
         };
     }, []);
@@ -75,8 +84,8 @@ export default function TelegramDesktopExpand({ language = 'ru' }) {
 
     const title = language === 'ru' ? 'Открыть на весь экран' : 'Open fullscreen';
     const hint = language === 'ru'
-        ? 'Из списка чатов Telegram открывает приложение в компактном окне. Нажмите, чтобы перейти в полноэкранный режим.'
-        : 'Telegram may open the app in a compact window from the chat list. Tap to switch to fullscreen.';
+        ? 'Telegram открыл приложение в компактном окне. Нажмите, чтобы перейти в полноэкранный режим.'
+        : 'Telegram opened the app in a compact window. Tap to switch to fullscreen.';
 
     return (
         <div className="tg-desktop-expand" role="region" aria-label={title}>

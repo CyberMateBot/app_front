@@ -4297,7 +4297,7 @@ function App() {
                     disabled={newDialogDisabled}
                 >
                     {text.chatNewDialog}
-                </button>
+            </button>
             ) : (
                 <span className="app-page-header__spacer" aria-hidden="true" />
             )}
@@ -4803,11 +4803,11 @@ function App() {
             <header className="home-concept__header">
                 <div className="home-concept__header-left">
                     <div className="home-concept__hdr-logo">
-                        <img
+                    <img
                             className="home-concept__logo-image home-concept__logo-image--header"
                             src="/logo-cm.png"
-                            alt=""
-                        />
+                        alt=""
+                    />
                         <span className="home-concept__logo-name">{text.homeBrandName}</span>
                     </div>
                     <p className="home-concept__greeting-text">{homeGreetingText}</p>
@@ -6258,13 +6258,13 @@ function App() {
                 trailing={(
                 <div className="history-concept__actions">
                     {historySelectMode ? (
-                        <button
-                            type="button"
+                <button
+                    type="button"
                             className="history-concept__action history-concept__action--text"
                             onClick={exitHistorySelectMode}
-                        >
+                >
                             {text.historyDeleteCancel}
-                        </button>
+                </button>
                     ) : null}
                     <button
                         type="button"
@@ -6572,13 +6572,13 @@ function App() {
                 <span className="app-shell__orb app-shell__orb--3" />
                 <span className="app-shell__orb app-shell__orb--4" />
             </div>
+            <TelegramDesktopExpand language={language} />
             <main className="app-main">
-                <TelegramDesktopExpand language={language} />
                 {currentPage === 'home'
                     ? renderHomeScreen()
                     : currentPage === 'subscription'
                         ? renderSubscriptionScreen()
-                        : currentPage === 'catalog'
+                    : currentPage === 'catalog'
                         ? renderCatalogScreen()
                         : currentPage === 'profile'
                             ? renderProfileScreen()

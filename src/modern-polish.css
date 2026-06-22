@@ -462,9 +462,10 @@
 }
 
 /* mini-pc nav: keep narrow pill after compact-ui mobile rules */
+html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 .app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner {
-  width: var(--mini-pc-nav-width, min(288px, 80%));
-  max-width: var(--mini-pc-nav-width, min(288px, 80%));
+  width: var(--mini-pc-nav-width, min(220px, 68%));
+  max-width: var(--mini-pc-nav-width, min(220px, 68%));
   padding: 5px 2px;
 }
