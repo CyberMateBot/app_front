@@ -11,7 +11,7 @@ import {
 import './index.css';
 import { initUiScale } from './lib/uiScale.js';
 import { initAppUpdateWatcher } from './lib/appUpdate.js';
-import { initTelegramMiniApp } from './lib/telegramWebApp.js';
+import { getTelegramWebApp, initTelegramMiniAppAsync } from './lib/telegramWebApp.js';
 
 function showFatalBootError(message) {
     const root = document.getElementById('root');
@@ -43,8 +43,9 @@ if (typeof window !== 'undefined') {
     });
 }
 
-initTelegramMiniApp();
-initUiScale();
+void initTelegramMiniAppAsync({ timeoutMs: 12000 }).then((tg) => {
+    initUiScale(tg ?? getTelegramWebApp());
+});
 initAppUpdateWatcher();
 
 if (import.meta.env.DEV) {

@@ -279,7 +279,8 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
-:root[data-tg-layout='mini-pc']:not([data-theme='light']) .bottom-nav__inner {
+:root[data-tg-layout='mini-pc']:not([data-theme='light']) .bottom-nav__inner,
+:root:not([data-theme='light']) .app-shell--mini-pc .bottom-nav__inner {
   background: rgba(10, 12, 22, 0.88);
   border-color: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(34px) saturate(1.8);
@@ -289,7 +290,8 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-:root[data-tg-layout='mini-pc']:not([data-theme='light']) .bottom-nav--concept::before {
+:root[data-tg-layout='mini-pc']:not([data-theme='light']) .bottom-nav--concept::before,
+:root:not([data-theme='light']) .app-shell--mini-pc .bottom-nav--concept::before {
   background: linear-gradient(to bottom, transparent, rgba(7, 8, 15, 0.72));
 }
 
@@ -328,7 +330,8 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
-:root[data-tg-layout='mini-pc'][data-theme='light'] .bottom-nav__inner {
+:root[data-tg-layout='mini-pc'][data-theme='light'] .bottom-nav__inner,
+:root[data-theme='light'] .app-shell--mini-pc .bottom-nav__inner {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(30px) saturate(1.35);
   -webkit-backdrop-filter: blur(30px) saturate(1.35);
@@ -337,7 +340,8 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.98);
 }
 
-:root[data-tg-layout='mini-pc'][data-theme='light'] .bottom-nav--concept::before {
+:root[data-tg-layout='mini-pc'][data-theme='light'] .bottom-nav--concept::before,
+:root[data-theme='light'] .app-shell--mini-pc .bottom-nav--concept::before {
   background: linear-gradient(to bottom, transparent, rgba(243, 244, 248, 0.78));
 }
 

@@ -221,7 +221,9 @@ import {
     getTelegramWebApp,
     hydrateTelegramUser,
     initTelegramMiniAppAsync,
+    resolveTelegramLayoutMode,
     showTelegramAlert,
+    subscribeTelegramLayout,
 } from './lib/telegramWebApp.js';
 
 const navigationItems = [
@@ -1567,6 +1569,7 @@ function App() {
     const [audioError, setAudioError] = useState('');
     const [threeDError, setThreeDError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [tgLayoutMode, setTgLayoutMode] = useState(() => resolveTelegramLayoutMode(getTelegramWebApp()));
     const [walletData, setWalletData] = useState(null);
     const [referralData, setReferralData] = useState(null);
     const [referralLink, setReferralLink] = useState('');
@@ -2037,6 +2040,8 @@ function App() {
 
         return () => window.clearTimeout(timer);
     }, [appNotice]);
+
+    useEffect(() => subscribeTelegramLayout(setTgLayoutMode), []);
 
     useEffect(() => {
         let isMounted = true;
@@ -6549,7 +6554,11 @@ function App() {
     };
 
     return (
-        <div className="app-shell" data-page={currentPage}>
+        <div
+            className={`app-shell${tgLayoutMode ? ` app-shell--${tgLayoutMode}` : ''}`}
+            data-page={currentPage}
+            data-tg-layout={tgLayoutMode || undefined}
+        >
             {isLoading ? (
                 <div className="app-boot" role="status" aria-live="polite">
                     <span className="app-boot__spinner" aria-hidden="true" />

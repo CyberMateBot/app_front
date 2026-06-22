@@ -6168,7 +6168,8 @@ html[data-tg-layout='desktop-full'] .bottom-nav.bottom-nav--concept .bottom-nav_
 }
 
 /* Telegram Desktop mini-pc: compact floating nav pill with visible glass blur. */
-html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner {
+html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
+.app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner {
   width: var(--mini-pc-nav-width, min(288px, 80%));
   max-width: var(--mini-pc-nav-width, min(288px, 80%));
   padding: 5px 2px;
@@ -6180,7 +6181,8 @@ html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inne
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-html[data-tg-layout='mini-pc'] .bottom-nav--concept::before {
+html[data-tg-layout='mini-pc'] .bottom-nav--concept::before,
+.app-shell--mini-pc .bottom-nav--concept::before {
   background: linear-gradient(
     to bottom,
     transparent,
@@ -6188,11 +6190,13 @@ html[data-tg-layout='mini-pc'] .bottom-nav--concept::before {
   );
 }
 
-html[data-tg-layout='mini-pc'] .nav-button {
+html[data-tg-layout='mini-pc'] .nav-button,
+.app-shell--mini-pc .nav-button {
   padding: 6px 0 4px;
   gap: 2px;
 }
 
-html[data-tg-layout='mini-pc'] .nav-button__label {
+html[data-tg-layout='mini-pc'] .nav-button__label,
+.app-shell--mini-pc .nav-button__label {
   font-size: 9px;
 }
