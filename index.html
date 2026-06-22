@@ -10,18 +10,66 @@
     <meta http-equiv="Expires" content="0" />
     <meta name="theme-color" content="#0a0b10" />
     <title>CyberMate</title>
-    <script src="https://telegram.org/js/telegram-web-app.js?57"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
     <script>
       (function () {
+        var DESKTOP_PLATFORMS = { tdesktop: 1, macos: 1, web: 1, weba: 1, unigram: 1 };
+        var PARENT_ORIGINS = [
+          'https://web.telegram.org',
+          'https://webk.telegram.org',
+          'https://weba.telegram.org'
+        ];
+
         var hash = window.location.hash.replace(/^#/, '');
         if (hash && hash.indexOf('tgWebApp') !== -1) {
           try { sessionStorage.setItem('cybermate.tg_launch_hash', hash); } catch (e) {}
         }
-        var tg = window.Telegram && window.Telegram.WebApp;
-        if (tg) {
-          tg.ready();
-          tg.expand();
+
+        function postFullscreen() {
+          var envelope = JSON.stringify({
+            eventType: 'web_app_request_fullscreen',
+            eventData: {}
+          });
+
+          if (window.TelegramWebviewProxy && typeof window.TelegramWebviewProxy.postEvent === 'function') {
+            window.TelegramWebviewProxy.postEvent('web_app_request_fullscreen', '{}');
+            window.TelegramWebviewProxy.postEvent('web_app_request_viewport', '{}');
+          }
+
+          if (window.parent !== window) {
+            try { window.parent.postMessage(envelope, '*'); } catch (e) {}
+            for (var i = 0; i < PARENT_ORIGINS.length; i += 1) {
+              try { window.parent.postMessage(envelope, PARENT_ORIGINS[i]); } catch (e) {}
+            }
+          }
         }
+
+        function isDesktopPlatform(platform) {
+          return !!DESKTOP_PLATFORMS[String(platform || '').toLowerCase()];
+        }
+
+        var tg = window.Telegram && window.Telegram.WebApp;
+        if (!tg) {
+          return;
+        }
+
+        tg.ready();
+        tg.expand();
+
+        var params = new URLSearchParams(hash);
+        var platform = tg.platform || params.get('tgWebAppPlatform') || '';
+
+        if (!isDesktopPlatform(platform)) {
+          return;
+        }
+
+        if (typeof tg.requestFullscreen === 'function') {
+          try { tg.requestFullscreen(); } catch (e) {}
+        }
+
+        postFullscreen();
+        window.setTimeout(postFullscreen, 120);
+        window.setTimeout(postFullscreen, 500);
       })();
     </script>
     <script>
