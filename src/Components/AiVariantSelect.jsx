@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Lock } from 'lucide-react';
 import CoinIcon from './CoinIcon.jsx';
 
 export default function AiVariantSelect({
@@ -9,6 +9,8 @@ export default function AiVariantSelect({
     options = [],
     onChange,
     disabled = false,
+    onLockedSelect,
+    text = {},
 }) {
     const [open, setOpen] = useState(false);
 
@@ -19,7 +21,12 @@ export default function AiVariantSelect({
     const activeOption = options.find((option) => option.id === value) ?? options[0];
     const summary = activeOption?.label ?? value;
 
-    const handleSelect = (nextValue) => {
+    const handleSelect = (nextValue, option) => {
+        if (option?.locked) {
+            onLockedSelect?.(option);
+            setOpen(false);
+            return;
+        }
         onChange(nextValue);
         setOpen(false);
     };
@@ -56,13 +63,18 @@ export default function AiVariantSelect({
                                         <button
                                             key={option.id}
                                             type="button"
-                                            className={`media-options__chip ${isActive ? 'media-options__chip--active' : ''}`}
-                                            onClick={() => handleSelect(option.id)}
+                                            className={`media-options__chip ${isActive ? 'media-options__chip--active' : ''}${option.locked ? ' media-options__chip--locked' : ''}`}
+                                            onClick={() => handleSelect(option.id, option)}
                                             disabled={disabled}
                                             aria-pressed={isActive}
                                         >
                                             <span className="media-options__chip-label">{option.label}</span>
-                                            {option.priceCoins ? (
+                                            {option.locked ? (
+                                                <span className="media-options__chip-lock">
+                                                    <Lock size={11} />
+                                                    {text[option.requiredPlanLabelKey] ?? option.requiredPlan}
+                                                </span>
+                                            ) : option.priceCoins ? (
                                                 <span className="media-options__chip-price">
                                                     <CoinIcon size={12} />
                                                     {option.priceCoins}

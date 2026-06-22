@@ -113,10 +113,34 @@ export function isInsufficientTokensError(error) {
     return false;
 }
 
+/** @param {Error & { code?: string, status?: number }} error */
+export function isModelLockedError(error) {
+    if (!error) {
+        return false;
+    }
+
+    if (error.code === 'MODEL_LOCKED') {
+        return true;
+    }
+
+    const message = String(error.message || '').toLowerCase();
+    return error.status === 403 && (
+        message.includes('subscription plan')
+        || message.includes('requires the')
+        || message.includes('подписк')
+    );
+}
+
 /** Maps API error codes to short UI copy. */
 export function formatUserFacingError(error, language = 'ru') {
     if (!error) {
         return '';
+    }
+
+    if (isModelLockedError(error)) {
+        return language === 'ru'
+            ? 'Эта модель недоступна на вашем тарифе. Обновите подписку.'
+            : 'This model is not available on your plan. Upgrade your subscription.';
     }
 
     if (isInsufficientTokensError(error)) {

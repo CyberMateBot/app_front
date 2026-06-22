@@ -1,4 +1,5 @@
 import { getModelPrice } from './modelPrices.js';
+import { annotateModelOption } from './planGating.js';
 
 const CATEGORY_BY_KIND = {
     text: 'text',
@@ -8,7 +9,7 @@ const CATEGORY_BY_KIND = {
     '3d': '3d',
 };
 
-export function getAiVariantOptions(selectorItem, text, kind = 'media') {
+export function getAiVariantOptions(selectorItem, text, kind = 'media', planId = 'free') {
     if (!selectorItem) {
         return [];
     }
@@ -19,33 +20,33 @@ export function getAiVariantOptions(selectorItem, text, kind = 'media') {
         const model = selectorItem.model;
 
         if (kind === 'text') {
-            return [{
+            return [annotateModelOption({
                 id: model.id,
                 label: model.label,
                 priceCoins: getModelPrice(model.id, 'text'),
-            }];
+            }, planId, 'text')];
         }
 
-        return [{
+        return [annotateModelOption({
             id: model.id,
             label: text[model.nameKey] ?? model.id,
             priceCoins: getModelPrice(model.id, category),
-        }];
+        }, planId, category)];
     }
 
     if (kind === 'text') {
-        return selectorItem.variants.map((variant) => ({
+        return selectorItem.variants.map((variant) => annotateModelOption({
             id: variant.id,
             label: variant.label,
             priceCoins: getModelPrice(variant.id, 'text'),
-        }));
+        }, planId, 'text'));
     }
 
-    return selectorItem.variants.map((variant) => ({
+    return selectorItem.variants.map((variant) => annotateModelOption({
         id: variant.id,
         label: text[variant.nameKey] ?? variant.id,
         priceCoins: getModelPrice(variant.id, category),
-    }));
+    }, planId, category));
 }
 
 export function getAiGroupTitle(selectorItem, text, getChipLabel) {

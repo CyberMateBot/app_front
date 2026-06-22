@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
     ArrowLeft,
-    Bell,
     Bot,
     Box,
     Check,
@@ -116,6 +115,14 @@ import {
     openExternalLink,
 } from './lib/homeWidgets.js';
 import { getAiGroupTitle, getAiVariantOptions } from './lib/aiVariantOptions.js';
+import { buildAppNotifications } from './lib/appNotifications.js';
+import { fetchUserSubscription } from './api/subscription.js';
+import {
+    minPlanForModel,
+    planLabelKey,
+    planUnlocksModel,
+    pickFirstUnlockedModelId,
+} from './lib/planGating.js';
 import { openSupport, resolveSupportUrl } from './lib/openSupport.js';
 import { getActiveBuildId } from './lib/appUpdate.js';
 import {
@@ -129,6 +136,8 @@ import {
     resolveBootstrapTheme,
 } from './lib/theme.js';
 import AppNotice from './Components/AppNotice.jsx';
+import AppNotifications from './Components/AppNotifications.jsx';
+import SubscriptionTimeBadge from './Components/SubscriptionTimeBadge.jsx';
 import TelegramDesktopExpand from './Components/TelegramDesktopExpand.jsx';
 import AppPageHeader from './Components/AppPageHeader.jsx';
 import CoinBalanceWidget from './Components/CoinBalanceWidget.jsx';
@@ -765,6 +774,9 @@ const translations = {
         subscriptionPageSub: '5 уровней · 1 CyberCoin = {rate} ₽',
         subscriptionCurrentPlan: 'Ваш план',
         subscriptionCoinsPerMonth: 'монет / мес',
+        subscriptionTimeLeft: 'Осталось',
+        subscriptionRenewHint: 'Продлить подписку',
+        modelLockedNotice: 'Модель «{model}» доступна с плана «{plan}»',
         referralProgramTitle: 'Реферальная программа',
         referralIntro: 'Приглашайте друзей в CyberMate и получайте CyberCoins за каждого активного пользователя.',
         referralStatFriends: 'Друзей',
@@ -1334,6 +1346,9 @@ const translations = {
         subscriptionPageSub: '5 tiers · 1 CyberCoin = {rate} ₽',
         subscriptionCurrentPlan: 'Your plan',
         subscriptionCoinsPerMonth: 'coins / mo',
+        subscriptionTimeLeft: 'Time left',
+        subscriptionRenewHint: 'Renew subscription',
+        modelLockedNotice: 'Model "{model}" requires the "{plan}" plan',
         referralProgramTitle: 'Referral program',
         referralIntro: 'Invite friends to CyberMate and earn CyberCoins for every active user.',
         referralStatFriends: 'Friends',
@@ -1573,6 +1588,7 @@ function App() {
     const [isLoading, setIsLoading] = useState(true);
     const [tgLayoutMode, setTgLayoutMode] = useState(() => resolveTelegramLayoutMode(getTelegramWebApp()));
     const [walletData, setWalletData] = useState(null);
+    const [subscriptionState, setSubscriptionState] = useState(null);
     const [referralData, setReferralData] = useState(null);
     const [referralLink, setReferralLink] = useState('');
     const [referralLinkLoading, setReferralLinkLoading] = useState(false);
@@ -1587,11 +1603,11 @@ function App() {
     const [textPrompt, setTextPrompt] = useState('');
     const [textModel, setTextModel] = useState(getInitialTextModelId);
     const [textModels, setTextModels] = useState(DEFAULT_TEXT_MODELS);
-    const initialImageDefaults = getImageModelDefaults('nano-banana');
+    const initialImageDefaults = getImageModelDefaults('flux-dev');
     const initialVideoDefaults = getVideoModelDefaults('kling-v3-std');
     const initialAudioDefaults = getAudioModelDefaults('qwen3-tts');
     const initialThreeDDefaults = getThreeDModelDefaults('hunyuan3d-v3.1-rapid');
-    const [imageModel, setImageModel] = useState('nano-banana');
+    const [imageModel, setImageModel] = useState('flux-dev');
     const [imagePrompt, setImagePrompt] = useState('');
     const [imageAttachment, setImageAttachment] = useState(null);
     const [imageSessionMessages, setImageSessionMessages] = useState([]);
@@ -2112,6 +2128,17 @@ function App() {
                 setProfile(normalizeProfileResponse(backendProfile, currentTelegramUser));
 
                 try {
+                    const subscriptionPayload = await fetchUserSubscription(currentTelegramUser?.id);
+                    if (isMounted && subscriptionPayload) {
+                        setSubscriptionState(subscriptionPayload);
+                    }
+                } catch (subscriptionError) {
+                    if (import.meta.env.DEV) {
+                        console.warn('[CyberMate] Failed to load subscription on bootstrap:', subscriptionError);
+                    }
+                }
+
+                try {
                     const walletPayload = await getMyWallet();
 
                     if (isMounted) {
@@ -2475,16 +2502,46 @@ function App() {
                 ?? profile?.tokenBalance
                 ?? profile?.tokens,
         }, telegramUser);
-        const subscription = deriveSubscriptionView(profile, text);
+        const subscription = deriveSubscriptionView(subscriptionState ?? profile, text, language);
 
         return {
             ...base,
             subscriptionPlanId: subscription.planId,
             subscriptionPlanName: subscription.planName,
             subscriptionUntil: subscription.untilLabel,
+            subscriptionTimeLeft: subscription.timeLeftLabel,
+            subscriptionExpiryDate: subscription.expiryDateLabel,
             subscriptionIsPaid: subscription.isPaid,
+            subscriptionExpiringSoon: subscription.expiringSoon,
+            subscriptionExpired: subscription.expired,
+            subscriptionDaysLeft: subscription.daysLeft,
         };
-    }, [profile, telegramUser, walletData, text]);
+    }, [profile, subscriptionState, telegramUser, walletData, text, language]);
+
+    const appNotifications = useMemo(
+        () => buildAppNotifications(subscriptionState, text, language),
+        [subscriptionState, text, language],
+    );
+
+    const handleLockedModelSelect = useCallback((option) => {
+        const requiredPlan = text[option?.requiredPlanLabelKey] ?? option?.requiredPlan ?? '';
+        showAppNotice(formatTemplate(text.modelLockedNotice, {
+            model: option?.label ?? option?.id ?? '',
+            plan: requiredPlan,
+        }));
+        setCurrentPage('subscription');
+    }, [text, showAppNotice]);
+
+    const annotateCatalogTool = useCallback((tool, category, planId) => {
+        const unlocked = planUnlocksModel(planId, tool.id, category);
+        const requiredPlan = minPlanForModel(tool.id, category);
+        return {
+            ...tool,
+            locked: !unlocked,
+            requiredPlan,
+            requiredPlanLabelKey: planLabelKey(requiredPlan),
+        };
+    }, []);
 
     const homeGreetingText = useMemo(() => {
         const firstName = userData.displayName.split(/\s+/)[0] || userData.displayName;
@@ -2620,33 +2677,52 @@ function App() {
         };
     }, [activeNavIndex, showBottomNav]);
 
-    const catalogSections = useMemo(() => [
+    useEffect(() => {
+        if (currentPage !== 'subscription' || !telegramUser?.id) {
+            return;
+        }
+
+        fetchUserSubscription(telegramUser.id)
+            .then((payload) => {
+                if (payload) {
+                    setSubscriptionState(payload);
+                }
+            })
+            .catch(() => {
+                // Keep previous subscription state visible.
+            });
+    }, [currentPage, telegramUser?.id]);
+
+    const catalogSections = useMemo(() => {
+        const planId = userData.subscriptionPlanId;
+        return [
         {
             id: 'text-models',
             labelKey: 'catalogSectionChat',
-            tools: buildCatalogTextTools(effectiveTextModels),
+            tools: buildCatalogTextTools(effectiveTextModels).map((tool) => annotateCatalogTool(tool, 'text', planId)),
         },
         {
             id: 'image-models',
             labelKey: 'catalogSectionPhoto',
-            tools: buildCatalogImageTools(IMAGE_MODEL_DEFINITIONS),
+            tools: buildCatalogImageTools(IMAGE_MODEL_DEFINITIONS).map((tool) => annotateCatalogTool(tool, 'image', planId)),
         },
         {
             id: 'video-models',
             labelKey: 'catalogSectionVideo',
-            tools: buildCatalogVideoTools(VIDEO_MODEL_DEFINITIONS),
+            tools: buildCatalogVideoTools(VIDEO_MODEL_DEFINITIONS).map((tool) => annotateCatalogTool(tool, 'video', planId)),
         },
         {
             id: 'audio-models',
             labelKey: 'catalogSectionVoice',
-            tools: buildCatalogAudioTools(AUDIO_MODEL_DEFINITIONS),
+            tools: buildCatalogAudioTools(AUDIO_MODEL_DEFINITIONS).map((tool) => annotateCatalogTool(tool, 'audio', planId)),
         },
         {
             id: '3d-models',
             labelKey: 'catalogSection3d',
-            tools: buildCatalogThreeDTools(THREE_D_MODEL_DEFINITIONS),
+            tools: buildCatalogThreeDTools(THREE_D_MODEL_DEFINITIONS).map((tool) => annotateCatalogTool(tool, '3d', planId)),
         },
-    ], [effectiveTextModels]);
+    ];
+    }, [effectiveTextModels, userData.subscriptionPlanId, annotateCatalogTool]);
 
     const catalogSearchQuery = catalogSearch.trim().toLowerCase();
 
@@ -3075,11 +3151,64 @@ function App() {
         openAiChat(modelId, 'history', { messages, topicTitle: title, sessionId });
     };
 
+    useEffect(() => {
+        const planId = userData.subscriptionPlanId;
+
+        if (!planUnlocksModel(planId, textModel, 'text')) {
+            const nextId = pickFirstUnlockedModelId(
+                effectiveTextModels.map((model) => model.id),
+                planId,
+                'text',
+            );
+            if (nextId && nextId !== textModel) {
+                setTextModel(nextId);
+            }
+        }
+
+        if (!planUnlocksModel(planId, imageModel, 'image')) {
+            const nextId = pickFirstUnlockedModelId(IMAGE_MODEL_DEFINITIONS.map((m) => m.id), planId, 'image');
+            if (nextId && nextId !== imageModel) {
+                setImageModel(nextId);
+            }
+        }
+
+        if (!planUnlocksModel(planId, videoModel, 'video')) {
+            const nextId = pickFirstUnlockedModelId(VIDEO_MODEL_DEFINITIONS.map((m) => m.id), planId, 'video');
+            if (nextId && nextId !== videoModel) {
+                setVideoModel(nextId);
+            }
+        }
+
+        if (!planUnlocksModel(planId, audioModel, 'audio')) {
+            const nextId = pickFirstUnlockedModelId(AUDIO_MODEL_DEFINITIONS.map((m) => m.id), planId, 'audio');
+            if (nextId && nextId !== audioModel) {
+                setAudioModel(nextId);
+            }
+        }
+
+        if (!planUnlocksModel(planId, threeDModel, '3d')) {
+            const nextId = pickFirstUnlockedModelId(THREE_D_MODEL_DEFINITIONS.map((m) => m.id), planId, '3d');
+            if (nextId && nextId !== threeDModel) {
+                setThreeDModel(nextId);
+            }
+        }
+    }, [
+        userData.subscriptionPlanId,
+        effectiveTextModels,
+        textModel,
+        imageModel,
+        videoModel,
+        audioModel,
+        threeDModel,
+    ]);
+
     const handleTextModelChange = (modelId) => {
         const resolvedModelId = resolveTextModelId(modelId, effectiveTextModels);
-        const lockedGroupItem = getSelectorItemForModelId(textModelSelectorItems, textModel);
+        const targetGroupItem = getSelectorItemForModelId(textModelSelectorItems, resolvedModelId);
         const allowedModelIds = new Set(
-            getAiVariantOptions(lockedGroupItem, text, 'text').map((option) => option.id),
+            getAiVariantOptions(targetGroupItem, text, 'text', userData.subscriptionPlanId)
+                .filter((option) => !option.locked)
+                .map((option) => option.id),
         );
 
         if (!allowedModelIds.has(resolvedModelId)) {
@@ -3786,6 +3915,11 @@ function App() {
 
     const handleCatalogToolClick = (tool) => {
         if (tool.locked) {
+            showAppNotice(formatTemplate(text.modelLockedNotice, {
+                model: getCatalogToolLabel(tool),
+                plan: text[tool.requiredPlanLabelKey] ?? tool.requiredPlan ?? '',
+            }));
+            setCurrentPage('subscription');
             return;
         }
 
@@ -4381,6 +4515,15 @@ function App() {
                                 <span className="subscription-plan-card__coin-label">{text.subscriptionCoinsPerMonth}</span>
                             </div>
                         ) : null}
+                        {isCurrent && userData.subscriptionTimeLeft ? (
+                            <SubscriptionTimeBadge
+                                timeLeftLabel={userData.subscriptionTimeLeft}
+                                expiryDateLabel={userData.subscriptionExpiryDate}
+                                expiringSoon={userData.subscriptionExpiringSoon}
+                                language={language}
+                                compact
+                            />
+                        ) : null}
                         <ul className="subscription-plan-card__features">
                             {displayFeatures.map((feature) => (
                                 <li key={feature} className="subscription-plan-card__feat">
@@ -4401,7 +4544,9 @@ function App() {
                             disabled={isCurrent}
                             onClick={isCurrent ? undefined : handleCoinPackPurchase}
                         >
-                            {isCurrent ? text.planCurrentButton : text.planSelectButton}
+                            {isCurrent && userData.subscriptionTimeLeft
+                                ? userData.subscriptionTimeLeft
+                                : (isCurrent ? text.planCurrentButton : text.planSelectButton)}
                         </button>
                     </article>
                 );
@@ -4814,9 +4959,11 @@ function App() {
                     <p className="home-concept__greeting-text">{homeGreetingText}</p>
                 </div>
                 <div className="home-concept__header-actions">
-                    <button type="button" className="home-concept__icon-btn" aria-label="Уведомления">
-                        <Bell size={18} />
-                    </button>
+                    <AppNotifications
+                        notifications={appNotifications}
+                        language={language}
+                        onOpenSubscription={() => setCurrentPage('subscription')}
+                    />
                     <button
                         type="button"
                         className="home-concept__icon-btn"
@@ -4827,6 +4974,26 @@ function App() {
                     </button>
                 </div>
             </header>
+
+            {userData.subscriptionIsPaid ? (
+                <div className="home-subscription-widget">
+                    <SubscriptionTimeBadge
+                        timeLeftLabel={userData.subscriptionTimeLeft}
+                        expiryDateLabel={userData.subscriptionExpiryDate}
+                        expiringSoon={userData.subscriptionExpiringSoon}
+                        language={language}
+                    />
+                    {userData.subscriptionExpiringSoon ? (
+                        <button
+                            type="button"
+                            className="home-subscription-widget__renew"
+                            onClick={() => setCurrentPage('subscription')}
+                        >
+                            {text.subscriptionRenewHint}
+                        </button>
+                    ) : null}
+                </div>
+            ) : null}
 
             <HomeNewsWidget slides={homeNewsSlides} />
 
@@ -4949,7 +5116,6 @@ function App() {
                                     type="button"
                                     className={`catalog-concept__card ${tool.locked ? 'catalog-concept__card--locked' : ''}`}
                                     onClick={() => handleCatalogToolClick(tool)}
-                                    disabled={tool.locked}
                                 >
                                     {tool.locked ? (
                                         <Lock className="catalog-concept__lock" size={12} aria-hidden="true" />
@@ -4968,7 +5134,11 @@ function App() {
                                             <CoinIcon size={12} />
                                             {priceLabel}
                                         </span>
-                                    ) : null}
+                                    ) : (
+                                        <span className="catalog-concept__plan-lock">
+                                            {text[tool.requiredPlanLabelKey] ?? tool.requiredPlan}
+                                        </span>
+                                    )}
                                 </button>
                             );
                         })}
@@ -4985,7 +5155,7 @@ function App() {
         const headerSubtitle = activeSelectorItem?.type === 'tiered' && activeModel
             ? text.chatTitle
             : (activeModel?.description ?? text.chatTitle);
-        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'text');
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'text', userData.subscriptionPlanId);
         const supportsChatImage = textModelSupportsImage(activeModel);
 
         return (
@@ -5005,6 +5175,8 @@ function App() {
                         value={textModel}
                         options={variantOptions}
                         onChange={handleTextModelChange}
+                        onLockedSelect={handleLockedModelSelect}
+                        text={text}
                                     disabled={isGeneratingText}
                     />
                 ) : null}
@@ -5094,7 +5266,7 @@ function App() {
         const activeSelectorItem = getMediaSelectorItemForModelId(imageModelSelectorItems, imageModel);
         const headerTitle = getAiGroupTitle(activeSelectorItem, text, getImageSelectorChipLabel);
         const headerSubtitle = text.imageGenerateTitle;
-        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media');
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media', userData.subscriptionPlanId);
         const canEdit = imageModelSupportsEdit(imageModel);
         const supportsSourceUpload = imageModelSupportsSourceUpload(imageModel);
         const hasAttachedImage = Boolean(imageAttachment);
@@ -5122,6 +5294,8 @@ function App() {
                     value={imageModel}
                     options={variantOptions}
                     onChange={handleImageModelChange}
+                    onLockedSelect={handleLockedModelSelect}
+                    text={text}
                     disabled={isGeneratingImage}
                 />
 
@@ -5300,7 +5474,7 @@ function App() {
         const activeSelectorItem = getMediaSelectorItemForModelId(videoModelSelectorItems, videoModel);
         const headerTitle = getAiGroupTitle(activeSelectorItem, text, getVideoSelectorChipLabel);
         const headerSubtitle = text.videoGenerateTitle;
-        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media');
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media', userData.subscriptionPlanId);
         const requiresImage = videoModelRequiresImage(videoModel);
         const requiresVideo = videoModelRequiresVideo(videoModel);
         const isExtend = videoModel === 'seedance-v2-video-extend';
@@ -5327,6 +5501,8 @@ function App() {
                     value={videoModel}
                     options={variantOptions}
                     onChange={handleVideoModelChange}
+                    onLockedSelect={handleLockedModelSelect}
+                    text={text}
                     disabled={isGeneratingVideo}
                 />
 
@@ -5513,7 +5689,7 @@ function App() {
         const isMureka = audioModel === 'mureka-v9';
         const isOmniVoice = audioModel === 'omnivoice';
         const headerSubtitle = isMusicModel ? text.musicGenerateTitle : text.voiceGenerateTitle;
-        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media');
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media', userData.subscriptionPlanId);
         const supportsClone = audioModelSupportsClone(audioModel);
         const isCloneMode = Boolean(audioAttachment) && supportsClone;
         const promptPlaceholder = isCloneMode
@@ -5546,6 +5722,8 @@ function App() {
                     value={audioModel}
                     options={variantOptions}
                     onChange={handleAudioModelChange}
+                    onLockedSelect={handleLockedModelSelect}
+                    text={text}
                     disabled={isGeneratingAudio}
                 />
 
@@ -5687,7 +5865,7 @@ function App() {
     const renderAiThreeDScreen = () => {
         const activeSelectorItem = getMediaSelectorItemForModelId(threeDModelSelectorItems, threeDModel);
         const headerTitle = getAiGroupTitle(activeSelectorItem, text, getThreeDSelectorChipLabel);
-        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media');
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media', userData.subscriptionPlanId);
         const requiresImage = threeDModelRequiresImage(threeDModel);
         const requiresMultiImage = threeDModelRequiresMultiImage(threeDModel);
         const requiresPrompt = threeDModelRequiresPrompt(threeDModel);
@@ -5716,6 +5894,8 @@ function App() {
                     value={threeDModel}
                     options={variantOptions}
                     onChange={handleThreeDModelChange}
+                    onLockedSelect={handleLockedModelSelect}
+                    text={text}
                     disabled={isGeneratingThreeD}
                 />
 
@@ -6149,6 +6329,14 @@ function App() {
                         <Crown size={18} aria-hidden="true" />
                         <span>{currentPlanEnglishName}</span>
                     </div>
+                    {userData.subscriptionIsPaid ? (
+                        <SubscriptionTimeBadge
+                            timeLeftLabel={userData.subscriptionTimeLeft}
+                            expiryDateLabel={userData.subscriptionExpiryDate}
+                            expiringSoon={userData.subscriptionExpiringSoon}
+                            language={language}
+                        />
+                    ) : null}
                     <p className="subscription-page__hero-sub">
                         {formatTemplate(text.subscriptionPageSub, {
                             rate: String(billingCatalog?.coinRateRub ?? 1),

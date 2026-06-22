@@ -1,3 +1,5 @@
+import { formatSubscriptionExpiryDate, formatSubscriptionTimeLeft } from './subscriptionTime.js';
+
 const PAID_PLAN_IDS = new Set(['basic', 'pro', 'max', 'ultra']);
 
 export function normalizeSubscriptionPlanId(raw) {
@@ -11,14 +13,15 @@ export function normalizeSubscriptionPlanId(raw) {
 }
 
 /**
- * Builds subscription UI fields from API profile (no hardcoded Premium/Pro mocks).
+ * Builds subscription UI fields from API subscription state or legacy profile fields.
  */
-export function deriveSubscriptionView(profile, text = {}) {
+export function deriveSubscriptionView(subscriptionState, text = {}, language = 'ru') {
     const planId = normalizeSubscriptionPlanId(
-        profile?.subscriptionPlan
-        ?? profile?.role
-        ?? profile?.subscription?.plan
-        ?? profile?.subscriptionStatus,
+        subscriptionState?.plan_id
+        ?? subscriptionState?.subscriptionPlan
+        ?? subscriptionState?.role
+        ?? subscriptionState?.subscription?.plan
+        ?? subscriptionState?.subscriptionStatus,
     );
 
     const planNameKeyMap = {
@@ -29,16 +32,14 @@ export function deriveSubscriptionView(profile, text = {}) {
         ultra: 'planUltraName',
     };
     const planNameKey = planNameKeyMap[planId] ?? 'planFreeName';
+    const planName = subscriptionState?.plan_name || text[planNameKey] || planId;
 
-    const planName = text[planNameKey] ?? planId;
+    const timeLeftLabel = formatSubscriptionTimeLeft(subscriptionState, language);
+    const expiryDateLabel = formatSubscriptionExpiryDate(subscriptionState, language);
 
-    const untilRaw = profile?.subscriptionUntil
-        ?? profile?.subscriptionLeft
-        ?? profile?.subscriptionSince
-        ?? profile?.subscription?.until
-        ?? '';
-
-    const untilLabel = String(untilRaw || '').trim()
+    const untilLabel = timeLeftLabel
+        || expiryDateLabel
+        || String(subscriptionState?.subscriptionUntil ?? subscriptionState?.subscriptionLeft ?? '').trim()
         || (planId === 'free'
             ? (text.profileSubscriptionNoExpiry ?? '—')
             : (text.profileSubscriptionNoExpiry ?? '—'));
@@ -46,7 +47,16 @@ export function deriveSubscriptionView(profile, text = {}) {
     return {
         planId,
         planName,
+        planRank: Number(subscriptionState?.plan_rank ?? 0),
         untilLabel,
-        isPaid: PAID_PLAN_IDS.has(planId),
+        timeLeftLabel,
+        expiryDateLabel,
+        expiresAt: subscriptionState?.expires_at ?? '',
+        daysLeft: Number(subscriptionState?.days_left ?? 0),
+        hoursLeft: Number(subscriptionState?.hours_left ?? 0),
+        isPaid: Boolean(subscriptionState?.is_paid) || PAID_PLAN_IDS.has(planId),
+        isActive: subscriptionState?.is_active !== false,
+        expiringSoon: Boolean(subscriptionState?.expiring_soon),
+        expired: Boolean(subscriptionState?.expired),
     };
 }
