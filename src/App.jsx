@@ -121,7 +121,7 @@ import {
     loadReadNotificationIds,
     markNotificationsRead,
 } from './lib/appNotifications.js';
-import { buildPlanFeatureBullets, buildPlanModelSections } from './lib/planModelsCatalog.js';
+import { buildPlanModelSections } from './lib/planModelsCatalog.js';
 import { fetchUserSubscription } from './api/subscription.js';
 import {
     annotateCatalogTool as annotateCatalogToolGating,
@@ -2527,8 +2527,14 @@ function App() {
                 if (variant?.label) {
                     return variant.label;
                 }
+                if (variant?.nameKey && text[variant.nameKey]) {
+                    return text[variant.nameKey];
+                }
             }
-            return tool?.label ?? text[tool?.nameKey] ?? modelId;
+            if (tool?.nameKey && text[tool.nameKey]) {
+                return text[tool.nameKey];
+            }
+            return tool?.label ?? modelId;
         };
 
         return Object.fromEntries(
@@ -4495,21 +4501,22 @@ function App() {
             }));
 
         return plans.map((plan, index) => {
+            const planFeaturesMap = {
+                free: text.planFreeFeatures,
+                basic: text.planBasicFeatures,
+                pro: text.planProFeatures,
+                max: text.planMaxFeatures,
+                ultra: text.planUltraFeatures,
+            };
+            const displayFeatures = (Array.isArray(plan.features) && plan.features.length)
+                ? plan.features
+                : (planFeaturesMap[plan.id] ?? text.planProFeatures);
             const displayLocked = (Array.isArray(plan.locked) && plan.locked.length)
                 ? plan.locked
                 : (plan.id === 'free' ? text.planFreeLocked : []);
             const isCurrent = plan.id === currentPlanId;
             const badgeClass = plan.badge_class || plan.badgeClass || 'free';
             const coins = Number(plan.coins) || 0;
-            const generatedFeatures = buildPlanFeatureBullets(plan.id, planModelCatalogs, text, {
-                coins,
-                language,
-            });
-            const displayFeatures = generatedFeatures.length
-                ? generatedFeatures
-                : (Array.isArray(plan.features) && plan.features.length
-                    ? plan.features
-                    : text.planProFeatures);
             const planDef = subscriptionPlanDefs.find((entry) => entry.id === plan.id);
             const displayName = language === 'en'
                 ? getSubscriptionPlanEnglishName(plan.id, plan.name)

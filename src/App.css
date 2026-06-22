@@ -623,7 +623,7 @@
 }
 
 .home-social-block {
-  margin-top: 28px;
+  margin-top: 14px;
 }
 
 .home-concept__section-label--widgets {
@@ -6462,6 +6462,8 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
 
 .app-notifications__panel.app-notifications__panel--portal {
   position: fixed;
+  top: auto;
+  right: auto;
   z-index: 1100;
 }
 

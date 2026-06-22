@@ -61,11 +61,9 @@ export default function AppNotifications({
 
         updateLayout();
         window.addEventListener('resize', updateLayout);
-        window.addEventListener('scroll', updateLayout, true);
 
         return () => {
             window.removeEventListener('resize', updateLayout);
-            window.removeEventListener('scroll', updateLayout, true);
         };
     }, [open]);
 
@@ -95,6 +93,7 @@ export default function AppNotifications({
             role="dialog"
             aria-label={language === 'ru' ? 'Уведомления' : 'Notifications'}
             style={{
+                position: 'fixed',
                 top: panelLayout.top,
                 right: panelLayout.right,
                 width: panelLayout.width,
