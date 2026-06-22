@@ -37,6 +37,22 @@
   }
 }
 
+/* Telegram Desktop: fullscreen launch from chat list (not inline mini-pc panel). */
+:root[data-tg-layout='desktop-full'] {
+  --layout-max-width: min(100%, 1600px);
+  --page-pad-x: clamp(16px, 2.5vw, 32px);
+}
+
+:root[data-tg-layout='mini-pc'] {
+  --layout-max-width: 100%;
+  --ui-scale: 1;
+  --home-ui-scale: 1;
+  --chat-ui-scale: 1;
+  --header-ui-scale: 1;
+  --nav-ui-scale: 1;
+  --mini-pc-nav-width: min(288px, 80%);
+}
+
 :root[data-theme='light'] {
   --bg-color: #f3f4f8;
   --card-bg: #ffffff;

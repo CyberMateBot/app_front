@@ -6156,3 +6156,43 @@
     gap: 14px;
   }
 }
+
+html[data-tg-layout='desktop-full'] .app-main {
+  max-width: var(--layout-max-width, 100%);
+}
+
+html[data-tg-layout='desktop-full'] .bottom-nav.bottom-nav--concept .bottom-nav__inner {
+  width: 100%;
+  max-width: var(--layout-max-width, 100%);
+  margin-inline: auto;
+}
+
+/* Telegram Desktop mini-pc: compact floating nav pill with visible glass blur. */
+html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner {
+  width: var(--mini-pc-nav-width, min(288px, 80%));
+  max-width: var(--mini-pc-nav-width, min(288px, 80%));
+  padding: 5px 2px;
+  background: color-mix(in srgb, var(--cm-surface) 94%, transparent);
+  backdrop-filter: blur(32px) saturate(1.75);
+  -webkit-backdrop-filter: blur(32px) saturate(1.75);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+html[data-tg-layout='mini-pc'] .bottom-nav--concept::before {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--cm-bg) 72%, transparent)
+  );
+}
+
+html[data-tg-layout='mini-pc'] .nav-button {
+  padding: 6px 0 4px;
+  gap: 2px;
+}
+
+html[data-tg-layout='mini-pc'] .nav-button__label {
+  font-size: 9px;
+}

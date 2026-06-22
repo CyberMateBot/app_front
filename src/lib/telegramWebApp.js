@@ -1,6 +1,9 @@
 import { ENABLE_TELEGRAM_MOCK } from '../config/env.js';
 import { applyUiScale } from './uiScale.js';
 
+const DESKTOP_PLATFORMS = new Set(['tdesktop', 'macos', 'web', 'weba', 'unigram']);
+const MINI_PC_MAX_WIDTH = 520;
+
 function hasTelegramUser(tg) {
     return Boolean(tg?.initDataUnsafe?.user?.id);
 }
@@ -48,6 +51,25 @@ function parseUserFromInitData(initData) {
     }
 }
 
+/** Launch params from URL hash (#tgWebAppData=...&tgWebAppPlatform=...). */
+export function readLaunchParams() {
+    if (typeof window === 'undefined') {
+        return new URLSearchParams();
+    }
+
+    const hash = window.location.hash.replace(/^#/, '');
+
+    if (!hash) {
+        return new URLSearchParams();
+    }
+
+    return new URLSearchParams(hash);
+}
+
+export function readLaunchParam(name) {
+    return readLaunchParams().get(name) ?? '';
+}
+
 /** Reads tgWebAppData from launch URL (Telegram Desktop / deep links). */
 export function readLaunchInitData() {
     if (typeof window === 'undefined') {
@@ -61,15 +83,103 @@ export function readLaunchInitData() {
         return fromSearch;
     }
 
-    const hash = window.location.hash.replace(/^#/, '');
+    return readLaunchParams().get('tgWebAppData') || '';
+}
 
-    if (!hash) {
-        return '';
+export function isDesktopTelegramPlatform(tg) {
+    const platform = String(tg?.platform ?? readLaunchParam('tgWebAppPlatform') ?? '').toLowerCase();
+    return DESKTOP_PLATFORMS.has(platform);
+}
+
+/** True when the mini app runs inside Telegram Desktop external shell (chat list launch). */
+export function isTelegramIframe() {
+    if (typeof window === 'undefined') {
+        return false;
     }
 
-    const hashParams = new URLSearchParams(hash);
+    try {
+        return window.parent !== window;
+    } catch {
+        return true;
+    }
+}
 
-    return hashParams.get('tgWebAppData') || '';
+export function getTelegramViewportWidth(tg) {
+    const tgWidth = Number(tg?.viewportStableWidth || tg?.viewportWidth);
+    if (Number.isFinite(tgWidth) && tgWidth > 0) {
+        return tgWidth;
+    }
+
+    if (typeof window !== 'undefined' && window.innerWidth > 0) {
+        return window.innerWidth;
+    }
+
+    return 0;
+}
+
+/**
+ * mobile — phone clients
+ * mini-pc — Telegram Desktop embedded in bot chat (phone-sized panel)
+ * desktop-full — Telegram Desktop from chat list / wide window (browser-like)
+ */
+export function resolveTelegramLayoutMode(tg) {
+    if (!isDesktopTelegramPlatform(tg)) {
+        return 'mobile';
+    }
+
+    if (isTelegramIframe()) {
+        return 'desktop-full';
+    }
+
+    const width = getTelegramViewportWidth(tg);
+    if (width > 0 && width <= MINI_PC_MAX_WIDTH) {
+        return 'mini-pc';
+    }
+
+    return 'desktop-full';
+}
+
+function applyTelegramLayoutMode(tg) {
+    if (typeof document === 'undefined') {
+        return resolveTelegramLayoutMode(tg);
+    }
+
+    const mode = resolveTelegramLayoutMode(tg);
+    document.documentElement.dataset.tgLayout = mode;
+    return mode;
+}
+
+function requestDesktopFullscreen(tg) {
+    if (!tg || resolveTelegramLayoutMode(tg) !== 'desktop-full') {
+        return;
+    }
+
+    tg.expand?.();
+
+    if (tg.isFullscreen) {
+        return;
+    }
+
+    if (typeof tg.requestFullscreen !== 'function') {
+        return;
+    }
+
+    try {
+        tg.requestFullscreen();
+    } catch {
+        // Telegram client may reject fullscreen in unsupported contexts.
+    }
+}
+
+function scheduleDesktopFullscreen(tg) {
+    requestDesktopFullscreen(tg);
+
+    if (typeof window === 'undefined' || resolveTelegramLayoutMode(tg) !== 'desktop-full') {
+        return;
+    }
+
+    window.setTimeout(() => requestDesktopFullscreen(tg), 120);
+    window.setTimeout(() => requestDesktopFullscreen(tg), 600);
 }
 
 function applyLaunchParamsToWebApp(tg) {
@@ -310,20 +420,28 @@ function applyTelegramLayoutVars(tg) {
     }
 }
 
+function syncTelegramViewport(tg) {
+    applyTelegramLayoutVars(tg);
+    applyTelegramLayoutMode(tg);
+    applyUiScale(tg);
+}
+
 export function initTelegramMiniApp() {
     const tg = getTelegramWebApp();
 
     tg?.ready?.();
     tg?.expand?.();
     tg?.disableVerticalSwipes?.();
-    applyTelegramLayoutVars(tg);
-    applyUiScale(tg);
+    syncTelegramViewport(tg);
+    scheduleDesktopFullscreen(tg);
 
     tg?.onEvent?.('viewportChanged', () => {
-        applyTelegramLayoutVars(tg);
-        applyUiScale(tg);
+        syncTelegramViewport(tg);
     });
     tg?.onEvent?.('safeAreaChanged', () => applyTelegramLayoutVars(tg));
+    tg?.onEvent?.('fullscreenChanged', () => {
+        syncTelegramViewport(tg);
+    });
 
     return applyLaunchParamsToWebApp(tg);
 }
@@ -360,14 +478,16 @@ export async function initTelegramMiniAppAsync(options = {}) {
         tg = applyLaunchParamsToWebApp(tg);
     }
 
-    applyTelegramLayoutVars(tg);
-    applyUiScale(tg);
+    syncTelegramViewport(tg);
+    scheduleDesktopFullscreen(tg);
 
     tg.onEvent?.('viewportChanged', () => {
-        applyTelegramLayoutVars(tg);
-        applyUiScale(tg);
+        syncTelegramViewport(tg);
     });
     tg.onEvent?.('safeAreaChanged', () => applyTelegramLayoutVars(tg));
+    tg.onEvent?.('fullscreenChanged', () => {
+        syncTelegramViewport(tg);
+    });
 
     return applyLaunchParamsToWebApp(tg);
 }
