@@ -117,6 +117,7 @@ import {
 } from './lib/homeWidgets.js';
 import { getAiGroupTitle, getAiVariantOptions } from './lib/aiVariantOptions.js';
 import { openSupport, resolveSupportUrl } from './lib/openSupport.js';
+import { getActiveBuildId } from './lib/appUpdate.js';
 import {
     applyTheme,
     bindSystemThemeChanged,
@@ -6495,6 +6496,9 @@ function App() {
                         <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
                     </button>
                 </div>
+                <p className="settings-concept__build-id" aria-label={text.versionLabel}>
+                    {text.versionLabel}: {getActiveBuildId() || text.releaseVersion}
+                </p>
             </section>
         );
     };

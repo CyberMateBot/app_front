@@ -7,25 +7,40 @@ import handler from 'serve-handler';
 const port = Number(process.env.PORT || 3000);
 const dist = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 
-const NO_CACHE = 'no-cache, no-store, must-revalidate';
+const NO_CACHE = 'no-cache, no-store, must-revalidate, max-age=0';
+const HTML_CACHE = 'no-cache, no-store, must-revalidate, max-age=0, private';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 
 const cacheHeaders = [
     {
-        source: '**',
-        headers: [{ key: 'Cache-Control', value: NO_CACHE }],
+        source: 'index.html',
+        headers: [
+            { key: 'Cache-Control', value: HTML_CACHE },
+            { key: 'Pragma', value: 'no-cache' },
+            { key: 'Expires', value: '0' },
+        ],
+    },
+    {
+        source: 'build-meta.json',
+        headers: [
+            { key: 'Cache-Control', value: NO_CACHE },
+            { key: 'Pragma', value: 'no-cache' },
+        ],
     },
     {
         source: 'assets/**',
         headers: [{ key: 'Cache-Control', value: IMMUTABLE }],
     },
     {
-        source: 'build-meta.json',
-        headers: [{ key: 'Cache-Control', value: NO_CACHE }],
-    },
-    {
         source: '**/*.{js,css,png,jpg,jpeg,gif,webp,svg,ico,woff,woff2}',
         headers: [{ key: 'Cache-Control', value: IMMUTABLE }],
+    },
+    {
+        source: '**',
+        headers: [
+            { key: 'Cache-Control', value: NO_CACHE },
+            { key: 'Pragma', value: 'no-cache' },
+        ],
     },
 ];
 

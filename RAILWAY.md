@@ -48,5 +48,7 @@ https://tgappfront-production.up.railway.app
 1. Откройте в **обычном браузере на телефоне** (не Telegram):  
    https://tgappfront-production.up.railway.app  
    Должен открыться интерфейс CyberMate.
-2. Если в браузере OK, а в Telegram нет — сбросьте кэш Telegram или переустановите ссылку Main App.
-3. Если в браузере тоже Railway error — смотрите Target port и полные Deploy Logs.
+2. **Настройки → Версия** — должен отображаться `build id` вида `abc123def456-lm2n3o4`. После деплоя значение **обязано измениться**.
+3. Проверка API сборки: `curl -s "https://tgappfront-production.up.railway.app/build-meta.json"` — `buildId` совпадает с версией в приложении.
+4. Если в браузере OK, а в Telegram старая версия — полностью **закройте** Mini App (крестик), подождите 5 сек, откройте снова. URL в адресной строке WebView должен содержать `?cm_b=...`.
+5. Если в браузере тоже Railway error — смотрите Target port и полные Deploy Logs.

@@ -6270,3 +6270,11 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   background: linear-gradient(135deg, var(--cm-accent), color-mix(in srgb, var(--cm-accent) 70%, #7c3aed));
   color: #fff;
 }
+
+.settings-concept__build-id {
+  margin: 18px 4px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--cm-text-muted, rgba(255, 255, 255, 0.45));
+  word-break: break-all;
+}

@@ -1,4 +1,5 @@
 const BUILD_META_URL = '/build-meta.json';
+const BUILD_PARAM = 'cm_b';
 const STORAGE_KEY = 'cybermate:active-build-id';
 
 function readDomBuildId() {
@@ -9,12 +10,26 @@ function readDomBuildId() {
     return document.querySelector('meta[name="cm-build-id"]')?.content?.trim() || '';
 }
 
+function readUrlBuildId() {
+    if (typeof window === 'undefined') {
+        return '';
+    }
+
+    try {
+        return new URL(window.location.href).searchParams.get(BUILD_PARAM)?.trim() || '';
+    } catch {
+        return '';
+    }
+}
+
 export function getActiveBuildId() {
     if (typeof window === 'undefined') {
         return '';
     }
 
-    return window.sessionStorage.getItem(STORAGE_KEY) || readDomBuildId();
+    return readUrlBuildId()
+        || window.sessionStorage.getItem(STORAGE_KEY)
+        || readDomBuildId();
 }
 
 export function rememberActiveBuildId(buildId) {
@@ -25,11 +40,26 @@ export function rememberActiveBuildId(buildId) {
     window.sessionStorage.setItem(STORAGE_KEY, buildId);
 }
 
+export function replaceUrlWithBuildId(buildId) {
+    if (!buildId || typeof window === 'undefined') {
+        return;
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.set(BUILD_PARAM, buildId);
+    url.searchParams.set('cm_t', String(Date.now()));
+    window.location.replace(url.toString());
+}
+
 export async function fetchLatestBuildId() {
     const url = `${BUILD_META_URL}?t=${Date.now()}`;
     const response = await fetch(url, {
         cache: 'no-store',
-        headers: { Accept: 'application/json' },
+        headers: {
+            Accept: 'application/json',
+            'Cache-Control': 'no-cache',
+            Pragma: 'no-cache',
+        },
     });
 
     if (!response.ok) {
@@ -41,17 +71,24 @@ export async function fetchLatestBuildId() {
 }
 
 export async function checkForAppUpdate({ reload = true } = {}) {
-    const current = getActiveBuildId();
+    const domBuildId = readDomBuildId();
     const latest = await fetchLatestBuildId();
 
-    if (!latest || !current || latest === current) {
+    if (!latest) {
+        return false;
+    }
+
+    const current = domBuildId || getActiveBuildId();
+
+    if (current && latest === current) {
+        rememberActiveBuildId(latest);
         return false;
     }
 
     rememberActiveBuildId(latest);
 
     if (reload) {
-        window.location.reload();
+        replaceUrlWithBuildId(latest);
     }
 
     return true;
@@ -74,6 +111,8 @@ export function initAppUpdateWatcher() {
         });
     };
 
+    runCheck();
+
     window.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             runCheck();
@@ -88,7 +127,7 @@ export function initAppUpdateWatcher() {
 
     window.addEventListener('focus', runCheck);
 
-    const intervalId = window.setInterval(runCheck, 3 * 60 * 1000);
+    const intervalId = window.setInterval(runCheck, 60 * 1000);
 
     return () => {
         window.clearInterval(intervalId);

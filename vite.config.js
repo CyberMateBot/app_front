@@ -3,17 +3,37 @@ import react from '@vitejs/plugin-react';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const buildId = (
+const gitRef = (
     process.env.RAILWAY_GIT_COMMIT_SHA
     || process.env.GITHUB_SHA
     || process.env.VERCEL_GIT_COMMIT_SHA
-    || String(Date.now())
+    || 'dev'
 ).slice(0, 12);
+const builtAt = new Date().toISOString();
+// Unique per build — Telegram WebView caches index.html aggressively.
+const buildId = `${gitRef}-${Date.now().toString(36)}`;
+
+const CACHE_BUST_SCRIPT = `<script>
+(function () {
+  var BUILD_ID = ${JSON.stringify(buildId)};
+  var PARAM = 'cm_b';
+  try {
+    var url = new URL(window.location.href);
+    if (url.searchParams.get(PARAM) !== BUILD_ID) {
+      url.searchParams.set(PARAM, BUILD_ID);
+      window.location.replace(url.toString());
+      return;
+    }
+    sessionStorage.setItem('cybermate:active-build-id', BUILD_ID);
+  } catch (e) {}
+})();
+</script>`;
 
 function buildMetaPayload() {
     return {
         buildId,
-        builtAt: new Date().toISOString(),
+        builtAt,
+        gitRef,
     };
 }
 
@@ -21,10 +41,15 @@ function cybermateBuildMetaPlugin() {
     return {
         name: 'cybermate-build-meta',
         transformIndexHtml(html) {
-            return html.replace(
+            let next = html.replace(
+                '<head>',
+                `<head>\n    ${CACHE_BUST_SCRIPT}`,
+            );
+            next = next.replace(
                 '</head>',
                 `    <meta name="cm-build-id" content="${buildId}" />\n  </head>`,
             );
+            return next;
         },
         configureServer(server) {
             server.middlewares.use((req, res, next) => {
