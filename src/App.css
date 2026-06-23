@@ -661,14 +661,27 @@
   margin: 0 auto 6px;
 }
 
+.home-social-card__ico--tiktok,
+.home-social-card__ico--instagram {
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
 .home-social-card__ico--tiktok {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.8);
+  border-radius: 9px;
 }
 
 .home-social-card__ico--instagram {
-  background: rgba(220, 60, 130, 0.1);
-  color: rgba(230, 90, 150, 0.85);
+  border-radius: 9px;
+}
+
+.home-social-card__img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
 }
 
 .home-social-card__ico--telegram {
@@ -6266,6 +6279,35 @@
 
 html[data-tg-layout='desktop-full'] .app-main {
   max-width: var(--layout-max-width, 100%);
+}
+
+html[data-tg-layout='desktop-full'] .app-shell[data-page='subscription'] .app-main {
+  max-width: 100%;
+}
+
+html[data-tg-layout='desktop-full'] .subscription-page__plans-carousel {
+  gap: 12px;
+  margin: 0;
+  width: 100%;
+}
+
+html[data-tg-layout='desktop-full'] .subscription-page__plans-scroll {
+  margin: 0;
+  overflow: visible;
+  border: none;
+  box-shadow: none;
+}
+
+html[data-tg-layout='desktop-full'] .subscription-page__plans {
+  padding: 4px 0 14px;
+  scroll-padding-inline: 0;
+  scroll-snap-type: none;
+}
+
+html[data-tg-layout='desktop-full'] .subscription-page__plans .subscription-plan-card {
+  flex: 0 0 300px;
+  scroll-snap-align: none;
+  min-height: 420px;
 }
 
 html[data-tg-layout='desktop-full'] .bottom-nav.bottom-nav--concept .bottom-nav__inner {

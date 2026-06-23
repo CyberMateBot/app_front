@@ -147,10 +147,19 @@
     animation: mp-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  .catalog-concept__grid > * {
+  .catalog-concept__grid > .catalog-concept__card--reveal {
     content-visibility: auto;
     contain-intrinsic-size: auto 120px;
+    animation: mp-catalog-card-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(1) { animation-delay: 0.02s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(2) { animation-delay: 0.04s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(3) { animation-delay: 0.06s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(4) { animation-delay: 0.08s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(5) { animation-delay: 0.1s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(6) { animation-delay: 0.12s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(n + 7) { animation-delay: 0.12s; }
 
   .home-concept__grid > *:nth-child(1),
   .subscription-page__plans .subscription-plan-card:nth-child(1),
@@ -188,6 +197,11 @@
 
 @keyframes mp-card-in {
   from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes mp-catalog-card-in {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
@@ -443,7 +457,7 @@
   .referral-screen--concept,
   .wallet-screen--concept,
   .home-concept__grid > *,
-  .catalog-concept__grid > *,
+  .catalog-concept__grid > .catalog-concept__card--reveal,
   .home-concept__promo {
     animation: none;
   }
@@ -533,4 +547,19 @@ html[data-tg-layout='desktop-full'] .home-news-widget__desc {
 
 html[data-tg-layout='desktop-full'] .app-main {
   contain: layout style;
+}
+
+html[data-tg-layout='desktop-full'] .subscription-page__plans {
+  padding: 4px 0 14px;
+  scroll-padding-inline: 0;
+  scroll-snap-type: none;
+}
+
+html[data-tg-layout='desktop-full'] .subscription-page__plans-scroll {
+  overflow: visible;
+}
+
+html[data-tg-layout='desktop-full'] .subscription-page__plans .subscription-plan-card {
+  flex: 0 0 300px;
+  scroll-snap-align: none;
 }

@@ -31,7 +31,6 @@ import {
     Mic,
     Moon,
     MoreHorizontal,
-    Music2,
     Paperclip,
     Plus,
     Search,
@@ -48,7 +47,7 @@ import {
     Zap,
     Play,
 } from 'lucide-react';
-import { FaInstagram, FaTelegram } from 'react-icons/fa6';
+import { FaTelegram } from 'react-icons/fa6';
 import {
     deletePromptHistoryTopic,
     getMyProfile,
@@ -3037,6 +3036,20 @@ function App() {
         return () => scrollEl.removeEventListener('wheel', onWheel);
     }, [currentPage]);
 
+    useEffect(() => {
+        if (currentPage !== 'subscription' || tgLayoutMode !== 'desktop-full') {
+            return undefined;
+        }
+
+        const el = subscriptionPlansScrollRef.current;
+        if (!el) {
+            return undefined;
+        }
+
+        el.scrollLeft = 0;
+        return undefined;
+    }, [currentPage, tgLayoutMode, billingCatalog?.plans?.length]);
+
     const scrollSubscriptionPlan = useCallback((direction) => {
         const el = subscriptionPlansScrollRef.current;
         if (!el) {
@@ -3048,25 +3061,39 @@ function App() {
             return;
         }
 
-        const viewportCenter = el.scrollLeft + el.clientWidth / 2;
+        const isDesktopFull = tgLayoutMode === 'desktop-full';
+        const edgeOffset = 12;
         let activeIndex = 0;
-        let minDistance = Infinity;
 
-        cards.forEach((card, index) => {
-            const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-            const distance = Math.abs(cardCenter - viewportCenter);
-            if (distance < minDistance) {
-                minDistance = distance;
-                activeIndex = index;
-            }
-        });
+        if (isDesktopFull) {
+            const viewportLeft = el.scrollLeft + edgeOffset;
+            cards.forEach((card, index) => {
+                if (card.offsetLeft <= viewportLeft + 4) {
+                    activeIndex = index;
+                }
+            });
+        } else {
+            const viewportCenter = el.scrollLeft + el.clientWidth / 2;
+            let minDistance = Infinity;
+
+            cards.forEach((card, index) => {
+                const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+                const distance = Math.abs(cardCenter - viewportCenter);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    activeIndex = index;
+                }
+            });
+        }
 
         const nextIndex = Math.min(cards.length - 1, Math.max(0, activeIndex + direction));
         const target = cards[nextIndex];
-        const targetLeft = target.offsetLeft - (el.clientWidth - target.offsetWidth) / 2;
+        const targetLeft = isDesktopFull
+            ? Math.max(0, target.offsetLeft - edgeOffset)
+            : Math.max(0, target.offsetLeft - (el.clientWidth - target.offsetWidth) / 2);
 
-        el.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
-    }, []);
+        el.scrollTo({ left: targetLeft, behavior: 'smooth' });
+    }, [tgLayoutMode]);
 
     const exitHistorySelectMode = useCallback(() => {
         setHistorySelectMode(false);
@@ -5194,8 +5221,8 @@ function App() {
                     onClick={() => openExternalLink(HOME_SOCIAL_LINKS.tiktok)}
                         >
                     <span className="home-social-card__ico home-social-card__ico--tiktok" aria-hidden="true">
-                        <Music2 size={16} />
-                                </span>
+                        <img className="home-social-card__img" src="/social-tiktok.png" alt="" />
+                    </span>
                     <span className="home-social-card__label">{text.homeSocialTiktok}</span>
                 </button>
                 <button
@@ -5204,8 +5231,8 @@ function App() {
                     onClick={() => openExternalLink(HOME_SOCIAL_LINKS.instagram)}
                 >
                     <span className="home-social-card__ico home-social-card__ico--instagram" aria-hidden="true">
-                        <FaInstagram size={16} />
-                            </span>
+                        <img className="home-social-card__img" src="/social-instagram.png" alt="" />
+                    </span>
                     <span className="home-social-card__label">{text.homeSocialInstagram}</span>
                         </button>
                 <button
@@ -5296,7 +5323,7 @@ function App() {
                                 <button
                                     key={tool.groupId ?? tool.id}
                                     type="button"
-                                    className={`catalog-concept__card ${tool.locked ? 'catalog-concept__card--locked' : ''}`}
+                                    className={`catalog-concept__card catalog-concept__card--reveal ${tool.locked ? 'catalog-concept__card--locked' : ''}`}
                                     onClick={() => handleCatalogToolClick(tool)}
                                 >
                                     {tool.locked ? (
