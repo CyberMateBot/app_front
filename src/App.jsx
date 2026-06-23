@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, {
+    startTransition,
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import {
     ArrowLeft,
     Bot,
@@ -1655,6 +1663,7 @@ function App() {
     const [mediaDownloadBusy, setMediaDownloadBusy] = useState(null);
     const [catalogTab, setCatalogTab] = useState('all');
     const [catalogSearch, setCatalogSearch] = useState('');
+    const [catalogToolsRendered, setCatalogToolsRendered] = useState(0);
     const [historyFilter, setHistoryFilter] = useState('all');
     const [historySelectMode, setHistorySelectMode] = useState(false);
     const [selectedHistoryTopicIds, setSelectedHistoryTopicIds] = useState([]);
@@ -2806,7 +2815,7 @@ function App() {
         return tool.sub ?? text[tool.subKey] ?? '';
     };
 
-    const filteredCatalogSections = catalogSections
+    const filteredCatalogSections = useMemo(() => catalogSections
         .map((section) => ({
             ...section,
             tools: section.tools.filter((tool) => {
@@ -2823,7 +2832,87 @@ function App() {
                 return matchesTab && matchesSearch;
             }),
         }))
-        .filter((section) => section.tools.length > 0);
+        .filter((section) => section.tools.length > 0), [
+        catalogSections,
+        catalogTab,
+        catalogSearchQuery,
+        language,
+        text,
+        effectiveTextModels,
+    ]);
+
+    const catalogToolCount = useMemo(
+        () => filteredCatalogSections.reduce((sum, section) => sum + section.tools.length, 0),
+        [filteredCatalogSections],
+    );
+
+    const visibleCatalogSections = useMemo(() => {
+        if (currentPage !== 'catalog') {
+            return [];
+        }
+
+        const renderLimit = catalogToolsRendered > 0
+            ? catalogToolsRendered
+            : Math.min(20, catalogToolCount);
+        let remaining = renderLimit;
+
+        return filteredCatalogSections
+            .map((section) => {
+                if (remaining <= 0) {
+                    return { ...section, tools: [] };
+                }
+
+                const tools = section.tools.slice(0, remaining);
+                remaining -= tools.length;
+                return { ...section, tools };
+            })
+            .filter((section) => section.tools.length > 0);
+    }, [currentPage, catalogToolsRendered, catalogToolCount, filteredCatalogSections]);
+
+    useEffect(() => {
+        if (currentPage !== 'catalog') {
+            setCatalogToolsRendered(0);
+            return undefined;
+        }
+
+        if (catalogToolsRendered >= catalogToolCount) {
+            return undefined;
+        }
+
+        let cancelled = false;
+
+        const revealMore = () => {
+            if (cancelled) {
+                return;
+            }
+
+            setCatalogToolsRendered((prev) => (
+                prev === 0
+                    ? Math.min(20, catalogToolCount)
+                    : Math.min(catalogToolCount, prev + 28)
+            ));
+        };
+
+        const idleId = typeof window.requestIdleCallback === 'function'
+            ? window.requestIdleCallback(revealMore, { timeout: 80 })
+            : window.setTimeout(revealMore, 0);
+
+        return () => {
+            cancelled = true;
+
+            if (typeof window.cancelIdleCallback === 'function' && typeof idleId === 'number') {
+                window.cancelIdleCallback(idleId);
+            } else {
+                window.clearTimeout(idleId);
+            }
+        };
+    }, [currentPage, catalogToolsRendered, catalogToolCount]);
+
+    useEffect(() => {
+        if (currentPage === 'catalog') {
+            setCatalogToolsRendered(0);
+        }
+    }, [currentPage, catalogTab, catalogSearchQuery]);
 
     const getCatalogBadgeLabel = (badge) => {
         if (badge === 'lite') return text.tierLite;
@@ -5174,7 +5263,7 @@ function App() {
                 ))}
             </div>
 
-            {filteredCatalogSections.length === 0 ? (
+            {catalogToolCount === 0 ? (
                 <p className="catalog-concept__empty">
                     {catalogSearchQuery
                         ? (language === 'ru' ? 'Ничего не найдено.' : 'Nothing found.')
@@ -5182,7 +5271,14 @@ function App() {
                 </p>
             ) : null}
 
-            {filteredCatalogSections.map((section) => (
+            {catalogToolCount > 0 && visibleCatalogSections.length === 0 && catalogToolsRendered === 0 ? (
+                <div className="catalog-concept__loading" role="status" aria-live="polite">
+                    <span className="catalog-concept__loading-spinner" aria-hidden="true" />
+                    <span>{language === 'ru' ? 'Загрузка каталога…' : 'Loading catalog…'}</span>
+                </div>
+            ) : null}
+
+            {visibleCatalogSections.map((section) => (
                 <div key={section.id} className="catalog-concept__section">
                     <p className="catalog-concept__section-label">{text[section.labelKey]}</p>
                     <div className="catalog-concept__grid">
@@ -6910,11 +7006,13 @@ function App() {
                                     aria-label={label}
                                     aria-current={isActive ? 'page' : undefined}
                                     onClick={() => {
-                                        if (key === 'history') {
-                                            setHistoryReturnPage('home');
-                                        }
-                                        setCurrentPage(key);
-                                        setIsLanguageMenuOpen(false);
+                                        startTransition(() => {
+                                            if (key === 'history') {
+                                                setHistoryReturnPage('home');
+                                            }
+                                            setCurrentPage(key);
+                                            setIsLanguageMenuOpen(false);
+                                        });
                                     }}
                                 >
                                     <span className="nav-button__icon-wrap" aria-hidden="true">

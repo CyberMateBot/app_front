@@ -135,7 +135,6 @@
   }
 
   .home-concept__grid > *,
-  .catalog-concept__grid > *,
   .subscription-page__plans .subscription-plan-card,
   .history-concept__item,
   .profile-concept__balance-card,
@@ -148,32 +147,30 @@
     animation: mp-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  .catalog-concept__grid > * {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
+  }
+
   .home-concept__grid > *:nth-child(1),
-  .catalog-concept__grid > *:nth-child(1),
   .subscription-page__plans .subscription-plan-card:nth-child(1),
   .history-concept__item:nth-child(1) { animation-delay: 0.02s; }
   .home-concept__grid > *:nth-child(2),
-  .catalog-concept__grid > *:nth-child(2),
   .subscription-page__plans .subscription-plan-card:nth-child(2),
   .history-concept__item:nth-child(2) { animation-delay: 0.05s; }
   .home-concept__grid > *:nth-child(3),
-  .catalog-concept__grid > *:nth-child(3),
   .subscription-page__plans .subscription-plan-card:nth-child(3),
   .history-concept__item:nth-child(3) { animation-delay: 0.08s; }
   .home-concept__grid > *:nth-child(4),
-  .catalog-concept__grid > *:nth-child(4),
   .subscription-page__plans .subscription-plan-card:nth-child(4),
   .history-concept__item:nth-child(4) { animation-delay: 0.11s; }
   .home-concept__grid > *:nth-child(5),
-  .catalog-concept__grid > *:nth-child(5),
   .subscription-page__plans .subscription-plan-card:nth-child(5),
   .history-concept__item:nth-child(5) { animation-delay: 0.14s; }
   .home-concept__grid > *:nth-child(6),
-  .catalog-concept__grid > *:nth-child(6),
   .subscription-page__plans .subscription-plan-card:nth-child(6),
   .history-concept__item:nth-child(6) { animation-delay: 0.17s; }
   .home-concept__grid > *:nth-child(n + 7),
-  .catalog-concept__grid > *:nth-child(n + 7),
   .subscription-page__plans .subscription-plan-card:nth-child(n + 7),
   .history-concept__item:nth-child(n + 7) { animation-delay: 0.17s; }
 
@@ -468,4 +465,72 @@ html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inne
   width: var(--mini-pc-nav-width, calc(100% - 24px));
   max-width: var(--mini-pc-nav-width, calc(100% - 24px));
   padding: 8px 4px;
+}
+
+/* Telegram Desktop fullscreen — lighter ambient effects, smoother scrolling. */
+html[data-tg-layout='desktop-full'] .app-shell::before {
+  display: none;
+}
+
+html[data-tg-layout='desktop-full'] .app-shell__orbs::before,
+html[data-tg-layout='desktop-full'] .app-shell__orbs::after {
+  display: none;
+}
+
+html[data-tg-layout='desktop-full'] .app-shell__orb {
+  filter: blur(22px) !important;
+  animation-duration: 320s !important;
+  will-change: auto;
+}
+
+html[data-tg-layout='desktop-full'] .app-shell__orb--4 {
+  display: none;
+}
+
+html[data-tg-layout='desktop-full'] .home-concept__orb {
+  display: none;
+}
+
+html[data-tg-layout='desktop-full']:not([data-theme='light']) .bottom-nav__indicator {
+  animation: none;
+}
+
+html[data-tg-layout='desktop-full'] .home-screen--widgets {
+  max-width: min(760px, 100%);
+  margin-inline: auto;
+}
+
+html[data-tg-layout='desktop-full'] .home-news-widget {
+  aspect-ratio: 16 / 9;
+  max-height: 300px;
+  margin-bottom: 16px;
+}
+
+html[data-tg-layout='desktop-full'] .home-news-widget__slide-image {
+  object-fit: cover;
+  object-position: center center;
+  image-rendering: auto;
+}
+
+html[data-tg-layout='desktop-full'] .home-news-widget__slide-bg {
+  background-size: cover;
+  background-position: center center;
+}
+
+html[data-tg-layout='desktop-full'] .home-continue-card,
+html[data-tg-layout='desktop-full'] .home-subscription-widget,
+html[data-tg-layout='desktop-full'] .home-social-block {
+  width: 100%;
+}
+
+html[data-tg-layout='desktop-full'] .home-news-widget__title {
+  font-size: clamp(15px, 1.6vw, 18px);
+}
+
+html[data-tg-layout='desktop-full'] .home-news-widget__desc {
+  font-size: clamp(11px, 1.1vw, 13px);
+}
+
+html[data-tg-layout='desktop-full'] .app-main {
+  contain: layout style;
 }

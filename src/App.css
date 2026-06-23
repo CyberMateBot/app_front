@@ -3844,9 +3844,29 @@
 }
 
 .catalog-concept__empty {
-  margin: 12px 4px;
-  font-size: 12px;
+  margin: 24px 4px;
+  font-size: 13px;
   color: var(--cm-text-muted);
+  text-align: center;
+}
+
+.catalog-concept__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 28px 4px;
+  font-size: 13px;
+  color: var(--cm-text-muted);
+}
+
+.catalog-concept__loading-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(107, 111, 255, 0.2);
+  border-top-color: var(--cm-accent);
+  animation: app-boot-spin 0.8s linear infinite;
 }
 
 /* History screen (concept) */
@@ -5382,7 +5402,7 @@
 .bottom-nav {
   position: fixed;
   inset: auto 0 0;
-  z-index: 5;
+  z-index: 120;
   pointer-events: none;
 }
 
@@ -5639,13 +5659,26 @@
     width: var(--mini-pc-nav-width, calc(100% - 24px));
     max-width: var(--mini-pc-nav-width, calc(100% - 24px));
     padding: 8px 4px;
-    background: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.92));
+    background: transparent;
+    isolation: auto;
+    overflow: hidden;
     border-color: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.14));
-    backdrop-filter: blur(28px) saturate(1.7);
-    -webkit-backdrop-filter: blur(28px) saturate(1.7);
     box-shadow:
       0 10px 32px rgba(0, 0, 0, 0.4),
       inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.08));
+  }
+
+  html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
+  html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--mini-pc-nav-glass, rgba(10, 12, 22, 0.55));
+    backdrop-filter: var(--mini-pc-nav-blur, blur(40px) saturate(1.75));
+    -webkit-backdrop-filter: var(--mini-pc-nav-blur, blur(40px) saturate(1.75));
+    z-index: 0;
+    pointer-events: none;
   }
 
   html[data-tg-desktop-embedded='1'] .bottom-nav--concept::before,
@@ -6251,13 +6284,34 @@ html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inne
   width: var(--mini-pc-nav-width, calc(100% - 24px));
   max-width: var(--mini-pc-nav-width, calc(100% - 24px));
   padding: 8px 4px;
-  background: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.92)) !important;
+  background: transparent !important;
+  isolation: auto;
+  overflow: hidden;
   border: 0.5px solid var(--mini-pc-nav-border, rgba(255, 255, 255, 0.14)) !important;
-  backdrop-filter: blur(28px) saturate(1.7) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(1.7) !important;
   box-shadow:
     0 10px 32px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.08)) !important;
+}
+
+html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
+html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
+.app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--mini-pc-nav-glass, rgba(10, 12, 22, 0.55));
+  backdrop-filter: var(--mini-pc-nav-blur, blur(40px) saturate(1.75));
+  -webkit-backdrop-filter: var(--mini-pc-nav-blur, blur(40px) saturate(1.75));
+  z-index: 0;
+  pointer-events: none;
+}
+
+html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner > *,
+html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner > *,
+.app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner > * {
+  position: relative;
+  z-index: 1;
 }
 
 html[data-tg-desktop-embedded='1'] .bottom-nav--concept::before,
@@ -6269,10 +6323,15 @@ html[data-tg-layout='mini-pc'] .bottom-nav--concept::before,
 html[data-theme='light'][data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 html[data-theme='light'][data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 html[data-theme='light'] .app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner {
-  background: var(--mini-pc-nav-bg, rgba(255, 255, 255, 0.94)) !important;
   border-color: var(--mini-pc-nav-border, rgba(20, 24, 36, 0.12)) !important;
-  backdrop-filter: blur(28px) saturate(1.5) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(1.5) !important;
+}
+
+html[data-theme='light'][data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
+html[data-theme='light'][data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
+html[data-theme='light'] .app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner::before {
+  background: var(--mini-pc-nav-glass, rgba(255, 255, 255, 0.72));
+  backdrop-filter: var(--mini-pc-nav-blur, blur(36px) saturate(1.5));
+  -webkit-backdrop-filter: var(--mini-pc-nav-blur, blur(36px) saturate(1.5));
 }
 
 html[data-tg-desktop-embedded='1'] .nav-button,

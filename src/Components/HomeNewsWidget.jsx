@@ -104,6 +104,8 @@ export default function HomeNewsWidget({ slides }) {
                             src={slide.imageUrl}
                             alt=""
                             draggable={false}
+                            loading={index === 0 ? 'eager' : 'lazy'}
+                            decoding="async"
                         />
                     ) : (
                         <div className="home-news-widget__slide-bg" style={{ background: slide.background }} />
