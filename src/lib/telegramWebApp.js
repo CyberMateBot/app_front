@@ -128,14 +128,39 @@ export function shouldAllowDesktopFullscreen(tg) {
         return false;
     }
 
-    if (hasBotChatContext(tg)) {
+    if (isDesktopInBotChatPanel(tg)) {
         return false;
     }
 
     return true;
 }
 
-/** initData fields present when opened from a bot chat context (menu / attachment). */
+/**
+ * On Telegram Desktop, Main Mini App (chat list) includes chat markers in initData.
+ * In-bot menu / attachment usually does not — use narrow viewport for that case.
+ */
+export function isChatListMainAppLaunch(tg) {
+    return hasBotChatContext(tg);
+}
+
+/** Desktop side panel opened from inside a bot chat (compact, not fullscreen). */
+export function isDesktopInBotChatPanel(tg) {
+    if (!isDesktopTelegramPlatform(tg)) {
+        return false;
+    }
+
+    if (readLaunchCompactFlag()) {
+        return true;
+    }
+
+    if (isChatListMainAppLaunch(tg)) {
+        return false;
+    }
+
+    return isNarrowDesktopViewport(tg);
+}
+
+/** initData fields present when opened from chat-list Main Mini App on Desktop. */
 export function hasBotChatContext(tg) {
     const unsafe = tg?.initDataUnsafe ?? {};
     if (unsafe.chat?.id) {
@@ -269,6 +294,10 @@ export function shouldShowDesktopExpandPrompt(tg) {
         return false;
     }
 
+    if (!isNarrowDesktopViewport(tg)) {
+        return false;
+    }
+
     if (tg?.isFullscreen || readLaunchFullscreenFlag()) {
         return false;
     }
@@ -371,7 +400,7 @@ export function getTelegramViewportWidth(tg) {
  * Phone-sized panel on Telegram Desktop (usually in-chat embed after fullscreen is unsupported).
  */
 export function isTelegramEmbeddedChatPanel(tg) {
-    return shouldUseMiniPcLayout(tg);
+    return isDesktopInBotChatPanel(tg);
 }
 
 function isNarrowDesktopViewport(tg) {
@@ -399,19 +428,19 @@ export function isTelegramDesktopEmbeddedPanel(tg) {
         return false;
     }
 
-    if (readLaunchCompactFlag()) {
+    if (isDesktopInBotChatPanel(tg)) {
         return true;
     }
 
-    if (desktopFullscreenUnsupported) {
+    if (desktopFullscreenUnsupported && isChatListMainAppLaunch(tg) && isNarrowDesktopViewport(tg)) {
         return true;
     }
 
-    return isNarrowDesktopViewport(tg);
+    return false;
 }
 
 function shouldUseMiniPcLayout(tg) {
-    return isTelegramDesktopEmbeddedPanel(tg);
+    return isDesktopInBotChatPanel(tg);
 }
 
 function normalizeFullscreenError(payload) {
@@ -496,15 +525,19 @@ export function resolveTelegramLayoutMode(tg) {
         return 'mobile';
     }
 
+    if (isDesktopInBotChatPanel(tg)) {
+        return 'mini-pc';
+    }
+
     if (tg?.isFullscreen || readLaunchFullscreenFlag()) {
         return 'desktop-full';
     }
 
-    if (isTelegramDesktopEmbeddedPanel(tg)) {
-        return 'mini-pc';
+    if (isChatListMainAppLaunch(tg)) {
+        return 'desktop-full';
     }
 
-    return 'desktop-full';
+    return isNarrowDesktopViewport(tg) ? 'mini-pc' : 'desktop-full';
 }
 
 export function subscribeTelegramLayout(listener) {
@@ -616,10 +649,6 @@ function requestDesktopFullscreen(tg) {
         return;
     }
 
-    if (shouldUseMiniPcLayout(tg)) {
-        return;
-    }
-
     if (tg.isFullscreen) {
         return;
     }
@@ -642,10 +671,6 @@ function requestDesktopFullscreen(tg) {
 
 function scheduleDesktopFullscreen(tg) {
     if (typeof window === 'undefined' || !tg || !shouldAllowDesktopFullscreen(tg)) {
-        return;
-    }
-
-    if (shouldUseMiniPcLayout(tg)) {
         return;
     }
 

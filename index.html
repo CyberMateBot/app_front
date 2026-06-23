@@ -56,6 +56,26 @@
         tg.ready();
         tg.expand();
 
+        function isChatListMainAppLaunch(tg) {
+          return hasBotChatContext(tg);
+        }
+
+        function isDesktopInBotChatPanel(tg) {
+          if (isChatListMainAppLaunch(tg)) {
+            return false;
+          }
+
+          var width = Number(tg.viewportStableWidth || tg.viewportWidth || window.innerWidth || 0);
+          var height = Number(tg.viewportStableHeight || tg.viewportHeight || window.innerHeight || 0);
+          if (width <= 0 || height <= 0) {
+            return false;
+          }
+          if (width <= 560) {
+            return true;
+          }
+          return height <= 900 && width <= 640;
+        }
+
         function hasBotChatContext(tg) {
           var unsafe = tg.initDataUnsafe || {};
           if (unsafe.chat && unsafe.chat.id) return true;
@@ -84,7 +104,7 @@
           return;
         }
 
-        if (hasBotChatContext(tg)) {
+        if (isDesktopInBotChatPanel(tg)) {
           return;
         }
 
