@@ -51,7 +51,7 @@
   --chat-ui-scale: 1;
   --header-ui-scale: 1;
   --nav-ui-scale: 1;
-  --mini-pc-nav-width: min(220px, 68%);
+  --mini-pc-nav-width: calc(100% - 24px);
 }
 
 :root[data-theme='light'] {
