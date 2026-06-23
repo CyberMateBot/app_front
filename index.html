@@ -56,6 +56,22 @@
         tg.ready();
         tg.expand();
 
+        function hasBotChatContext(tg) {
+          var unsafe = tg.initDataUnsafe || {};
+          if (unsafe.chat && unsafe.chat.id) return true;
+          if (unsafe.chat_type) return true;
+          if (unsafe.chat_instance) return true;
+
+          var initData = tg.initData || '';
+          if (!initData && hash) {
+            initData = params.get('tgWebAppData') || '';
+          }
+          if (!initData) return false;
+
+          var dataParams = new URLSearchParams(initData);
+          return !!(dataParams.get('chat_type') || dataParams.get('chat_instance') || dataParams.get('chat'));
+        }
+
         var params = new URLSearchParams(hash);
         var platform = tg.platform || params.get('tgWebAppPlatform') || '';
 
@@ -65,6 +81,10 @@
 
         var launchMode = String(params.get('tgWebAppMode') || params.get('mode') || '').toLowerCase();
         if (launchMode === 'compact') {
+          return;
+        }
+
+        if (hasBotChatContext(tg)) {
           return;
         }
 

@@ -118,6 +118,23 @@ export function readLaunchCompactFlag() {
     return mode === 'compact';
 }
 
+/** True when Desktop fullscreen should be requested (chat list / Main Mini App, not in-bot chat). */
+export function shouldAllowDesktopFullscreen(tg) {
+    if (!isDesktopTelegramPlatform(tg)) {
+        return false;
+    }
+
+    if (readLaunchCompactFlag()) {
+        return false;
+    }
+
+    if (hasBotChatContext(tg)) {
+        return false;
+    }
+
+    return true;
+}
+
 /** initData fields present when opened from a bot chat context (menu / attachment). */
 export function hasBotChatContext(tg) {
     const unsafe = tg?.initDataUnsafe ?? {};
@@ -220,7 +237,7 @@ function maybeAutoRelaunchFullscreen(tg) {
         return;
     }
 
-    if (!isDesktopTelegramPlatform(tg)) {
+    if (!shouldAllowDesktopFullscreen(tg)) {
         return;
     }
 
@@ -248,7 +265,7 @@ export function shouldShowDesktopExpandPrompt(tg) {
         return false;
     }
 
-    if (!isTelegramDesktopEmbeddedPanel(tg)) {
+    if (!shouldAllowDesktopFullscreen(tg)) {
         return false;
     }
 
@@ -595,15 +612,7 @@ function postTelegramWebEvent(eventType, payload = {}) {
 }
 
 function requestDesktopFullscreen(tg) {
-    if (!tg || !isDesktopTelegramPlatform(tg)) {
-        return;
-    }
-
-    if (readLaunchCompactFlag()) {
-        return;
-    }
-
-    if (hasBotChatContext(tg) && isNarrowDesktopViewport(tg)) {
+    if (!tg || !shouldAllowDesktopFullscreen(tg)) {
         return;
     }
 
@@ -632,7 +641,7 @@ function requestDesktopFullscreen(tg) {
 }
 
 function scheduleDesktopFullscreen(tg) {
-    if (typeof window === 'undefined' || !tg || !isDesktopTelegramPlatform(tg)) {
+    if (typeof window === 'undefined' || !tg || !shouldAllowDesktopFullscreen(tg)) {
         return;
     }
 
