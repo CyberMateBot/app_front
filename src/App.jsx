@@ -2678,6 +2678,7 @@ function App() {
                 : 'home';
 
     const showBottomNav = !['ai-chat', 'ai-image', 'ai-video', 'ai-voice', 'ai-3d', 'settings', 'wallet', 'referrals'].includes(currentPage);
+    const showNavIndicator = tgLayoutMode !== 'mini-pc';
 
     const navInnerRef = useRef(null);
     const navButtonRefs = useRef([]);
@@ -2690,7 +2691,7 @@ function App() {
     const activeNavIndex = navigationItems.findIndex((item) => item.key === activeNavKey);
 
     useLayoutEffect(() => {
-        if (!showBottomNav) {
+        if (!showBottomNav || !showNavIndicator) {
             return undefined;
         }
 
@@ -2726,7 +2727,7 @@ function App() {
             resizeObserver?.disconnect();
             window.removeEventListener('resize', updateNavIndicator);
         };
-    }, [activeNavIndex, showBottomNav]);
+    }, [activeNavIndex, showBottomNav, showNavIndicator]);
 
     useEffect(() => {
         if (currentPage !== 'subscription' || !telegramUser?.id) {
@@ -6985,11 +6986,13 @@ function App() {
             {showBottomNav ? (
                 <nav className="bottom-nav bottom-nav--concept" aria-label={language === 'ru' ? 'Основная навигация' : 'Main navigation'}>
                     <div className="bottom-nav__inner" ref={navInnerRef}>
-                        <span
-                            className="bottom-nav__indicator"
-                            style={navIndicatorStyle}
-                            aria-hidden="true"
-                        />
+                        {showNavIndicator ? (
+                            <span
+                                className="bottom-nav__indicator"
+                                style={navIndicatorStyle}
+                                aria-hidden="true"
+                            />
+                        ) : null}
                         {navigationItems.map((item, index) => {
                             const { key, labelKey, icon: NavIcon } = item;
                             const isActive = activeNavKey === key;

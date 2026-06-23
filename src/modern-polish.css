@@ -403,7 +403,7 @@
    ============================================================ */
 
 @media (prefers-reduced-motion: no-preference) {
-  :root:not([data-theme='light']) .bottom-nav__indicator {
+  :root:not([data-theme='light']):not([data-tg-layout='mini-pc']):not([data-tg-desktop-embedded='1']) .bottom-nav__indicator {
     animation: mp-indicator-pulse 3.6s ease-in-out infinite;
   }
 }

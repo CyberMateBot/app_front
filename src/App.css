@@ -5659,26 +5659,23 @@
     width: var(--mini-pc-nav-width, calc(100% - 24px));
     max-width: var(--mini-pc-nav-width, calc(100% - 24px));
     padding: 8px 4px;
-    background: transparent;
-    isolation: auto;
-    overflow: hidden;
-    border-color: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.14));
+    background: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.58));
+    border-color: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12));
+    backdrop-filter: blur(22px) saturate(1.45);
+    -webkit-backdrop-filter: blur(22px) saturate(1.45);
     box-shadow:
-      0 10px 32px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.08));
+      0 10px 36px rgba(0, 0, 0, 0.38),
+      inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.07));
   }
 
   html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
   html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: var(--mini-pc-nav-glass, rgba(10, 12, 22, 0.55));
-    backdrop-filter: var(--mini-pc-nav-blur, blur(40px) saturate(1.75));
-    -webkit-backdrop-filter: var(--mini-pc-nav-blur, blur(40px) saturate(1.75));
-    z-index: 0;
-    pointer-events: none;
+    display: none;
+  }
+
+  html[data-tg-desktop-embedded='1'] .bottom-nav__indicator,
+  html[data-tg-layout='mini-pc'] .bottom-nav__indicator {
+    display: none;
   }
 
   html[data-tg-desktop-embedded='1'] .bottom-nav--concept::before,
@@ -6277,41 +6274,32 @@ html[data-tg-layout='desktop-full'] .bottom-nav.bottom-nav--concept .bottom-nav_
   margin-inline: auto;
 }
 
-/* Telegram Desktop embedded panel: compact floating nav pill with visible glass blur. */
+/* Telegram Desktop embedded panel: compact floating nav pill (same glass as mobile). */
 html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 .app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner {
   width: var(--mini-pc-nav-width, calc(100% - 24px));
   max-width: var(--mini-pc-nav-width, calc(100% - 24px));
   padding: 8px 4px;
-  background: transparent !important;
-  isolation: auto;
-  overflow: hidden;
-  border: 0.5px solid var(--mini-pc-nav-border, rgba(255, 255, 255, 0.14)) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.58)) !important;
+  border: 0.5px solid var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12)) !important;
+  backdrop-filter: blur(22px) saturate(1.45) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.45) !important;
   box-shadow:
-    0 10px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.08)) !important;
+    0 10px 36px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.07)) !important;
+  isolation: isolate;
+  overflow: visible;
+  transform: translateZ(0);
 }
 
 html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
 html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
 .app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--mini-pc-nav-glass, rgba(10, 12, 22, 0.55));
-  backdrop-filter: var(--mini-pc-nav-blur, blur(40px) saturate(1.75));
-  -webkit-backdrop-filter: var(--mini-pc-nav-blur, blur(40px) saturate(1.75));
-  z-index: 0;
-  pointer-events: none;
-}
-
-html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner > *,
-html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner > *,
-.app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner > * {
-  position: relative;
-  z-index: 1;
+  display: none !important;
 }
 
 html[data-tg-desktop-embedded='1'] .bottom-nav--concept::before,
@@ -6323,22 +6311,25 @@ html[data-tg-layout='mini-pc'] .bottom-nav--concept::before,
 html[data-theme='light'][data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 html[data-theme='light'][data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 html[data-theme='light'] .app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner {
-  border-color: var(--mini-pc-nav-border, rgba(20, 24, 36, 0.12)) !important;
-}
-
-html[data-theme='light'][data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
-html[data-theme='light'][data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
-html[data-theme='light'] .app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner::before {
-  background: var(--mini-pc-nav-glass, rgba(255, 255, 255, 0.72));
-  backdrop-filter: var(--mini-pc-nav-blur, blur(36px) saturate(1.5));
-  -webkit-backdrop-filter: var(--mini-pc-nav-blur, blur(36px) saturate(1.5));
+  background: var(--mini-pc-nav-bg, rgba(255, 255, 255, 0.74)) !important;
+  border-color: var(--mini-pc-nav-border, rgba(20, 24, 36, 0.1)) !important;
+  backdrop-filter: blur(20px) saturate(1.25) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.25) !important;
 }
 
 html[data-tg-desktop-embedded='1'] .nav-button,
 html[data-tg-layout='mini-pc'] .nav-button,
 .app-shell--mini-pc .nav-button {
+  flex: 1 1 0;
+  min-width: 0;
   padding: 5px 0 4px;
   gap: 3px;
+}
+
+html[data-tg-desktop-embedded='1'] .bottom-nav__indicator,
+html[data-tg-layout='mini-pc'] .bottom-nav__indicator,
+.app-shell--mini-pc .bottom-nav__indicator {
+  display: none !important;
 }
 
 html[data-tg-desktop-embedded='1'] .nav-button__label,
@@ -6350,13 +6341,6 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0 1px;
-}
-
-html[data-tg-desktop-embedded='1'] .bottom-nav__indicator,
-html[data-tg-layout='mini-pc'] .bottom-nav__indicator,
-.app-shell--mini-pc .bottom-nav__indicator {
-  top: 8px;
-  bottom: 8px;
 }
 
 .tg-desktop-expand {
