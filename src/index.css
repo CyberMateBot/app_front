@@ -52,6 +52,28 @@
   --header-ui-scale: 1;
   --nav-ui-scale: 1;
   --mini-pc-nav-width: calc(100% - 24px);
+  --mini-pc-nav-bg: rgba(10, 12, 22, 0.92);
+  --mini-pc-nav-border: rgba(255, 255, 255, 0.14);
+  --mini-pc-nav-inset: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-tg-layout='mini-pc'][data-theme='light'],
+:root[data-tg-desktop-embedded='1'][data-theme='light'] {
+  --mini-pc-nav-bg: rgba(255, 255, 255, 0.94);
+  --mini-pc-nav-border: rgba(20, 24, 36, 0.12);
+  --mini-pc-nav-inset: rgba(255, 255, 255, 0.95);
+}
+
+.app-shell--mini-pc {
+  --mini-pc-nav-bg: rgba(10, 12, 22, 0.92);
+  --mini-pc-nav-border: rgba(255, 255, 255, 0.14);
+  --mini-pc-nav-inset: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme='light'] .app-shell--mini-pc {
+  --mini-pc-nav-bg: rgba(255, 255, 255, 0.94);
+  --mini-pc-nav-border: rgba(20, 24, 36, 0.12);
+  --mini-pc-nav-inset: rgba(255, 255, 255, 0.95);
 }
 
 :root[data-theme='light'] {
