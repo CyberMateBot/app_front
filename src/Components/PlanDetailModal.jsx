@@ -82,8 +82,6 @@ export default function PlanDetailModal({
                 aria-modal="true"
                 aria-label={planName}
             >
-                <div className="plan-detail-modal__panel-glass" aria-hidden="true" />
-
                 <div className="plan-detail-modal__head">
                     <div>
                         <p className="plan-detail-modal__eyebrow">

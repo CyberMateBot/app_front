@@ -110,8 +110,6 @@ export default function AppNotifications({
                 maxHeight: panelLayout.maxHeight,
             }}
         >
-            <div className="app-notifications__panel-glass" aria-hidden="true" />
-
             <div className="app-notifications__panel-head">
                 <strong>{language === 'ru' ? 'Уведомления' : 'Notifications'}</strong>
                 <button
