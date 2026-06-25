@@ -4,6 +4,16 @@ import { Bell, Coins, Crown, ShoppingBag, X } from 'lucide-react';
 
 const BOTTOM_NAV_RESERVE_PX = 92;
 
+const NOTIFICATIONS_PORTAL_ID = 'app-overlays';
+
+function getNotificationsPortalRoot() {
+    if (typeof document === 'undefined') {
+        return null;
+    }
+
+    return document.getElementById(NOTIFICATIONS_PORTAL_ID) ?? document.body;
+}
+
 function getPanelLayout(triggerEl) {
     if (!triggerEl || typeof window === 'undefined') {
         return null;
@@ -11,13 +21,12 @@ function getPanelLayout(triggerEl) {
 
     const rect = triggerEl.getBoundingClientRect();
     const top = rect.bottom + 8;
-    const maxHeight = Math.max(180, window.innerHeight - top - BOTTOM_NAV_RESERVE_PX);
 
     return {
         top,
         right: Math.max(12, window.innerWidth - rect.right),
         width: Math.min(320, window.innerWidth - 24),
-        maxHeight,
+        maxHeight: Math.max(180, window.innerHeight - top - BOTTOM_NAV_RESERVE_PX),
     };
 }
 
@@ -61,9 +70,11 @@ export default function AppNotifications({
 
         updateLayout();
         window.addEventListener('resize', updateLayout);
+        window.addEventListener('scroll', updateLayout, true);
 
         return () => {
             window.removeEventListener('resize', updateLayout);
+            window.removeEventListener('scroll', updateLayout, true);
         };
     }, [open]);
 
@@ -93,13 +104,14 @@ export default function AppNotifications({
             role="dialog"
             aria-label={language === 'ru' ? 'Уведомления' : 'Notifications'}
             style={{
-                position: 'fixed',
                 top: panelLayout.top,
                 right: panelLayout.right,
                 width: panelLayout.width,
                 maxHeight: panelLayout.maxHeight,
             }}
         >
+            <div className="app-notifications__panel-glass" aria-hidden="true" />
+
             <div className="app-notifications__panel-head">
                 <strong>{language === 'ru' ? 'Уведомления' : 'Notifications'}</strong>
                 <button
@@ -165,8 +177,8 @@ export default function AppNotifications({
                 ) : null}
             </button>
 
-            {typeof document !== 'undefined' && panel
-                ? createPortal(panel, document.body)
+            {panel && getNotificationsPortalRoot()
+                ? createPortal(panel, getNotificationsPortalRoot())
                 : null}
         </div>
     );

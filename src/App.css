@@ -115,6 +115,20 @@
   --cm-bubble-assistant-bg: #12141e;
   --cm-bubble-assistant-fg: #c8cad8;
   --cm-bubble-assistant-border: #252838;
+  --nav-glass-blur: blur(24px) saturate(1.5);
+  --nav-glass-bg: color-mix(in srgb, var(--cm-surface) 52%, transparent);
+  --nav-glass-border: color-mix(in srgb, var(--cm-border) 88%, transparent);
+  --nav-glass-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --panel-glass-blur: blur(24px) saturate(1.5);
+  --panel-glass-bg: color-mix(in srgb, var(--cm-surface) 42%, transparent);
+  --panel-glass-border: color-mix(in srgb, var(--cm-text) 10%, transparent);
+  --panel-glass-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+  --plan-detail-glass-blur: blur(24px) saturate(1.5);
+  --plan-detail-glass-bg: color-mix(in srgb, var(--cm-surface) 42%, transparent);
+  --plan-detail-glass-border: color-mix(in srgb, var(--cm-text) 10%, transparent);
+  --plan-detail-glass-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
 }
 
 :root[data-theme='light'] {
@@ -234,6 +248,20 @@
   --cm-bubble-assistant-bg: #ffffff;
   --cm-bubble-assistant-fg: #3a4058;
   --cm-bubble-assistant-border: #d5dae6;
+  --nav-glass-blur: blur(20px) saturate(1.25);
+  --nav-glass-bg: color-mix(in srgb, var(--cm-surface) 62%, transparent);
+  --nav-glass-border: color-mix(in srgb, var(--cm-border) 90%, transparent);
+  --nav-glass-shadow:
+    0 10px 30px rgba(20, 24, 36, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  --panel-glass-blur: blur(22px) saturate(1.25);
+  --panel-glass-bg: color-mix(in srgb, var(--cm-surface) 52%, transparent);
+  --panel-glass-border: color-mix(in srgb, var(--cm-text) 10%, transparent);
+  --panel-glass-shadow: 0 16px 36px rgba(20, 24, 36, 0.14);
+  --plan-detail-glass-blur: blur(22px) saturate(1.25);
+  --plan-detail-glass-bg: color-mix(in srgb, var(--cm-surface) 52%, transparent);
+  --plan-detail-glass-border: color-mix(in srgb, var(--cm-text) 10%, transparent);
+  --plan-detail-glass-shadow: 0 20px 44px rgba(20, 24, 36, 0.14);
 }
 
 .app-boot {
@@ -722,6 +750,7 @@
   gap: 12px;
   padding: 4px 4px 8px;
   position: relative;
+  overflow: visible;
 }
 
 .home-concept__logo-area {
@@ -5456,14 +5485,27 @@
   gap: 2px;
   pointer-events: auto;
   box-sizing: border-box;
-  border: 0.5px solid var(--cm-border);
+  border: 0.5px solid transparent;
   border-radius: 18px;
-  background: color-mix(in srgb, var(--cm-surface) 72%, transparent);
-  backdrop-filter: blur(22px) saturate(1.45);
-  -webkit-backdrop-filter: blur(22px) saturate(1.45);
-  box-shadow:
-    0 10px 36px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: transparent;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
+.bottom-nav__inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--nav-glass-bg);
+  border: 0.5px solid var(--nav-glass-border);
+  box-shadow: var(--nav-glass-shadow);
+  backdrop-filter: var(--nav-glass-blur);
+  -webkit-backdrop-filter: var(--nav-glass-blur);
+  transform: translateZ(0);
+  will-change: backdrop-filter;
 }
 
 .bottom-nav__indicator {
@@ -5472,7 +5514,7 @@
   bottom: 6px;
   left: 0;
   border-radius: 14px;
-  z-index: 0;
+  z-index: 1;
   pointer-events: none;
   transition:
     transform 0.38s cubic-bezier(0.34, 1.35, 0.64, 1),
@@ -5483,7 +5525,7 @@
 
 .nav-button {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   flex: 1 1 0;
   display: inline-flex;
   flex-direction: column;
@@ -5644,7 +5686,11 @@
 
 @media (min-width: 768px) {
   html:not([data-tg-desktop-embedded='1']):not([data-tg-layout='mini-pc']) .app-shell {
-    padding-bottom: calc(var(--nav-bar-height, 52px) * var(--ui-scale, 1) + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+    padding-bottom: max(var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)), env(safe-area-inset-bottom, 0px));
+  }
+
+  html:not([data-tg-desktop-embedded='1']):not([data-tg-layout='mini-pc']) .app-main {
+    padding-bottom: calc(var(--nav-bar-height, 56px) + 20px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
   }
 
   .app-main {
@@ -5662,9 +5708,8 @@
     max-width: var(--layout-max-width, 100%);
     margin-inline: auto;
     padding: 6px 4px;
-    backdrop-filter: blur(26px) saturate(1.55);
-    -webkit-backdrop-filter: blur(26px) saturate(1.55);
-    background: color-mix(in srgb, var(--cm-surface) 68%, transparent);
+    --nav-glass-blur: blur(28px) saturate(1.6);
+    --nav-glass-bg: color-mix(in srgb, var(--cm-surface) 48%, transparent);
   }
 
   html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
@@ -5672,13 +5717,12 @@
     width: var(--mini-pc-nav-width, calc(100% - 24px));
     max-width: var(--mini-pc-nav-width, calc(100% - 24px));
     padding: 8px 4px;
-    background: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.58));
-    border-color: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12));
-    backdrop-filter: blur(22px) saturate(1.45);
-    -webkit-backdrop-filter: blur(22px) saturate(1.45);
-    box-shadow:
+    --nav-glass-bg: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.42));
+    --nav-glass-border: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12));
+    --nav-glass-shadow:
       0 10px 36px rgba(0, 0, 0, 0.38),
       inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.07));
+    --nav-glass-blur: blur(24px) saturate(1.5);
   }
 
   html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
@@ -6310,13 +6354,35 @@ html[data-tg-layout='desktop-full'] .subscription-page__plans .subscription-plan
   min-height: 420px;
 }
 
+html[data-tg-layout='desktop-full'] .app-shell {
+  padding-bottom: max(var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)), env(safe-area-inset-bottom, 0px));
+}
+
+html[data-tg-layout='desktop-full'] .app-main {
+  padding-bottom: calc(var(--nav-bar-height, 56px) + 24px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
 html[data-tg-layout='desktop-full'] .bottom-nav.bottom-nav--concept .bottom-nav__inner {
   width: 100%;
   max-width: var(--layout-max-width, 100%);
   margin-inline: auto;
+  --nav-glass-blur: blur(30px) saturate(1.65);
+  --nav-glass-bg: color-mix(in srgb, var(--cm-surface) 46%, transparent);
 }
 
-/* Telegram Desktop embedded panel: compact floating nav pill (same glass as mobile). */
+/* Telegram Desktop embedded panel: compact floating nav pill with glass blur. */
+html[data-tg-desktop-embedded='1'] .app-shell,
+html[data-tg-layout='mini-pc'] .app-shell,
+.app-shell--mini-pc {
+  padding-bottom: max(var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)), env(safe-area-inset-bottom, 0px));
+}
+
+html[data-tg-desktop-embedded='1'] .app-main,
+html[data-tg-layout='mini-pc'] .app-main,
+.app-shell--mini-pc .app-main {
+  padding-bottom: calc(var(--nav-bar-height, 74px) + 16px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
 html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 .app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner {
@@ -6326,37 +6392,32 @@ html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inne
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.58)) !important;
-  border: 0.5px solid var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12)) !important;
-  backdrop-filter: blur(22px) saturate(1.45) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(1.45) !important;
-  box-shadow:
+  --nav-glass-bg: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.42));
+  --nav-glass-border: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12));
+  --nav-glass-blur: blur(24px) saturate(1.5);
+  --nav-glass-shadow:
     0 10px 36px rgba(0, 0, 0, 0.38),
-    inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.07)) !important;
+    inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.07));
   isolation: isolate;
-  overflow: visible;
+  overflow: hidden;
   transform: translateZ(0);
-}
-
-html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
-html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
-.app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner::before {
-  display: none !important;
-}
-
-html[data-tg-desktop-embedded='1'] .bottom-nav--concept::before,
-html[data-tg-layout='mini-pc'] .bottom-nav--concept::before,
-.app-shell--mini-pc .bottom-nav--concept::before {
-  display: none !important;
 }
 
 html[data-theme='light'][data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 html[data-theme='light'][data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
 html[data-theme='light'] .app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner {
-  background: var(--mini-pc-nav-bg, rgba(255, 255, 255, 0.74)) !important;
-  border-color: var(--mini-pc-nav-border, rgba(20, 24, 36, 0.1)) !important;
-  backdrop-filter: blur(20px) saturate(1.25) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(1.25) !important;
+  --nav-glass-bg: var(--mini-pc-nav-bg, rgba(255, 255, 255, 0.62));
+  --nav-glass-border: var(--mini-pc-nav-border, rgba(20, 24, 36, 0.1));
+  --nav-glass-blur: blur(22px) saturate(1.25);
+  --nav-glass-shadow:
+    0 10px 30px rgba(20, 24, 36, 0.1),
+    inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.95));
+}
+
+html[data-tg-desktop-embedded='1'] .bottom-nav--concept::before,
+html[data-tg-layout='mini-pc'] .bottom-nav--concept::before,
+.app-shell--mini-pc .bottom-nav--concept::before {
+  display: none;
 }
 
 html[data-tg-desktop-embedded='1'] .nav-button,
@@ -6523,8 +6584,20 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   color: var(--cm-text-muted, rgba(255, 255, 255, 0.62));
 }
 
+.app-overlays {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  pointer-events: none;
+}
+
+.app-overlays > * {
+  pointer-events: auto;
+}
+
 .app-notifications {
   position: relative;
+  z-index: 2;
 }
 
 .app-notifications__trigger {
@@ -6557,31 +6630,51 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   top: calc(100% + 8px);
   right: 0;
   width: min(320px, calc(100vw - 24px));
-  z-index: 220;
+  z-index: 1100;
   display: flex;
   flex-direction: column;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--cm-surface) 72%, transparent);
-  border: 1px solid color-mix(in srgb, var(--cm-text) 10%, transparent);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(22px) saturate(1.45);
-  -webkit-backdrop-filter: blur(22px) saturate(1.45);
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
   overflow: hidden;
+  isolation: isolate;
+  transform: translateZ(0);
 }
 
-.app-notifications__panel.app-notifications__panel--portal {
+.app-notifications__panel--portal {
   position: fixed;
   top: auto;
   right: auto;
-  z-index: 1100;
+}
+
+.app-notifications__panel-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: rgba(18, 20, 30, 0.42);
+  background: var(--panel-glass-bg);
+  border: 1px solid var(--panel-glass-border);
+  box-shadow: var(--panel-glass-shadow);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: var(--panel-glass-blur);
+  -webkit-backdrop-filter: var(--panel-glass-blur);
+  transform: translateZ(0);
+  will-change: backdrop-filter;
 }
 
 .app-notifications__panel-head {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
   border-bottom: 1px solid color-mix(in srgb, var(--cm-text) 8%, transparent);
+  background: transparent;
   flex: 0 0 auto;
 }
 
@@ -6595,6 +6688,8 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
 }
 
 .app-notifications__list {
+  position: relative;
+  z-index: 1;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -6645,11 +6740,42 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
 }
 
 .app-notifications__empty {
+  position: relative;
+  z-index: 1;
   margin: 0;
   padding: 16px 14px 18px;
   font-size: 12px;
   color: var(--cm-text-muted, rgba(255, 255, 255, 0.62));
   flex: 1 1 auto;
+}
+
+@media (min-width: 768px) {
+  .app-notifications__panel {
+    --panel-glass-blur: blur(28px) saturate(1.6);
+    --panel-glass-bg: color-mix(in srgb, var(--cm-surface) 38%, transparent);
+  }
+}
+
+html[data-tg-layout='desktop-full'] .app-notifications__panel,
+html[data-tg-layout='mini-pc'] .app-notifications__panel,
+html[data-tg-desktop-embedded='1'] .app-notifications__panel {
+  --panel-glass-blur: blur(30px) saturate(1.65);
+  --panel-glass-bg: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.42));
+  --panel-glass-border: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12));
+  --panel-glass-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.07));
+}
+
+html[data-theme='light'][data-tg-layout='desktop-full'] .app-notifications__panel,
+html[data-theme='light'][data-tg-layout='mini-pc'] .app-notifications__panel,
+html[data-theme='light'][data-tg-desktop-embedded='1'] .app-notifications__panel {
+  --panel-glass-bg: var(--mini-pc-nav-bg, rgba(255, 255, 255, 0.62));
+  --panel-glass-border: var(--mini-pc-nav-border, rgba(20, 24, 36, 0.1));
+  --panel-glass-blur: blur(22px) saturate(1.25);
+  --panel-glass-shadow:
+    0 16px 36px rgba(20, 24, 36, 0.12),
+    inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.95));
 }
 
 .plan-detail-modal {
@@ -6668,8 +6794,6 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   inset: 0;
   border: none;
   background: rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -6681,36 +6805,54 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
 
 .plan-detail-modal__panel {
   position: relative;
+  z-index: 1;
   width: min(100%, 420px);
   max-height: min(78vh, 640px);
   display: flex;
   flex-direction: column;
   border-radius: 20px;
-  border: 1px solid color-mix(in srgb, var(--cm-text) 10%, transparent);
-  background: color-mix(in srgb, var(--cm-surface) 72%, transparent);
-  backdrop-filter: blur(22px) saturate(1.45);
-  -webkit-backdrop-filter: blur(22px) saturate(1.45);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
   overflow: hidden;
+  isolation: isolate;
+  transform: translateZ(0);
   opacity: 0;
-  transform: translateY(28px) scale(0.96);
-  transition:
-    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.plan-detail-modal__panel-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: rgba(18, 20, 30, 0.42);
+  background: var(--plan-detail-glass-bg);
+  border: 1px solid var(--plan-detail-glass-border);
+  box-shadow: var(--plan-detail-glass-shadow);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: var(--plan-detail-glass-blur);
+  -webkit-backdrop-filter: var(--plan-detail-glass-blur);
+  transform: translateZ(0);
+  will-change: backdrop-filter;
 }
 
 .plan-detail-modal--visible .plan-detail-modal__panel {
   opacity: 1;
-  transform: translateY(0) scale(1);
 }
 
 .plan-detail-modal__head {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 16px 16px 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--cm-text) 8%, transparent);
+  background: transparent;
   opacity: 0;
   transform: translateY(8px);
   transition:
@@ -6748,6 +6890,8 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
 }
 
 .plan-detail-modal__body {
+  position: relative;
+  z-index: 1;
   overflow-y: auto;
   padding: 12px 16px 18px;
 }
@@ -6810,6 +6954,35 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   margin: 0;
   font-size: 13px;
   color: var(--cm-text-muted, rgba(255, 255, 255, 0.62));
+}
+
+@media (min-width: 768px) {
+  .plan-detail-modal__panel {
+    --plan-detail-glass-blur: blur(28px) saturate(1.6);
+    --plan-detail-glass-bg: color-mix(in srgb, var(--cm-surface) 38%, transparent);
+  }
+}
+
+html[data-tg-layout='desktop-full'] .plan-detail-modal__panel,
+html[data-tg-layout='mini-pc'] .plan-detail-modal__panel,
+html[data-tg-desktop-embedded='1'] .plan-detail-modal__panel {
+  --plan-detail-glass-blur: blur(30px) saturate(1.65);
+  --plan-detail-glass-bg: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.42));
+  --plan-detail-glass-border: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12));
+  --plan-detail-glass-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.07));
+}
+
+html[data-theme='light'][data-tg-layout='desktop-full'] .plan-detail-modal__panel,
+html[data-theme='light'][data-tg-layout='mini-pc'] .plan-detail-modal__panel,
+html[data-theme='light'][data-tg-desktop-embedded='1'] .plan-detail-modal__panel {
+  --plan-detail-glass-bg: var(--mini-pc-nav-bg, rgba(255, 255, 255, 0.62));
+  --plan-detail-glass-border: var(--mini-pc-nav-border, rgba(20, 24, 36, 0.1));
+  --plan-detail-glass-blur: blur(22px) saturate(1.25);
+  --plan-detail-glass-shadow:
+    0 20px 44px rgba(20, 24, 36, 0.12),
+    inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.95));
 }
 
 .catalog-concept__plan-lock {

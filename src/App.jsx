@@ -7010,6 +7010,8 @@ function App() {
                                                     : renderInfoScreen()}
             </main>
 
+            <div id="app-overlays" className="app-overlays" aria-live="polite" />
+
             {showBottomNav ? (
                 <nav className="bottom-nav bottom-nav--concept" aria-label={language === 'ru' ? 'Основная навигация' : 'Main navigation'}>
                     <div className="bottom-nav__inner" ref={navInnerRef}>

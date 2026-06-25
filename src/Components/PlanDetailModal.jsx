@@ -3,6 +3,15 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 const CLOSE_ANIMATION_MS = 300;
+const APP_OVERLAYS_ID = 'app-overlays';
+
+function getAppOverlaysRoot() {
+    if (typeof document === 'undefined') {
+        return null;
+    }
+
+    return document.getElementById(APP_OVERLAYS_ID) ?? document.body;
+}
 
 export default function PlanDetailModal({
     open = false,
@@ -50,7 +59,9 @@ export default function PlanDetailModal({
         return () => window.clearTimeout(timer);
     }, [open]);
 
-    if (!shouldRender || typeof document === 'undefined') {
+    const portalRoot = getAppOverlaysRoot();
+
+    if (!shouldRender || !portalRoot) {
         return null;
     }
 
@@ -71,6 +82,8 @@ export default function PlanDetailModal({
                 aria-modal="true"
                 aria-label={planName}
             >
+                <div className="plan-detail-modal__panel-glass" aria-hidden="true" />
+
                 <div className="plan-detail-modal__head">
                     <div>
                         <p className="plan-detail-modal__eyebrow">
@@ -120,6 +133,6 @@ export default function PlanDetailModal({
                 </div>
             </div>
         </div>,
-        document.body,
+        portalRoot,
     );
 }
