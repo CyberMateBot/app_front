@@ -5252,6 +5252,7 @@ function App() {
 
     const renderCatalogScreen = () => (
         <section className="catalog-screen catalog-screen--concept">
+            <div className="catalog-concept__sticky">
             <AppPageHeader
                 title={text.catalogTitle}
                 trailing={(
@@ -5290,7 +5291,9 @@ function App() {
                     </button>
                 ))}
             </div>
+            </div>
 
+            <div className="catalog-concept__scroll">
             {catalogToolCount === 0 ? (
                 <p className="catalog-concept__empty">
                     {catalogSearchQuery
@@ -5354,6 +5357,7 @@ function App() {
                     </div>
                 </div>
             ))}
+            </div>
         </section>
     );
 

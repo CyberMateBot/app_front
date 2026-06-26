@@ -3590,11 +3590,60 @@
 
 /* Catalog screen (concept) */
 .catalog-screen--concept {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   margin: 0;
-  padding: 8px 4px 16px;
+  padding: 8px 4px 0;
   font-family: 'K2D', 'Inter', sans-serif;
   color: var(--cm-text);
+  overflow: hidden;
+}
+
+.catalog-concept__sticky {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 5;
+  background: transparent;
+  padding-bottom: 10px;
+}
+
+.catalog-concept__sticky .catalog-concept__tabs {
+  margin-bottom: 0;
+}
+
+.catalog-concept__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-bottom: calc(var(--nav-bar-height, 56px) + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)) + 24px);
+}
+
+.catalog-concept__scroll::-webkit-scrollbar {
+  width: 0;
+}
+
+/* Catalog uses an internal scroll area so the header stays pinned. */
+.app-shell[data-page='catalog'] .app-main {
+  height: calc(max(var(--app-height, 100dvh), 100dvh) - var(--page-pad-top, 0px) - var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.app-shell[data-page='catalog'] {
+  padding-bottom: var(--page-pad-bottom, env(safe-area-inset-bottom, 0px));
+}
+
+.app-shell[data-page='catalog'] .catalog-screen--concept {
+  padding-top: 8px;
 }
 
 .catalog-concept__header {
