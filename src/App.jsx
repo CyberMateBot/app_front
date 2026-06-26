@@ -1538,6 +1538,7 @@ function getInitialTextModelId() {
 
 function App() {
     const [currentPage, setCurrentPage] = useState('home');
+    const [walletReturnPage, setWalletReturnPage] = useState('profile');
     const [profile, setProfile] = useState(null);
     const [homeWidgetSlides, setHomeWidgetSlides] = useState(null);
     const [billingCatalog, setBillingCatalog] = useState(() => getFallbackBillingCatalog());
@@ -2665,8 +2666,9 @@ function App() {
     const tokenBalance = resolveGenerationTokenBalance(walletData, profile);
 
     const openCoinTopUp = useCallback(() => {
+        setWalletReturnPage((prev) => (currentPage === 'wallet' ? prev : currentPage));
         setCurrentPage('wallet');
-    }, []);
+    }, [currentPage]);
     const activeNavKey = currentPage === 'settings' || currentPage === 'wallet' || currentPage === 'referrals'
         ? 'profile'
         : currentPage === 'ai-chat' || currentPage === 'ai-image' || currentPage === 'ai-video'
@@ -5148,7 +5150,10 @@ function App() {
                         notifications={appNotifications}
                         language={language}
                         onOpenSubscription={() => setCurrentPage('subscription')}
-                        onOpenWallet={() => setCurrentPage('wallet')}
+                        onOpenWallet={() => {
+                            setWalletReturnPage((prev) => (currentPage === 'wallet' ? prev : currentPage));
+                            setCurrentPage('wallet');
+                        }}
                         onMarkRead={handleMarkNotificationsRead}
                     />
                     <button
@@ -6596,7 +6601,7 @@ function App() {
 
         return (
             <section className="wallet-screen wallet-screen--concept">
-                {renderConceptPageHeader(text.walletPageTitle, () => setCurrentPage('profile'))}
+                {renderConceptPageHeader(text.walletPageTitle, () => setCurrentPage(walletReturnPage))}
 
                 <article className="profile-concept__balance-card subscription-concept__balance subscription-page__hero--animate">
                     <div className="subscription-concept__balance-grid">
