@@ -57,7 +57,7 @@ export const API_ENDPOINTS = {
         method: 'POST',
         path: '/v1/generate/image',
         when: 'Генерация изображения (Nano Banana)',
-        body: '{ telegramId, initDataRaw: base64, prompt, category: "image", model: "nano-banana"|..., sourceImageUrl?: string, imageBase64?: string, imageMimeType?: string, aspect_ratio?, resolution?, quality?, output_format?, messages?: [{ role, content }] }',
+        body: '{ telegramId, initDataRaw: base64, prompt, category: "image", model: "nano-banana"|..., sourceImageUrl?: string, imageBase64?: string, imageMimeType?: string, aspect_ratio?, resolution?, quality?, output_format?, web_search?: boolean, image_search?: boolean, messages?: [{ role, content }] }',
     },
     generateVideo: {
         method: 'POST',

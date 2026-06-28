@@ -145,8 +145,8 @@ export function formatUserFacingError(error, language = 'ru') {
 
     if (isInsufficientTokensError(error)) {
         return language === 'ru'
-            ? 'Недостаточно токенов.'
-            : 'Insufficient tokens.';
+            ? 'Недостаточно монет.'
+            : 'Insufficient coins.';
     }
 
     return error instanceof Error ? error.message : String(error);

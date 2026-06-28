@@ -58,6 +58,7 @@ import {
     getMyWallet,
     normalizeProfileResponse,
     fetchTextModels,
+    fetchMediaModels,
     generateImage,
     generateText,
     generateVideo,
@@ -165,8 +166,6 @@ import {
     IMAGE_MODEL_DEFINITIONS,
 } from './config/aiModels.js';
 import {
-    getImageModelCapabilities,
-    getImageModelDefaults,
     getVideoModelCapabilities,
     getVideoModelDefaults,
     getAudioModelCapabilities,
@@ -242,6 +241,21 @@ import {
     formatCatalogPriceLabel,
     getCatalogToolPriceRange,
 } from './lib/modelPrices.js';
+import { calculatePrice, calculateAudioPrice, calculateThreeDPrice, calculateVideoPrice, getMediaModelMinPrice, getOptionPriceDelta } from './lib/mediaGenerationPrice.js';
+import {
+    applyBarOptionChange,
+    buildAudioSelectedFromApp,
+    buildImageOptionsFromModel,
+    buildMediaModelsCatalog,
+    buildThreeDSelectedFromApp,
+    buildVideoSelectedFromApp,
+    imageOptionsToBarValues,
+    pickAudioGenerateParams,
+    pickImageGenerateParams,
+    pickThreeDGenerateParams,
+    pickVideoGenerateParams,
+    resolveImageCapabilities,
+} from './lib/mediaModelCatalog.js';
 import {
     getTelegramWebApp,
     hydrateTelegramUser,
@@ -528,6 +542,9 @@ const translations = {
         mediaOptionMusicTags: 'Стиль (tags)',
         mediaOptionSpeed: 'Скорость',
         mediaOptionEmotion: 'Эмоция',
+        mediaOptionSimilarity: 'Схожесть',
+        mediaOptionStability: 'Стабильность',
+        mediaOptionSpeakerBoost: 'Speaker Boost',
         mediaOptionNumberOfSongs: 'Кол-во песен',
         musicGenerateButton: 'Сгенерировать',
         musicGenerating: 'Генерация музыки...',
@@ -689,6 +706,7 @@ const translations = {
         imageRemovePhoto: 'Убрать фото',
         imageEditedNote: 'Изображение отредактировано.',
         imageGenerateButton: 'Сгенерировать',
+        imageInsufficientCoins: 'Недостаточно монет',
         imageGenerating: 'Генерация...',
         imageResultTitle: 'Результат',
         mediaDownloadButton: 'Скачать',
@@ -707,6 +725,10 @@ const translations = {
         mediaOptionQuality: 'Качество',
         mediaOptionDuration: 'Длительность',
         mediaOptionOutputFormat: 'Формат файла',
+        mediaOptionWebSearch: 'Веб-поиск',
+        mediaOptionImageSearch: 'Поиск по изображениям',
+        mediaOptionSize: 'Размер',
+        mediaOptionNumImages: 'Количество',
         mediaToggleOn: 'Вкл',
         mediaToggleOff: 'Выкл',
         mediaQualityLow: 'Низкое',
@@ -1066,6 +1088,9 @@ const translations = {
         mediaOptionMusicTags: 'Style (tags)',
         mediaOptionSpeed: 'Speed',
         mediaOptionEmotion: 'Emotion',
+        mediaOptionSimilarity: 'Similarity',
+        mediaOptionStability: 'Stability',
+        mediaOptionSpeakerBoost: 'Speaker Boost',
         mediaOptionNumberOfSongs: 'Number of songs',
         musicGenerateButton: 'Generate',
         musicGenerating: 'Generating music...',
@@ -1227,6 +1252,7 @@ const translations = {
         imageRemovePhoto: 'Remove photo',
         imageEditedNote: 'Image edited.',
         imageGenerateButton: 'Generate',
+        imageInsufficientCoins: 'Insufficient coins',
         imageGenerating: 'Generating...',
         imageResultTitle: 'Result',
         mediaDownloadButton: 'Download',
@@ -1245,6 +1271,10 @@ const translations = {
         mediaOptionQuality: 'Quality',
         mediaOptionDuration: 'Duration',
         mediaOptionOutputFormat: 'Output format',
+        mediaOptionWebSearch: 'Web search',
+        mediaOptionImageSearch: 'Image search',
+        mediaOptionSize: 'Size',
+        mediaOptionNumImages: 'Count',
         mediaToggleOn: 'On',
         mediaToggleOff: 'Off',
         mediaQualityLow: 'Low',
@@ -1570,19 +1600,19 @@ function App() {
     const [textPrompt, setTextPrompt] = useState('');
     const [textModel, setTextModel] = useState(getInitialTextModelId);
     const [textModels, setTextModels] = useState(DEFAULT_TEXT_MODELS);
-    const initialImageDefaults = getImageModelDefaults('flux-dev');
     const initialVideoDefaults = getVideoModelDefaults('kling-v3-std');
     const initialAudioDefaults = getAudioModelDefaults('qwen3-tts');
     const initialThreeDDefaults = getThreeDModelDefaults('hunyuan3d-v3.1-rapid');
     const [imageModel, setImageModel] = useState('flux-dev');
+    const [mediaModelsCatalog, setMediaModelsCatalog] = useState({});
+    const [imageOptions, setImageOptions] = useState(() => buildImageOptionsFromModel(
+        'flux-dev',
+        {},
+    ));
     const [imagePrompt, setImagePrompt] = useState('');
     const [imageAttachment, setImageAttachment] = useState(null);
     const [imageSessionMessages, setImageSessionMessages] = useState([]);
     const [imageSessionId, setImageSessionId] = useState(() => createChatSessionId());
-    const [imageAspectRatio, setImageAspectRatio] = useState(initialImageDefaults.aspectRatio ?? '1:1');
-    const [imageResolution, setImageResolution] = useState(initialImageDefaults.resolution ?? '');
-    const [imageQuality, setImageQuality] = useState(initialImageDefaults.quality ?? '');
-    const [imageOutputFormat, setImageOutputFormat] = useState(initialImageDefaults.outputFormat ?? '');
     const [generatedImageUrl, setGeneratedImageUrl] = useState('');
     const [generatedImageUrls, setGeneratedImageUrls] = useState([]);
     const [videoModel, setVideoModel] = useState('kling-v3-std');
@@ -1615,6 +1645,9 @@ function App() {
     const [audioReferenceText, setAudioReferenceText] = useState(initialAudioDefaults.referenceText ?? '');
     const [audioSpeed, setAudioSpeed] = useState(initialAudioDefaults.speed ?? '1.0');
     const [audioEmotion, setAudioEmotion] = useState(initialAudioDefaults.emotion ?? 'happy');
+    const [audioSimilarity, setAudioSimilarity] = useState(initialAudioDefaults.similarity ?? 1.0);
+    const [audioStability, setAudioStability] = useState(initialAudioDefaults.stability ?? 0.5);
+    const [audioSpeakerBoost, setAudioSpeakerBoost] = useState(initialAudioDefaults.speakerBoost ?? true);
     const [audioDuration, setAudioDuration] = useState(initialAudioDefaults.duration ?? 60);
     const [audioNumberOfSongs, setAudioNumberOfSongs] = useState(initialAudioDefaults.numberOfSongs ?? '1');
     const [audioOutputFormat, setAudioOutputFormat] = useState(initialAudioDefaults.outputFormat ?? 'mp3');
@@ -2138,6 +2171,20 @@ function App() {
                         console.warn('[CyberMate] Failed to load text models:', modelError);
                     }
                 }
+
+                try {
+                    const payload = await fetchMediaModels();
+
+                    if (isMounted) {
+                        const catalogMap = buildMediaModelsCatalog(payload);
+                        setMediaModelsCatalog(catalogMap);
+                        setImageOptions(buildImageOptionsFromModel('flux-dev', catalogMap));
+                    }
+                } catch (imageModelError) {
+                    if (import.meta.env.DEV) {
+                        console.warn('[CyberMate] Failed to load media models:', imageModelError);
+                    }
+                }
             } catch (error) {
                 if (!isMounted) {
                     return;
@@ -2516,7 +2563,14 @@ function App() {
                 ?? profile?.tokenBalance
                 ?? profile?.tokens,
         }, telegramUser);
-        const subscription = deriveSubscriptionView(subscriptionState ?? profile, text, language);
+        // Dev-only: force a subscription plan via VITE_FORCE_PLAN (e.g. "ultra" for Business).
+        const forcedPlan = import.meta.env.DEV
+            ? String(import.meta.env.VITE_FORCE_PLAN ?? '').trim().toLowerCase()
+            : '';
+        const subscriptionSource = forcedPlan
+            ? { ...(subscriptionState ?? profile), plan_id: forcedPlan, is_paid: forcedPlan !== 'free', is_active: true }
+            : (subscriptionState ?? profile);
+        const subscription = deriveSubscriptionView(subscriptionSource, text, language);
 
         return {
             ...base,
@@ -2664,6 +2718,110 @@ function App() {
         return applyReadState(items, readNotificationIds);
     }, [subscriptionState, walletTransactions, text, language, readNotificationIds]);
     const tokenBalance = resolveGenerationTokenBalance(walletData, profile);
+    const activeImageCatalogModel = mediaModelsCatalog[imageModel] ?? null;
+    const imageGenerationPrice = useMemo(() => {
+        const model = activeImageCatalogModel ?? { id: imageModel, kind: 'image' };
+        return calculatePrice(model, imageOptions);
+    }, [activeImageCatalogModel, imageModel, imageOptions]);
+    const imageInsufficientBalance = tokenBalance < imageGenerationPrice;
+
+    const videoSelectedOptions = useMemo(() => buildVideoSelectedFromApp({
+        aspectRatio: videoAspectRatio,
+        duration: videoDuration,
+        resolution: videoResolution,
+        negativePrompt: videoNegativePrompt,
+        sound: videoSound,
+        generateAudio: videoGenerateAudio,
+        cameraFixed: videoCameraFixed,
+        turboMode: videoTurboMode,
+    }), [
+        videoAspectRatio,
+        videoDuration,
+        videoResolution,
+        videoNegativePrompt,
+        videoSound,
+        videoGenerateAudio,
+        videoCameraFixed,
+        videoTurboMode,
+    ]);
+    const activeVideoCatalogModel = mediaModelsCatalog[videoModel] ?? null;
+    const videoGenerationPrice = useMemo(() => {
+        const model = activeVideoCatalogModel ?? { id: videoModel, kind: 'video' };
+        return calculateVideoPrice(model, videoSelectedOptions);
+    }, [activeVideoCatalogModel, videoModel, videoSelectedOptions]);
+    const videoInsufficientBalance = tokenBalance < videoGenerationPrice;
+
+    const audioSelectedOptions = useMemo(() => buildAudioSelectedFromApp({
+        language: audioLanguage,
+        voice: audioVoice,
+        speed: audioSpeed,
+        emotion: audioEmotion,
+        duration: audioDuration,
+        numberOfSongs: audioNumberOfSongs,
+        outputFormat: audioOutputFormat,
+        styleInstruction: audioStyleInstruction,
+    }), [
+        audioLanguage,
+        audioVoice,
+        audioSpeed,
+        audioEmotion,
+        audioDuration,
+        audioNumberOfSongs,
+        audioOutputFormat,
+        audioStyleInstruction,
+    ]);
+    const isAudioCloneMode = Boolean(audioAttachment) && audioModelSupportsClone(audioModel);
+    const activeAudioCatalogModel = mediaModelsCatalog[audioModel] ?? null;
+    const audioGenerationPrice = useMemo(() => {
+        const model = activeAudioCatalogModel ?? { id: audioModel, kind: 'audio' };
+        const promptText = isAudioCloneMode
+            ? (audioReferenceText || audioPrompt)
+            : audioPrompt;
+        return calculateAudioPrice(model, audioSelectedOptions, {
+            textLength: promptText.trim().length || 1,
+            voiceClone: isAudioCloneMode,
+        });
+    }, [
+        activeAudioCatalogModel,
+        audioModel,
+        audioSelectedOptions,
+        audioPrompt,
+        audioReferenceText,
+        isAudioCloneMode,
+    ]);
+    const audioInsufficientBalance = tokenBalance < audioGenerationPrice;
+
+    const threeDSelectedOptions = useMemo(() => buildThreeDSelectedFromApp({
+        negativePrompt: threeDNegativePrompt,
+        textureQuality: threeDTextureQuality,
+        outputFormat: threeDOutputFormat,
+        geometryQuality: threeDGeometryQuality,
+        mode: threeDMode,
+        artStyle: threeDArtStyle,
+        topology: threeDTopology,
+        tier: threeDTier,
+        material: threeDMaterial,
+        geometryFileFormat: threeDGeometryFileFormat,
+        textureMode: threeDTextureMode,
+    }), [
+        threeDNegativePrompt,
+        threeDTextureQuality,
+        threeDOutputFormat,
+        threeDGeometryQuality,
+        threeDMode,
+        threeDArtStyle,
+        threeDTopology,
+        threeDTier,
+        threeDMaterial,
+        threeDGeometryFileFormat,
+        threeDTextureMode,
+    ]);
+    const activeThreeDCatalogModel = mediaModelsCatalog[threeDModel] ?? null;
+    const threeDGenerationPrice = useMemo(() => {
+        const model = activeThreeDCatalogModel ?? { id: threeDModel, kind: '3d' };
+        return calculateThreeDPrice(model, threeDSelectedOptions);
+    }, [activeThreeDCatalogModel, threeDModel, threeDSelectedOptions]);
+    const threeDInsufficientBalance = tokenBalance < threeDGenerationPrice;
 
     const openCoinTopUp = useCallback(() => {
         setWalletReturnPage((prev) => (currentPage === 'wallet' ? prev : currentPage));
@@ -3514,12 +3672,8 @@ function App() {
     }, []);
 
     const applyImageModelOptions = useCallback((modelId) => {
-        const defaults = getImageModelDefaults(modelId);
-        setImageAspectRatio(defaults.aspectRatio ?? '');
-        setImageResolution(defaults.resolution ?? '');
-        setImageQuality(defaults.quality ?? '');
-        setImageOutputFormat(defaults.outputFormat ?? '');
-    }, []);
+        setImageOptions(buildImageOptionsFromModel(modelId, mediaModelsCatalog));
+    }, [mediaModelsCatalog]);
 
     const applyVideoModelOptions = useCallback((modelId) => {
         const defaults = getVideoModelDefaults(modelId);
@@ -3552,28 +3706,16 @@ function App() {
         setAudioReferenceText(defaults.referenceText ?? '');
         setAudioSpeed(defaults.speed ?? '1.0');
         setAudioEmotion(defaults.emotion ?? 'happy');
+        setAudioSimilarity(defaults.similarity ?? 1.0);
+        setAudioStability(defaults.stability ?? 0.5);
+        setAudioSpeakerBoost(defaults.speakerBoost ?? true);
         setAudioDuration(defaults.duration ?? 60);
         setAudioNumberOfSongs(defaults.numberOfSongs ?? '1');
         setAudioOutputFormat(defaults.outputFormat ?? 'mp3');
     }, []);
 
     const handleImageOptionChange = (key, value) => {
-        switch (key) {
-            case 'aspectRatio':
-                setImageAspectRatio(value);
-                break;
-            case 'resolution':
-                setImageResolution(value);
-                break;
-            case 'quality':
-                setImageQuality(value);
-                break;
-            case 'outputFormat':
-                setImageOutputFormat(value);
-                break;
-            default:
-                break;
-        }
+        setImageOptions((prev) => applyBarOptionChange(prev, key, value));
     };
 
     const resetVideoCameraAxes = useCallback(() => {
@@ -3691,6 +3833,15 @@ function App() {
                 break;
             case 'emotion':
                 setAudioEmotion(value);
+                break;
+            case 'similarity':
+                setAudioSimilarity(value);
+                break;
+            case 'stability':
+                setAudioStability(value);
+                break;
+            case 'speakerBoost':
+                setAudioSpeakerBoost(value);
                 break;
             case 'duration':
                 setAudioDuration(value);
@@ -4148,6 +4299,7 @@ function App() {
             setImageError('');
             setGeneratedImageUrl('');
             setGeneratedImageUrls([]);
+            const generationParams = pickImageGenerateParams(imageModel, mediaModelsCatalog, imageOptions);
             const response = await generateImage({
                 prompt: trimmedPrompt,
                 model: imageModel,
@@ -4156,10 +4308,7 @@ function App() {
                 sourceImageUrl: sourceImageUrl || undefined,
                 imageBase64: attachedImage?.base64,
                 imageMimeType: attachedImage?.mimeType,
-                aspectRatio: imageAspectRatio || undefined,
-                resolution: imageResolution || undefined,
-                quality: imageQuality || undefined,
-                outputFormat: imageOutputFormat || undefined,
+                ...generationParams,
             });
             const imageUrl = response?.imageUrl?.trim() ?? '';
             const imageUrls = Array.isArray(response?.imageUrls) && response.imageUrls.length
@@ -4264,31 +4413,21 @@ function App() {
                 }
                 : undefined;
 
+            const videoOptionParams = pickVideoGenerateParams(videoModel, mediaModelsCatalog, videoSelectedOptions);
             const response = await generateVideo({
-                    prompt: trimmedPrompt,
+                prompt: trimmedPrompt,
                 model: videoModel,
                 messages: contextMessages,
                 sessionId: videoSessionId,
-                aspectRatio: videoAspectRatio || undefined,
-                duration: videoDuration,
-                resolution: videoResolution || undefined,
-                negativePrompt: videoCapabilities.options?.negativePrompt
-                    ? (videoNegativePrompt.trim() || undefined)
-                    : undefined,
                 sourceImageUrl: resolvedSourceImageUrl || undefined,
                 sourceVideoUrl: resolvedSourceVideoUrl || undefined,
-                sound: videoCapabilities.options?.sound ? videoSound : undefined,
+                ...videoOptionParams,
+                negativePrompt: videoOptionParams.negativePrompt ?? (
+                    videoCapabilities.options?.negativePrompt
+                        ? (videoNegativePrompt.trim() || undefined)
+                        : undefined
+                ),
                 cameraControl,
-                generateAudio: videoCapabilities.options?.generateAudio
-                    ? videoGenerateAudio
-                    : undefined,
-                cameraFixed: videoCapabilities.options?.cameraFixed
-                    ? videoCameraFixed
-                    : undefined,
-                turboMode: (
-                    videoCapabilities.options?.turboMode
-                    && videoTurboMode
-                ) ? true : undefined,
             });
             const videoUrl = response?.videoUrl?.trim() ?? '';
 
@@ -4356,21 +4495,27 @@ function App() {
             setAudioError('');
             setGeneratedAudioUrl('');
 
+            const audioOptionParams = pickAudioGenerateParams(
+                audioModel,
+                mediaModelsCatalog,
+                audioSelectedOptions,
+                {
+                    voiceClone: isCloneMode,
+                    audioBase64: isCloneMode ? audioAttachment?.base64 : undefined,
+                    audioMimeType: isCloneMode ? audioAttachment?.mimeType : undefined,
+                },
+            );
             const response = await generateAudio({
                 prompt: trimmedPrompt,
                 model: audioModel,
                 sessionId: audioSessionId,
-                language: audioLanguage || undefined,
-                voice: isCloneMode ? undefined : (audioVoice || undefined),
-                styleInstruction: isCloneMode ? undefined : (audioStyleInstruction || undefined),
+                ...audioOptionParams,
                 referenceText: isCloneMode ? (audioReferenceText || undefined) : undefined,
-                audioBase64: isCloneMode ? audioAttachment?.base64 : undefined,
-                audioMimeType: isCloneMode ? audioAttachment?.mimeType : undefined,
-                speed: audioSpeed || undefined,
-                emotion: audioEmotion || undefined,
-                duration: audioDuration || undefined,
-                numberOfSongs: audioNumberOfSongs || undefined,
-                outputFormat: audioOutputFormat || undefined,
+                ...(audioModel === 'elevenlabs-v3' ? {
+                    similarity: audioSimilarity,
+                    stability: audioStability,
+                    useSpeakerBoost: audioSpeakerBoost,
+                } : {}),
             });
             const audioUrl = response?.audioUrl?.trim() ?? '';
 
@@ -4497,21 +4642,12 @@ function App() {
             setThreeDError('');
             setGeneratedThreeDUrl('');
 
+            const threeDOptionParams = pickThreeDGenerateParams(threeDModel, mediaModelsCatalog, threeDSelectedOptions);
             const response = await generate3D({
                 prompt: trimmedPrompt,
                 model: threeDModel,
                 sessionId: threeDSessionId,
-                negativePrompt: threeDNegativePrompt || undefined,
-                textureQuality: threeDTextureQuality || undefined,
-                outputFormat: threeDOutputFormat || undefined,
-                geometryQuality: threeDGeometryQuality || undefined,
-                mode: threeDMode || undefined,
-                artStyle: threeDArtStyle || undefined,
-                topology: threeDTopology || undefined,
-                tier: threeDTier || undefined,
-                material: threeDMaterial || undefined,
-                geometryFileFormat: threeDGeometryFileFormat || undefined,
-                textureMode: threeDTextureMode || undefined,
+                ...threeDOptionParams,
                 imageBase64: threeDAttachment?.base64,
                 imageMimeType: threeDAttachment?.mimeType,
                 imageBase64List: threeDAttachments.map((item) => item.base64),
@@ -5484,7 +5620,10 @@ function App() {
         const activeSelectorItem = getMediaSelectorItemForModelId(imageModelSelectorItems, imageModel);
         const headerTitle = getAiGroupTitle(activeSelectorItem, text, getImageSelectorChipLabel);
         const headerSubtitle = text.imageGenerateTitle;
-        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media', userData.subscriptionPlanId);
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media', userData.subscriptionPlanId, {
+            mediaModelsCatalog,
+            priceResolver: (modelId) => getMediaModelMinPrice(mediaModelsCatalog[modelId] ?? { id: modelId }),
+        });
         const canEdit = imageModelSupportsEdit(imageModel);
         const supportsSourceUpload = imageModelSupportsSourceUpload(imageModel);
         const hasAttachedImage = Boolean(imageAttachment);
@@ -5495,6 +5634,20 @@ function App() {
         const promptPlaceholder = (usesSessionEdit || hasAttachedImage)
             ? text.imageEditPlaceholder
             : text.imagePromptPlaceholder;
+        const imageCapabilities = resolveImageCapabilities(imageModel, mediaModelsCatalog);
+        const catalogModel = activeImageCatalogModel ?? { id: imageModel };
+        const formatImageOptionDelta = (barKey, value) => {
+            const optionKeyMap = {
+                resolution: 'resolution',
+                quality: 'quality',
+                size: 'size',
+                numImages: 'num_images',
+                'num-images': 'num_images',
+            };
+            const optionKey = optionKeyMap[barKey] ?? barKey;
+            return getOptionPriceDelta(catalogModel, optionKey, value, imageOptions);
+        };
+        const imageBarValues = imageOptionsToBarValues(imageOptions);
 
         return (
             <section className="ai-image-screen ai-image-screen--concept" aria-label={text.imageGenerateTitle}>
@@ -5515,17 +5668,13 @@ function App() {
                     onLockedSelect={handleLockedModelSelect}
                     text={text}
                     disabled={isGeneratingImage}
+                    activePriceCoins={imageGenerationPrice}
                 />
 
                 <div className="ai-video__main">
                     <MediaModelOptionsBar
-                        capabilities={getImageModelCapabilities(imageModel)}
-                        values={{
-                            aspectRatio: imageAspectRatio,
-                            resolution: imageResolution,
-                            quality: imageQuality,
-                            outputFormat: imageOutputFormat,
-                        }}
+                        capabilities={imageCapabilities}
+                        values={imageBarValues}
                         onChange={handleImageOptionChange}
                         labels={{
                             group: text.mediaOptionsGroup,
@@ -5533,6 +5682,10 @@ function App() {
                             resolution: text.mediaOptionResolution,
                             quality: text.mediaOptionQuality,
                             outputFormat: text.mediaOptionOutputFormat,
+                            size: text.mediaOptionSize,
+                            numImages: text.mediaOptionNumImages,
+                            webSearch: text.mediaOptionWebSearch,
+                            imageSearch: text.mediaOptionImageSearch,
                             toggleOn: text.mediaToggleOn,
                             toggleOff: text.mediaToggleOff,
                             qualityValues: {
@@ -5544,6 +5697,7 @@ function App() {
                         disabled={isGeneratingImage}
                         idPrefix="image"
                         collapsed
+                        formatOptionDelta={formatImageOptionDelta}
                     />
 
                     {usesSessionEdit ? (
@@ -5676,12 +5830,23 @@ function App() {
                     </div>
                     <button
                         type="button"
-                        className="ai-chat__send"
-                        aria-label={text.chatSend}
+                        className={`ai-chat__send ${imageInsufficientBalance ? 'ai-chat__send--insufficient' : ''}`}
+                        aria-label={imageInsufficientBalance ? text.imageInsufficientCoins : text.imageGenerateButton}
+                        title={imageInsufficientBalance ? text.imageInsufficientCoins : `${imageGenerationPrice}`}
                         onClick={handleGenerateImage}
-                        disabled={isGeneratingImage}
+                        disabled={isGeneratingImage || imageInsufficientBalance || !imagePrompt.trim()}
                     >
-                        <Send size={18} aria-hidden="true" />
+                        {imageInsufficientBalance ? (
+                            <span className="ai-chat__send-label">{text.imageInsufficientCoins}</span>
+                        ) : (
+                            <>
+                                <Send size={18} aria-hidden="true" />
+                                <span className="ai-chat__send-price" aria-hidden="true">
+                                    <CoinIcon size={14} />
+                                    {imageGenerationPrice}
+                                </span>
+                            </>
+                        )}
                     </button>
                 </footer>
             </section>
@@ -5692,7 +5857,10 @@ function App() {
         const activeSelectorItem = getMediaSelectorItemForModelId(videoModelSelectorItems, videoModel);
         const headerTitle = getAiGroupTitle(activeSelectorItem, text, getVideoSelectorChipLabel);
         const headerSubtitle = text.videoGenerateTitle;
-        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media', userData.subscriptionPlanId);
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'video', userData.subscriptionPlanId, {
+            mediaModelsCatalog,
+            priceResolver: (modelId) => getMediaModelMinPrice(mediaModelsCatalog[modelId] ?? { id: modelId, kind: 'video' }),
+        });
         const requiresImage = videoModelRequiresImage(videoModel);
         const requiresVideo = videoModelRequiresVideo(videoModel);
         const isExtend = videoModel === 'seedance-v2-video-extend';
@@ -5722,6 +5890,7 @@ function App() {
                     onLockedSelect={handleLockedModelSelect}
                     text={text}
                     disabled={isGeneratingVideo}
+                    activePriceCoins={videoGenerationPrice}
                 />
 
                 <div className="ai-video__main">
@@ -5888,11 +6057,23 @@ function App() {
 
                     <button
                         type="button"
-                        className="ai-video__submit"
+                        className={`ai-video__submit ${videoInsufficientBalance ? 'ai-video__submit--insufficient' : ''}`}
                         onClick={handleGenerateVideo}
-                        disabled={isGeneratingVideo}
+                        disabled={isGeneratingVideo || videoInsufficientBalance || !videoPrompt.trim()}
                     >
-                        {isGeneratingVideo ? text.videoGenerating : text.videoGenerateButton}
+                        {isGeneratingVideo ? (
+                            text.videoGenerating
+                        ) : videoInsufficientBalance ? (
+                            text.imageInsufficientCoins
+                        ) : (
+                            <>
+                                {text.videoGenerateButton}
+                                <span className="ai-video__submit-price">
+                                    <CoinIcon size={14} />
+                                    {videoGenerationPrice}
+                                </span>
+                            </>
+                        )}
                     </button>
                 </footer>
             </section>
@@ -5907,7 +6088,10 @@ function App() {
         const isMureka = audioModel === 'mureka-v9';
         const isOmniVoice = audioModel === 'omnivoice';
         const headerSubtitle = isMusicModel ? text.musicGenerateTitle : text.voiceGenerateTitle;
-        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media', userData.subscriptionPlanId);
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'audio', userData.subscriptionPlanId, {
+            mediaModelsCatalog,
+            priceResolver: (modelId) => getMediaModelMinPrice(mediaModelsCatalog[modelId] ?? { id: modelId, kind: 'audio' }),
+        });
         const supportsClone = audioModelSupportsClone(audioModel);
         const isCloneMode = Boolean(audioAttachment) && supportsClone;
         const promptPlaceholder = isCloneMode
@@ -5943,6 +6127,7 @@ function App() {
                     onLockedSelect={handleLockedModelSelect}
                     text={text}
                     disabled={isGeneratingAudio}
+                    activePriceCoins={audioGenerationPrice}
                 />
 
                 <div className="ai-video__main">
@@ -5955,6 +6140,9 @@ function App() {
                             referenceText: audioReferenceText,
                             speed: audioSpeed,
                             emotion: audioEmotion,
+                            similarity: audioSimilarity,
+                            stability: audioStability,
+                            speakerBoost: audioSpeakerBoost,
                             duration: audioDuration,
                             numberOfSongs: audioNumberOfSongs,
                             outputFormat: audioOutputFormat,
@@ -5970,9 +6158,14 @@ function App() {
                             referenceTextPlaceholder: text.mediaReferenceTextPlaceholder,
                             speed: text.mediaOptionSpeed,
                             emotion: text.mediaOptionEmotion,
+                            similarity: text.mediaOptionSimilarity,
+                            stability: text.mediaOptionStability,
+                            speakerBoost: text.mediaOptionSpeakerBoost,
                             numberOfSongs: text.mediaOptionNumberOfSongs,
                             duration: text.mediaOptionDuration,
                             outputFormat: text.mediaOptionOutputFormat,
+                            toggleOn: text.mediaToggleOn,
+                            toggleOff: text.mediaToggleOff,
                             durationValue: (seconds) => `${seconds}s`,
                         }}
                         disabled={isGeneratingAudio}
@@ -6068,12 +6261,22 @@ function App() {
                     </div>
                     <button
                         type="button"
-                        className="ai-chat__send"
-                        aria-label={generateLabel}
+                        className={`ai-chat__send ${audioInsufficientBalance ? 'ai-chat__send--insufficient' : ''}`}
+                        aria-label={audioInsufficientBalance ? text.imageInsufficientCoins : generateLabel}
                         onClick={handleGenerateAudio}
-                        disabled={isGeneratingAudio}
+                        disabled={isGeneratingAudio || audioInsufficientBalance}
                     >
-                        <Send size={18} aria-hidden="true" />
+                        {audioInsufficientBalance ? (
+                            <span className="ai-chat__send-label">{text.imageInsufficientCoins}</span>
+                        ) : (
+                            <>
+                                <Send size={18} aria-hidden="true" />
+                                <span className="ai-chat__send-price" aria-hidden="true">
+                                    <CoinIcon size={14} />
+                                    {audioGenerationPrice}
+                                </span>
+                            </>
+                        )}
                     </button>
                 </footer>
             </section>
@@ -6083,7 +6286,10 @@ function App() {
     const renderAiThreeDScreen = () => {
         const activeSelectorItem = getMediaSelectorItemForModelId(threeDModelSelectorItems, threeDModel);
         const headerTitle = getAiGroupTitle(activeSelectorItem, text, getThreeDSelectorChipLabel);
-        const variantOptions = getAiVariantOptions(activeSelectorItem, text, 'media', userData.subscriptionPlanId);
+        const variantOptions = getAiVariantOptions(activeSelectorItem, text, '3d', userData.subscriptionPlanId, {
+            mediaModelsCatalog,
+            priceResolver: (modelId) => getMediaModelMinPrice(mediaModelsCatalog[modelId] ?? { id: modelId, kind: '3d' }),
+        });
         const requiresImage = threeDModelRequiresImage(threeDModel);
         const requiresMultiImage = threeDModelRequiresMultiImage(threeDModel);
         const requiresPrompt = threeDModelRequiresPrompt(threeDModel);
@@ -6115,6 +6321,7 @@ function App() {
                     onLockedSelect={handleLockedModelSelect}
                     text={text}
                     disabled={isGeneratingThreeD}
+                    activePriceCoins={threeDGenerationPrice}
                 />
 
                 <div className="ai-video__main">
@@ -6255,11 +6462,23 @@ function App() {
 
                     <button
                         type="button"
-                        className="ai-video__submit"
+                        className={`ai-video__submit ${threeDInsufficientBalance ? 'ai-video__submit--insufficient' : ''}`}
                         onClick={handleGenerateThreeD}
-                        disabled={isGeneratingThreeD}
+                        disabled={isGeneratingThreeD || threeDInsufficientBalance}
                     >
-                        {isGeneratingThreeD ? text.threeDGenerating : text.threeDGenerateButton}
+                        {isGeneratingThreeD ? (
+                            text.threeDGenerating
+                        ) : threeDInsufficientBalance ? (
+                            text.imageInsufficientCoins
+                        ) : (
+                            <>
+                                {text.threeDGenerateButton}
+                                <span className="ai-video__submit-price">
+                                    <CoinIcon size={14} />
+                                    {threeDGenerationPrice}
+                                </span>
+                            </>
+                        )}
                     </button>
                 </footer>
             </section>

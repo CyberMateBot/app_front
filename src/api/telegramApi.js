@@ -357,6 +357,24 @@ export async function fetchTextModels() {
         .filter((model) => model.id);
 }
 
+export async function fetchMediaModels() {
+    const res = await apiFetch('/v1/generate/models', {
+        headers: { Accept: 'application/json' },
+    });
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to load media models.');
+    }
+
+    return res.json();
+}
+
+/** @deprecated use fetchMediaModels */
+export async function fetchImageModels() {
+    const payload = await fetchMediaModels();
+    return payload?.image_models ?? payload?.data?.image_models ?? [];
+}
+
 export function getTextCategoryLabel() {
     return 'text';
 }
@@ -455,6 +473,9 @@ export async function generateImage({
     resolution,
     quality,
     outputFormat,
+    webSearch,
+    imageSearch,
+    size,
     imageBase64,
     imageMimeType,
 }) {
@@ -515,6 +536,18 @@ export async function generateImage({
 
     if (outputFormat?.trim()) {
         body.output_format = outputFormat.trim();
+    }
+
+    if (typeof webSearch === 'boolean') {
+        body.web_search = webSearch;
+    }
+
+    if (typeof imageSearch === 'boolean') {
+        body.image_search = imageSearch;
+    }
+
+    if (size?.trim()) {
+        body.size = size.trim();
     }
 
     const trimmedImage = imageBase64?.trim();
@@ -584,6 +617,7 @@ export async function generateVideo({
     generateAudio,
     cameraFixed,
     turboMode,
+    extendBy,
     referenceImages,
     sessionId,
 }) {
@@ -667,6 +701,10 @@ export async function generateVideo({
         body.turbo_mode = turboMode;
     }
 
+    if (extendBy != null && extendBy !== '') {
+        body.extend_by = Number(extendBy) || extendBy;
+    }
+
     if (Array.isArray(referenceImages) && referenceImages.length > 0) {
         body.reference_images = referenceImages
             .map((item) => String(item || '').trim())
@@ -718,6 +756,10 @@ export async function generateAudio({
     numberOfSongs,
     outputFormat,
     tags,
+    mode,
+    similarity,
+    stability,
+    useSpeakerBoost,
 }) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim();
@@ -782,6 +824,9 @@ export async function generateAudio({
     }
     if (tags?.trim()) {
         body.tags = tags.trim();
+    }
+    if (mode?.trim()) {
+        body.mode = mode.trim();
     }
 
     const res = await apiFetch('/v1/generate/audio', {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import CoinIcon from './CoinIcon.jsx';
 
 function OptionChipGroup({
     label,
@@ -8,6 +9,8 @@ function OptionChipGroup({
     onChange,
     disabled,
     formatValue,
+    formatOptionPrice,
+    formatOptionDelta,
     idPrefix,
     optionKey,
 }) {
@@ -28,7 +31,12 @@ function OptionChipGroup({
                 {values.map((item) => {
                     const optionValue = String(item);
                     const isActive = String(value ?? '') === optionValue;
-                    const optionLabel = formatValue ? formatValue(optionValue) : optionValue;
+                    const baseLabel = formatValue ? formatValue(optionValue) : optionValue;
+                    const deltaSuffix = formatOptionDelta?.(optionKey, optionValue);
+                    const optionLabel = deltaSuffix ? `${baseLabel} ${deltaSuffix}` : baseLabel;
+                    const optionPrice = !formatOptionDelta && formatOptionPrice
+                        ? formatOptionPrice(optionValue)
+                        : null;
 
                     return (
                         <button
@@ -39,7 +47,13 @@ function OptionChipGroup({
                             disabled={disabled}
                             aria-pressed={isActive}
                         >
-                            {optionLabel}
+                            <span className="media-options__chip-label">{optionLabel}</span>
+                            {optionPrice != null ? (
+                                <span className="media-options__chip-price">
+                                    <CoinIcon size={12} />
+                                    {optionPrice}
+                                </span>
+                            ) : null}
                         </button>
                     );
                 })}
@@ -56,10 +70,13 @@ function OptionToggleChip({
     id,
     onLabel,
     offLabel,
+    priceSuffix,
 }) {
+    const displayLabel = priceSuffix ? `${label} ${priceSuffix}` : label;
+
     return (
         <div className="media-options__group media-options__group--inline">
-            <span className="media-options__label">{label}</span>
+            <span className="media-options__label">{displayLabel}</span>
             <button
                 id={id}
                 type="button"
@@ -227,6 +244,48 @@ function OptionCameraAxis({
     );
 }
 
+function OptionValueRange({
+    idPrefix,
+    optionKey,
+    label,
+    value,
+    min = 0,
+    max = 1,
+    step = 0.05,
+    onChange,
+    disabled,
+    hideLabel = false,
+}) {
+    const current = value ?? min;
+    const content = (
+        <div className="media-options__range-row">
+            <input
+                id={`${idPrefix}-${optionKey}-range`}
+                type="range"
+                className="media-options__range"
+                min={min}
+                max={max}
+                step={step}
+                value={current}
+                onChange={(event) => onChange(Number(event.target.value))}
+                disabled={disabled}
+            />
+            <span className="media-options__range-value">{Number(current).toFixed(2)}</span>
+        </div>
+    );
+
+    if (hideLabel) {
+        return <div className="media-options__group">{content}</div>;
+    }
+
+    return (
+        <div className="media-options__group">
+            <span className="media-options__label">{label}</span>
+            {content}
+        </div>
+    );
+}
+
 function OptionPicker({
     id,
     label,
@@ -288,6 +347,18 @@ function wrapPicker({
     );
 }
 
+function formatSizeLabel(value) {
+    return String(value).replace('*', '×').replace('x', '×');
+}
+
+function formatOptionDeltaSuffix(delta) {
+    if (!delta) {
+        return '';
+    }
+
+    return delta > 0 ? `(+${delta})` : `(${delta})`;
+}
+
 export default function MediaModelOptionsBar({
     capabilities,
     values,
@@ -297,6 +368,8 @@ export default function MediaModelOptionsBar({
     idPrefix = 'media',
     cloneMode = false,
     collapsed = false,
+    formatOptionPrice,
+    formatOptionDelta,
 }) {
     const { options = {} } = capabilities ?? {};
     const [openKey, setOpenKey] = useState(null);
@@ -368,6 +441,48 @@ export default function MediaModelOptionsBar({
                 />
             )) : null}
 
+            {options.similarity ? picker('similarity', labels.similarity, Number(values.similarity ?? options.similarity.default ?? 1).toFixed(2), (
+                <OptionValueRange
+                    idPrefix={idPrefix}
+                    optionKey="similarity"
+                    label={labels.similarity}
+                    value={values.similarity ?? options.similarity.default}
+                    min={options.similarity.min ?? 0}
+                    max={options.similarity.max ?? 1}
+                    step={options.similarity.step ?? 0.05}
+                    onChange={(next) => onChange('similarity', next)}
+                    disabled={disabled}
+                    hideLabel={collapsed}
+                />
+            )) : null}
+
+            {options.stability ? picker('stability', labels.stability, Number(values.stability ?? options.stability.default ?? 0.5).toFixed(2), (
+                <OptionValueRange
+                    idPrefix={idPrefix}
+                    optionKey="stability"
+                    label={labels.stability}
+                    value={values.stability ?? options.stability.default}
+                    min={options.stability.min ?? 0}
+                    max={options.stability.max ?? 1}
+                    step={options.stability.step ?? 0.05}
+                    onChange={(next) => onChange('stability', next)}
+                    disabled={disabled}
+                    hideLabel={collapsed}
+                />
+            )) : null}
+
+            {options.speakerBoost ? picker('speakerBoost', labels.speakerBoost, values.speakerBoost ? labels.toggleOn : labels.toggleOff, (
+                <OptionToggleChip
+                    id={`${idPrefix}-speaker-boost`}
+                    label={labels.speakerBoost}
+                    checked={Boolean(values.speakerBoost)}
+                    onChange={(next) => onChange('speakerBoost', next)}
+                    disabled={disabled}
+                    onLabel={labels.toggleOn}
+                    offLabel={labels.toggleOff}
+                />
+            )) : null}
+
             {options.numberOfSongs?.values ? picker('numberOfSongs', labels.numberOfSongs, values.numberOfSongs, (
                 <OptionChipGroup
                     idPrefix={idPrefix}
@@ -426,6 +541,12 @@ export default function MediaModelOptionsBar({
                     onChange={(next) => onChange('resolution', next)}
                     disabled={disabled}
                     formatValue={formatResolutionLabel}
+                    formatOptionPrice={!formatOptionDelta && options.resolution?.valuePrices && formatOptionPrice
+                        ? (item) => formatOptionPrice('resolution', item)
+                        : undefined}
+                    formatOptionDelta={options.resolution?.valuePrices && formatOptionDelta
+                        ? (key, item) => formatOptionDeltaSuffix(formatOptionDelta(key, item))
+                        : undefined}
                 />
             )) : null}
 
@@ -439,6 +560,40 @@ export default function MediaModelOptionsBar({
                     onChange={(next) => onChange('quality', next)}
                     disabled={disabled}
                     formatValue={(item) => labels.qualityValues?.[item] ?? item}
+                    formatOptionDelta={options.quality?.valuePrices && formatOptionDelta
+                        ? (key, item) => formatOptionDeltaSuffix(formatOptionDelta(key, item))
+                        : undefined}
+                />
+            )) : null}
+
+            {options.size?.values ? picker('size', labels.size, formatSizeLabel(values.size), (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="size"
+                    label={labels.size}
+                    value={values.size}
+                    values={options.size?.values}
+                    onChange={(next) => onChange('size', next)}
+                    disabled={disabled}
+                    formatValue={formatSizeLabel}
+                    formatOptionDelta={options.size?.valuePrices && formatOptionDelta
+                        ? (key, item) => formatOptionDeltaSuffix(formatOptionDelta(key, item))
+                        : undefined}
+                />
+            )) : null}
+
+            {options.numImages?.values ? picker('numImages', labels.numImages, String(values.numImages ?? options.numImages.default ?? '1'), (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="num-images"
+                    label={labels.numImages}
+                    value={String(values.numImages ?? '')}
+                    values={options.numImages?.values}
+                    onChange={(next) => onChange('numImages', next)}
+                    disabled={disabled}
+                    formatOptionDelta={options.numImages?.valuePrices && formatOptionDelta
+                        ? (key, item) => formatOptionDeltaSuffix(formatOptionDelta(key, item))
+                        : undefined}
                 />
             )) : null}
 
@@ -563,6 +718,36 @@ export default function MediaModelOptionsBar({
                     disabled={disabled}
                     onLabel={labels.toggleOn}
                     offLabel={labels.toggleOff}
+                />
+            )) : null}
+
+            {options.webSearch ? picker('webSearch', labels.webSearch, values.webSearch ? labels.toggleOn : labels.toggleOff, (
+                <OptionToggleChip
+                    id={`${idPrefix}-web-search`}
+                    label={labels.webSearch}
+                    checked={Boolean(values.webSearch)}
+                    onChange={(next) => onChange('webSearch', next)}
+                    disabled={disabled}
+                    onLabel={labels.toggleOn}
+                    offLabel={labels.toggleOff}
+                    priceSuffix={options.webSearch?.valuePrices?.true
+                        ? formatOptionDeltaSuffix(options.webSearch.valuePrices.true)
+                        : ''}
+                />
+            )) : null}
+
+            {options.imageSearch ? picker('imageSearch', labels.imageSearch, values.imageSearch ? labels.toggleOn : labels.toggleOff, (
+                <OptionToggleChip
+                    id={`${idPrefix}-image-search`}
+                    label={labels.imageSearch}
+                    checked={Boolean(values.imageSearch)}
+                    onChange={(next) => onChange('imageSearch', next)}
+                    disabled={disabled}
+                    onLabel={labels.toggleOn}
+                    offLabel={labels.toggleOff}
+                    priceSuffix={options.imageSearch?.valuePrices?.true
+                        ? formatOptionDeltaSuffix(options.imageSearch.valuePrices.true)
+                        : ''}
                 />
             )) : null}
 

@@ -15,7 +15,11 @@ export const IMAGE_MODEL_CAPABILITIES = {
         supportsMulti: true,
         options: {
             aspectRatio: { values: ['1:1', '3:2', '4:3', '16:9', '21:9'], default: '16:9' },
-            resolution: { values: RES_1K_4K, default: '1k' },
+            resolution: {
+                values: RES_1K_4K,
+                default: '1k',
+                valuePrices: { '1k': 0, '2k': 0, '4k': 29 },
+            },
             outputFormat: { values: ['png', 'jpeg', 'webp'], default: 'png' },
         },
     },
@@ -23,8 +27,14 @@ export const IMAGE_MODEL_CAPABILITIES = {
         supportsEdit: true,
         options: {
             aspectRatio: { values: GPT_ASPECT_RATIOS, default: '16:9' },
-            resolution: { values: ['0.5k', '1k', '2k', '4k'], default: '1k' },
+            resolution: {
+                values: ['0.5k', '1k', '2k', '4k'],
+                default: '1k',
+                valuePrices: { '0.5k': -8, '1k': 0, '2k': 11, '4k': 22 },
+            },
             outputFormat: { values: ['png', 'jpeg'], default: 'png' },
+            webSearch: { default: false, valuePrices: { true: 4 } },
+            imageSearch: { default: false, valuePrices: { true: 4 } },
         },
     },
     'gpt-image-2': {
@@ -71,12 +81,20 @@ export const IMAGE_MODEL_CAPABILITIES = {
     },
     'qwen-image': {
         options: {
-            size: { values: ['1024*1024', '1024x1024'], default: '1024*1024' },
+            size: {
+                values: ['1024*1024', '1024x1024'],
+                default: '1024*1024',
+                valuePrices: { '1328*1328': 3 },
+            },
         },
     },
     'qwen-image-2512': {
         options: {
-            size: { values: ['1024*1024', '1328*1328'], default: '1024*1024' },
+            size: {
+                values: ['1024*1024', '1328*1328'],
+                default: '1024*1024',
+                valuePrices: { '1328*1328': 3 },
+            },
             negativePrompt: { default: '' },
         },
     },
@@ -105,7 +123,16 @@ export const IMAGE_MODEL_CAPABILITIES = {
         supportsEdit: true,
         options: {
             aspectRatio: { values: ['auto', '1:1', '16:9', '9:16', '4:3', '3:4'], default: 'auto' },
-            resolution: { values: ['1k', '2k'], default: '1k' },
+            resolution: {
+                values: ['1k', '2k'],
+                default: '1k',
+                valuePrices: { '2k': 6 },
+            },
+            numImages: {
+                values: ['1', '2', '3', '4'],
+                default: '1',
+                valuePrices: { '2': 25, '3': 50, '4': 75 },
+            },
             outputFormat: { values: ['jpeg', 'png', 'webp'], default: 'jpeg' },
         },
     },
@@ -278,6 +305,18 @@ function buildDefaults(capabilities) {
     if (options.sound) {
         defaults.sound = options.sound.default ?? false;
     }
+    if (options.webSearch) {
+        defaults.webSearch = Boolean(options.webSearch.default);
+    }
+    if (options.imageSearch) {
+        defaults.imageSearch = Boolean(options.imageSearch.default);
+    }
+    if (options.size) {
+        defaults.size = options.size.default;
+    }
+    if (options.numImages) {
+        defaults.numImages = options.numImages.default ?? '1';
+    }
     if (options.language) {
         defaults.language = options.language.default;
     }
@@ -295,6 +334,15 @@ function buildDefaults(capabilities) {
     }
     if (options.emotion) {
         defaults.emotion = options.emotion.default;
+    }
+    if (options.similarity) {
+        defaults.similarity = options.similarity.default ?? 1.0;
+    }
+    if (options.stability) {
+        defaults.stability = options.stability.default ?? 0.5;
+    }
+    if (options.speakerBoost) {
+        defaults.speakerBoost = options.speakerBoost.default ?? true;
     }
     if (options.numberOfSongs) {
         defaults.numberOfSongs = options.numberOfSongs.default ?? '1';
@@ -370,6 +418,9 @@ export const AUDIO_MODEL_CAPABILITIES = {
                 ],
                 default: 'Alice',
             },
+            similarity: { min: 0, max: 1, step: 0.05, default: 1.0 },
+            stability: { min: 0, max: 1, step: 0.05, default: 0.5 },
+            speakerBoost: { default: true },
         },
     },
     'minimax-speech-2.6': {

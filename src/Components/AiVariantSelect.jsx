@@ -11,15 +11,18 @@ export default function AiVariantSelect({
     disabled = false,
     onLockedSelect,
     text = {},
+    activePriceCoins,
 }) {
     const [open, setOpen] = useState(false);
 
-    if (!options.length || options.length <= 1) {
+    if (!options.length) {
         return null;
     }
 
     const activeOption = options.find((option) => option.id === value) ?? options[0];
     const summary = activeOption?.label ?? value;
+    const displayPriceCoins = activePriceCoins ?? activeOption?.priceCoins;
+    const isSingleOption = options.length <= 1;
 
     const handleSelect = (nextValue, option) => {
         if (option?.locked) {
@@ -30,6 +33,25 @@ export default function AiVariantSelect({
         onChange(nextValue);
         setOpen(false);
     };
+
+    if (isSingleOption) {
+        return (
+            <div className="ai-variant-select">
+                <div className="media-picker">
+                    <div id={id} className="media-picker__trigger media-picker__trigger--static">
+                        <span className="media-picker__label">{label}</span>
+                        <span className="media-picker__summary">{summary}</span>
+                        {displayPriceCoins ? (
+                            <span className="media-picker__price">
+                                <CoinIcon size={13} />
+                                {displayPriceCoins}
+                            </span>
+                        ) : null}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="ai-variant-select">
@@ -44,10 +66,10 @@ export default function AiVariantSelect({
                 >
                     <span className="media-picker__label">{label}</span>
                     <span className="media-picker__summary">{summary}</span>
-                    {activeOption?.priceCoins ? (
+                    {displayPriceCoins ? (
                         <span className="media-picker__price">
                             <CoinIcon size={13} />
-                            {activeOption.priceCoins}
+                            {displayPriceCoins}
                         </span>
                     ) : null}
                     <ChevronDown size={14} className="media-picker__chevron" aria-hidden="true" />

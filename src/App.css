@@ -4997,6 +4997,36 @@
   filter: brightness(1.06);
 }
 
+.ai-chat__send--insufficient {
+  width: auto;
+  min-width: 44px;
+  max-width: 140px;
+  padding: 0 10px;
+  background: rgba(120, 120, 130, 0.35);
+}
+
+.ai-chat__send-label {
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+}
+
+.ai-chat__send-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ai-image-screen--concept .ai-chat__send:not(.ai-chat__send--insufficient) {
+  width: auto;
+  min-width: 44px;
+  padding: 0 10px;
+}
+
 .ai-image-screen--concept {
   padding-bottom: 0;
 }
@@ -5096,6 +5126,11 @@
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+.media-picker__trigger--static {
+  cursor: default;
+  grid-template-columns: auto 1fr auto;
 }
 
 .media-picker__price {
@@ -5417,6 +5452,19 @@
 .ai-video__submit:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.ai-video__submit--insufficient {
+  background: rgba(120, 120, 130, 0.35);
+}
+
+.ai-video__submit-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 :root[data-theme='light'] .ai-video__composer {
