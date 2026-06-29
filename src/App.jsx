@@ -790,6 +790,8 @@ const translations = {
         chatImageNeedsWavespeedKey: 'Для фото нужен WAVESPEED_API_KEY на сервере.',
         chatNewDialog: 'Новый диалог',
         chatGenerating: 'Generating',
+        chatCopy: 'Скопировать ответ',
+        chatCopied: 'Ответ скопирован',
         historyDeleteConfirm: 'Удалить всю историю промтов? Это действие нельзя отменить.',
         historyTopicDeleteConfirm: 'Удалить этот диалог из истории?',
         historyTopicDeleted: 'Диалог удалён.',
@@ -1336,6 +1338,8 @@ const translations = {
         chatImageNeedsWavespeedKey: 'Image uploads require WAVESPEED_API_KEY on the server.',
         chatNewDialog: 'New chat',
         chatGenerating: 'Generating',
+        chatCopy: 'Copy response',
+        chatCopied: 'Response copied',
         historyDeleteConfirm: 'Delete all prompt history? This cannot be undone.',
         historyTopicDeleteConfirm: 'Delete this conversation from history?',
         historyTopicDeleted: 'Conversation deleted.',
@@ -5544,6 +5548,8 @@ function App() {
                             key={message.id}
                             message={message}
                             generatingLabel={text.chatGenerating}
+                            copyLabel={text.chatCopy}
+                            copiedLabel={text.chatCopied}
                         />
                     ))}
                 </div>
