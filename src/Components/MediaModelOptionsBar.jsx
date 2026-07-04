@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ArrowLeftRight } from 'lucide-react';
 import CoinIcon from './CoinIcon.jsx';
 
 function OptionChipGroup({
@@ -255,8 +255,12 @@ function OptionValueRange({
     onChange,
     disabled,
     hideLabel = false,
+    formatDisplay,
 }) {
     const current = value ?? min;
+    const displayValue = formatDisplay
+        ? formatDisplay(Number(current))
+        : Number(current).toFixed(2);
     const content = (
         <div className="media-options__range-row">
             <input
@@ -270,7 +274,7 @@ function OptionValueRange({
                 onChange={(event) => onChange(Number(event.target.value))}
                 disabled={disabled}
             />
-            <span className="media-options__range-value">{Number(current).toFixed(2)}</span>
+            <span className="media-options__range-value">{displayValue}</span>
         </div>
     );
 
@@ -281,6 +285,115 @@ function OptionValueRange({
     return (
         <div className="media-options__group">
             <span className="media-options__label">{label}</span>
+            {content}
+        </div>
+    );
+}
+
+function OptionNumberField({
+    id,
+    label,
+    value,
+    min,
+    max,
+    step = 1,
+    onChange,
+    disabled,
+    hideLabel = false,
+}) {
+    const field = (
+        <input
+            id={id}
+            type="number"
+            className="media-options__input"
+            value={value ?? ''}
+            min={min}
+            max={max}
+            step={step}
+            onChange={(event) => onChange(Number(event.target.value))}
+            disabled={disabled}
+        />
+    );
+
+    if (hideLabel) {
+        return <div className="media-options__group">{field}</div>;
+    }
+
+    return (
+        <label className="media-options__group" htmlFor={id}>
+            <span className="media-options__label">{label}</span>
+            {field}
+        </label>
+    );
+}
+
+function OptionPixelDimensions({
+    idPrefix,
+    width,
+    height,
+    min = 256,
+    max = 2048,
+    onChange,
+    disabled,
+    labels,
+    hideLabel = false,
+}) {
+    const clamp = (value) => Math.min(max, Math.max(min, Number(value) || min));
+
+    const content = (
+        <>
+            <div className="media-options__dimensions-row">
+                <label className="media-options__dimension" htmlFor={`${idPrefix}-width`}>
+                    <span className="media-options__dimension-label">{labels.width}</span>
+                    <input
+                        id={`${idPrefix}-width`}
+                        type="number"
+                        className="media-options__input"
+                        min={min}
+                        max={max}
+                        step={1}
+                        value={width ?? min}
+                        onChange={(event) => onChange('width', clamp(event.target.value))}
+                        disabled={disabled}
+                    />
+                </label>
+                <button
+                    type="button"
+                    className="media-options__dimensions-swap"
+                    onClick={() => onChange('swapDimensions', { width: height, height: width })}
+                    disabled={disabled}
+                    aria-label={labels.swapDimensions}
+                >
+                    <ArrowLeftRight size={16} aria-hidden="true" />
+                </button>
+                <label className="media-options__dimension" htmlFor={`${idPrefix}-height`}>
+                    <span className="media-options__dimension-label">{labels.height}</span>
+                    <input
+                        id={`${idPrefix}-height`}
+                        type="number"
+                        className="media-options__input"
+                        min={min}
+                        max={max}
+                        step={1}
+                        value={height ?? min}
+                        onChange={(event) => onChange('height', clamp(event.target.value))}
+                        disabled={disabled}
+                    />
+                </label>
+            </div>
+            {labels.dimensionsHint ? (
+                <p className="media-options__dimensions-hint">{labels.dimensionsHint(width, height, min, max)}</p>
+            ) : null}
+        </>
+    );
+
+    if (hideLabel) {
+        return <div className="media-options__group">{content}</div>;
+    }
+
+    return (
+        <div className="media-options__group">
+            <span className="media-options__label">{labels.dimensions}</span>
             {content}
         </div>
     );
@@ -550,6 +663,25 @@ export default function MediaModelOptionsBar({
                 />
             )) : null}
 
+            {options.dimensions ? picker(
+                'dimensions',
+                labels.dimensions,
+                `${values.width ?? options.dimensions.defaultWidth} × ${values.height ?? options.dimensions.defaultHeight}`,
+                (
+                    <OptionPixelDimensions
+                        idPrefix={idPrefix}
+                        width={values.width ?? options.dimensions.defaultWidth}
+                        height={values.height ?? options.dimensions.defaultHeight}
+                        min={options.dimensions.min ?? 256}
+                        max={options.dimensions.max ?? 2048}
+                        onChange={onChange}
+                        disabled={disabled}
+                        labels={labels}
+                        hideLabel={collapsed}
+                    />
+                ),
+            ) : null}
+
             {options.quality?.values ? picker('quality', labels.quality, labels.qualityValues?.[values.quality] ?? values.quality, (
                 <OptionChipGroup
                     idPrefix={idPrefix}
@@ -581,6 +713,85 @@ export default function MediaModelOptionsBar({
                         : undefined}
                 />
             )) : null}
+
+            {options.numInferenceSteps ? picker(
+                'numInferenceSteps',
+                labels.numInferenceSteps,
+                String(values.numInferenceSteps ?? options.numInferenceSteps.default ?? 28),
+                (
+                    <OptionValueRange
+                        idPrefix={idPrefix}
+                        optionKey="num-inference-steps"
+                        label={labels.numInferenceSteps}
+                        value={values.numInferenceSteps ?? options.numInferenceSteps.default}
+                        min={options.numInferenceSteps.min ?? 1}
+                        max={options.numInferenceSteps.max ?? 50}
+                        step={options.numInferenceSteps.step ?? 1}
+                        onChange={(next) => onChange('numInferenceSteps', next)}
+                        disabled={disabled}
+                        hideLabel={collapsed}
+                    />
+                ),
+            ) : null}
+
+            {options.guidanceScale ? picker(
+                'guidanceScale',
+                labels.guidanceScale,
+                Number(values.guidanceScale ?? options.guidanceScale.default ?? 3.5).toFixed(1),
+                (
+                    <OptionValueRange
+                        idPrefix={idPrefix}
+                        optionKey="guidance-scale"
+                        label={labels.guidanceScale}
+                        value={values.guidanceScale ?? options.guidanceScale.default}
+                        min={options.guidanceScale.min ?? 1}
+                        max={options.guidanceScale.max ?? 20}
+                        step={options.guidanceScale.step ?? 0.1}
+                        onChange={(next) => onChange('guidanceScale', next)}
+                        disabled={disabled}
+                        hideLabel={collapsed}
+                    />
+                ),
+            ) : null}
+
+            {options.seed ? picker(
+                'seed',
+                labels.seed,
+                String(values.seed ?? options.seed.default ?? -1),
+                (
+                    <OptionNumberField
+                        id={`${idPrefix}-seed`}
+                        label={labels.seed}
+                        value={values.seed ?? options.seed.default ?? -1}
+                        min={-1}
+                        max={2147483647}
+                        step={1}
+                        onChange={(next) => onChange('seed', next)}
+                        disabled={disabled}
+                        hideLabel={collapsed}
+                    />
+                ),
+            ) : null}
+
+            {options.strength ? picker(
+                'strength',
+                labels.strength,
+                Number(values.strength ?? options.strength.default ?? 0.8).toFixed(2),
+                (
+                    <OptionValueRange
+                        idPrefix={idPrefix}
+                        optionKey="strength"
+                        label={labels.strength}
+                        value={values.strength ?? options.strength.default}
+                        min={options.strength.min ?? 0}
+                        max={options.strength.max ?? 1}
+                        step={options.strength.step ?? 0.05}
+                        onChange={(next) => onChange('strength', next)}
+                        disabled={disabled}
+                        hideLabel={collapsed}
+                    />
+                ),
+            ) : null}
 
             {options.numImages?.values ? picker('numImages', labels.numImages, String(values.numImages ?? options.numImages.default ?? '1'), (
                 <OptionChipGroup
@@ -769,6 +980,85 @@ export default function MediaModelOptionsBar({
                     label={labels.turboMode}
                     checked={Boolean(values.turboMode)}
                     onChange={(next) => onChange('turboMode', next)}
+                    disabled={disabled}
+                    onLabel={labels.toggleOn}
+                    offLabel={labels.toggleOff}
+                />
+            )) : null}
+
+            {options.enablePromptExpansion ? picker('enablePromptExpansion', labels.enablePromptExpansion, values.enablePromptExpansion ? labels.toggleOn : labels.toggleOff, (
+                <OptionToggleChip
+                    id={`${idPrefix}-enable-prompt-expansion`}
+                    label={labels.enablePromptExpansion}
+                    checked={Boolean(values.enablePromptExpansion)}
+                    onChange={(next) => onChange('enablePromptExpansion', next)}
+                    disabled={disabled}
+                    onLabel={labels.toggleOn}
+                    offLabel={labels.toggleOff}
+                />
+            )) : null}
+
+            {options.goFast ? picker('goFast', labels.goFast, values.goFast ? labels.toggleOn : labels.toggleOff, (
+                <OptionToggleChip
+                    id={`${idPrefix}-go-fast`}
+                    label={labels.goFast}
+                    checked={Boolean(values.goFast)}
+                    onChange={(next) => onChange('goFast', next)}
+                    disabled={disabled}
+                    onLabel={labels.toggleOn}
+                    offLabel={labels.toggleOff}
+                />
+            )) : null}
+
+            {options.generateType?.values ? picker('generateType', labels.generateType, labels.generateTypeValues?.[values.generateType] ?? values.generateType, (
+                <OptionChipGroup
+                    idPrefix={idPrefix}
+                    optionKey="generate_type"
+                    label={labels.generateType}
+                    value={values.generateType}
+                    values={options.generateType?.values}
+                    onChange={(next) => onChange('generateType', next)}
+                    disabled={disabled}
+                    formatValue={(item) => labels.generateTypeValues?.[item] ?? item}
+                    formatOptionDelta={formatOptionDelta}
+                />
+            )) : null}
+
+            {options.faceCount ? picker('faceCount', labels.faceCount, labels.formatFaceCount?.(Number(values.faceCount ?? options.faceCount.default ?? 500000)) ?? String(values.faceCount ?? options.faceCount.default ?? 500000), (
+                <OptionValueRange
+                    idPrefix={idPrefix}
+                    optionKey="face-count"
+                    label={labels.faceCount}
+                    value={values.faceCount ?? options.faceCount.default}
+                    min={options.faceCount.min ?? 40000}
+                    max={options.faceCount.max ?? 1500000}
+                    step={options.faceCount.step ?? 10000}
+                    onChange={(next) => onChange('faceCount', next)}
+                    disabled={disabled}
+                    hideLabel={collapsed}
+                    formatDisplay={labels.formatFaceCount}
+                />
+            )) : null}
+
+            {options.enablePbr ? picker('enablePbr', labels.enablePbr, values.enablePbr ? labels.toggleOn : labels.toggleOff, (
+                <OptionToggleChip
+                    id={`${idPrefix}-enable-pbr`}
+                    label={labels.enablePbr}
+                    checked={Boolean(values.enablePbr)}
+                    onChange={(next) => onChange('enablePbr', next)}
+                    disabled={disabled || values.generateType === 'Geometry' || values.enableGeometry}
+                    onLabel={labels.toggleOn}
+                    offLabel={labels.toggleOff}
+                    priceSuffix={formatOptionDelta ? formatOptionDeltaSuffix(formatOptionDelta('enablePbr', true)) : null}
+                />
+            )) : null}
+
+            {options.enableGeometry ? picker('enableGeometry', labels.enableGeometry, values.enableGeometry ? labels.toggleOn : labels.toggleOff, (
+                <OptionToggleChip
+                    id={`${idPrefix}-enable-geometry`}
+                    label={labels.enableGeometry}
+                    checked={Boolean(values.enableGeometry)}
+                    onChange={(next) => onChange('enableGeometry', next)}
                     disabled={disabled}
                     onLabel={labels.toggleOn}
                     offLabel={labels.toggleOff}

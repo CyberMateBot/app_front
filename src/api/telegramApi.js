@@ -323,6 +323,7 @@ export const THREE_D_MODEL_IDS = [
     'tripo3d-h3.1-i2d',
     'hunyuan3d-v3-t2d',
     'hunyuan3d-v3.1-rapid',
+    'hunyuan3d-v3.1-rapid-i2d',
     'meshy6-t2d',
     'rodin-v2-i2d',
     'rodin-v2.5-i2d',
@@ -476,6 +477,12 @@ export async function generateImage({
     webSearch,
     imageSearch,
     size,
+    seed,
+    width,
+    height,
+    strength,
+    guidanceScale,
+    numInferenceSteps,
     imageBase64,
     imageMimeType,
 }) {
@@ -548,6 +555,35 @@ export async function generateImage({
 
     if (size?.trim()) {
         body.size = size.trim();
+    } else if (
+        width != null && width !== '' && Number.isFinite(Number(width))
+        && height != null && height !== '' && Number.isFinite(Number(height))
+    ) {
+        body.size = `${Number(width)}*${Number(height)}`;
+    }
+
+    if (seed != null && seed !== '') {
+        body.seed = Number(seed);
+    }
+
+    if (width != null && width !== '' && Number.isFinite(Number(width))) {
+        body.width = Number(width);
+    }
+
+    if (height != null && height !== '' && Number.isFinite(Number(height))) {
+        body.height = Number(height);
+    }
+
+    if (strength != null && strength !== '' && Number.isFinite(Number(strength))) {
+        body.strength = Number(strength);
+    }
+
+    if (guidanceScale != null && guidanceScale !== '' && Number.isFinite(Number(guidanceScale))) {
+        body.guidance_scale = Number(guidanceScale);
+    }
+
+    if (numInferenceSteps != null && numInferenceSteps !== '' && Number.isFinite(Number(numInferenceSteps))) {
+        body.num_inference_steps = Number(numInferenceSteps);
     }
 
     const trimmedImage = imageBase64?.trim();
@@ -612,20 +648,37 @@ export async function generateVideo({
     negativePrompt,
     sourceImageUrl,
     sourceVideoUrl,
+    imageBase64,
+    imageMimeType,
+    videoBase64,
+    videoMimeType,
+    firstFrameUrl,
+    lastFrameUrl,
+    firstFrameBase64,
+    firstFrameMimeType,
+    lastFrameBase64,
+    lastFrameMimeType,
     sound,
     cameraControl,
     generateAudio,
     cameraFixed,
     turboMode,
     extendBy,
+    seed,
+    enablePromptExpansion,
+    goFast,
     referenceImages,
     sessionId,
 }) {
     const telegramId = getCurrentTelegramId();
-    const trimmedPrompt = prompt?.trim();
+    const trimmedPrompt = prompt?.trim() ?? '';
     const normalizedModel = VIDEO_MODEL_IDS.includes(model) ? model : 'kling-v3-std';
+    const hasSourceImage = Boolean(
+        sourceImageUrl?.trim()
+        || imageBase64
+    );
 
-    if (!trimmedPrompt) {
+    if (!trimmedPrompt && !hasSourceImage) {
         throw new Error('Prompt is required.');
     }
 
@@ -689,6 +742,48 @@ export async function generateVideo({
         body.sourceVideoUrl = trimmedSourceVideo;
     }
 
+    const trimmedImageBase64 = imageBase64?.trim();
+    if (trimmedImageBase64) {
+        body.imageBase64 = trimmedImageBase64;
+        if (imageMimeType?.trim()) {
+            body.imageMimeType = imageMimeType.trim();
+        }
+    }
+
+    const trimmedVideoBase64 = videoBase64?.trim();
+    if (trimmedVideoBase64) {
+        body.videoBase64 = trimmedVideoBase64;
+        if (videoMimeType?.trim()) {
+            body.videoMimeType = videoMimeType.trim();
+        }
+    }
+
+    const trimmedFirstFrame = firstFrameUrl?.trim();
+    if (trimmedFirstFrame) {
+        body.first_frame_url = trimmedFirstFrame;
+    }
+
+    const trimmedLastFrame = lastFrameUrl?.trim();
+    if (trimmedLastFrame) {
+        body.last_frame_url = trimmedLastFrame;
+    }
+
+    const trimmedFirstFrameBase64 = firstFrameBase64?.trim();
+    if (trimmedFirstFrameBase64) {
+        body.firstFrameBase64 = trimmedFirstFrameBase64;
+        if (firstFrameMimeType?.trim()) {
+            body.firstFrameMimeType = firstFrameMimeType.trim();
+        }
+    }
+
+    const trimmedLastFrameBase64 = lastFrameBase64?.trim();
+    if (trimmedLastFrameBase64) {
+        body.lastFrameBase64 = trimmedLastFrameBase64;
+        if (lastFrameMimeType?.trim()) {
+            body.lastFrameMimeType = lastFrameMimeType.trim();
+        }
+    }
+
     if (typeof generateAudio === 'boolean') {
         body.generate_audio = generateAudio;
     }
@@ -703,6 +798,18 @@ export async function generateVideo({
 
     if (extendBy != null && extendBy !== '') {
         body.extend_by = Number(extendBy) || extendBy;
+    }
+
+    if (seed != null && seed !== '' && Number.isFinite(Number(seed))) {
+        body.seed = Number(seed);
+    }
+
+    if (typeof enablePromptExpansion === 'boolean') {
+        body.enable_prompt_expansion = enablePromptExpansion;
+    }
+
+    if (typeof goFast === 'boolean') {
+        body.go_fast = goFast;
     }
 
     if (Array.isArray(referenceImages) && referenceImages.length > 0) {
@@ -872,6 +979,10 @@ export async function generate3D({
     material,
     geometryFileFormat,
     textureMode,
+    generateType,
+    faceLimit,
+    enablePbr,
+    enableGeometry,
 }) {
     const telegramId = getCurrentTelegramId();
     const trimmedPrompt = prompt?.trim() ?? '';
@@ -916,6 +1027,18 @@ export async function generate3D({
     }
     if (textureMode?.trim()) {
         body.texture_mode = textureMode.trim();
+    }
+    if (generateType?.trim()) {
+        body.generate_type = generateType.trim();
+    }
+    if (faceLimit != null && faceLimit !== '' && Number.isFinite(Number(faceLimit))) {
+        body.face_limit = Number(faceLimit);
+    }
+    if (typeof enablePbr === 'boolean') {
+        body.enable_pbr = enablePbr;
+    }
+    if (typeof enableGeometry === 'boolean') {
+        body.enable_geometry = enableGeometry;
     }
 
     const trimmedSource = sourceImageUrl?.trim();

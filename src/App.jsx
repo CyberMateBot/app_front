@@ -97,8 +97,13 @@ import {
     klingResolutionForModel,
     videoModelRequiresImage,
     videoModelRequiresVideo,
+    videoModelSupportsOptionalImage,
+    videoModelRequiresFirstFrame,
+    videoModelRequiresLastFrame,
 } from './lib/videoModels.js';
 import { compressImageFile } from './lib/compressImage.js';
+import { readImageReferenceFile, readVideoReferenceFile } from './lib/readMediaFile.js';
+import MediaReferenceField from './Components/MediaReferenceField.jsx';
 import { createChatSessionId } from './lib/chatSession.js';
 import { downloadMediaUrl, guessMediaFilename } from './lib/downloadMedia.js';
 import { clearMediaSession, loadMediaSession, saveMediaSession } from './lib/mediaSessions.js';
@@ -175,6 +180,13 @@ import {
     getThreeDModelCapabilities,
     getThreeDModelDefaults,
     videoModelIsKling,
+    getFluxDimensionsForAspect,
+    getSeedreamDimensionsForAspect,
+    isSeedreamImageModel,
+    getQwenDimensionsForAspect,
+    isQwenImageModel,
+    getZImageDimensionsForAspect,
+    isZImageModel,
 } from './config/mediaModelOptions.js';
 import {
     VIDEO_MODEL_DEFINITIONS,
@@ -241,7 +253,7 @@ import {
     formatCatalogPriceLabel,
     getCatalogToolPriceRange,
 } from './lib/modelPrices.js';
-import { calculatePrice, calculateAudioPrice, calculateThreeDPrice, calculateVideoPrice, getMediaModelMinPrice, getOptionPriceDelta } from './lib/mediaGenerationPrice.js';
+import { calculatePrice, calculateAudioPrice, calculateThreeDPrice, calculateVideoPrice, getMediaModelMinPrice, getOptionPriceDelta, getThreeDOptionPriceDelta, getVideoOptionPriceDelta } from './lib/mediaGenerationPrice.js';
 import {
     applyBarOptionChange,
     buildAudioSelectedFromApp,
@@ -482,8 +494,10 @@ const translations = {
         modelHunyuan3dGroupSub: 'Tencent text-to-3D',
         modelHunyuan3dV3Name: 'Hunyuan3D V3',
         modelHunyuan3dV3Sub: 'PBR-текстуры и геометрия',
-        modelHunyuan3dRapidName: 'Hunyuan3D V3.1 Rapid',
-        modelHunyuan3dRapidSub: 'Быстрая генерация',
+        modelHunyuan3dRapidT2dName: 'Hunyuan3D V3.1 Rapid T2D',
+        modelHunyuan3dRapidT2dSub: 'Быстрая генерация из текста',
+        modelHunyuan3dRapidI2dName: 'Hunyuan3D V3.1 Rapid I2D',
+        modelHunyuan3dRapidI2dSub: 'Быстрая генерация из фото',
         modelMeshyGroupName: 'Meshy 6',
         modelMeshyGroupSub: 'Лучшая геометрия и текстуры',
         modelMeshy6Name: 'Meshy 6',
@@ -515,6 +529,13 @@ const translations = {
         mediaOptionMaterial: 'Материал',
         mediaOptionGeometryFileFormat: 'Формат файла',
         mediaOptionTextureMode: 'Режим текстур',
+        mediaOptionGenerateType: 'Режим генерации',
+        mediaOptionFaceCount: 'Количество граней',
+        mediaOptionEnablePbr: 'PBR-материалы',
+        mediaOptionEnableGeometry: 'Только геометрия',
+        mediaGenerateTypeNormal: 'Normal',
+        mediaGenerateTypeLowPoly: 'Low Poly',
+        mediaGenerateTypeGeometry: 'Geometry',
         mediaOptionMode: 'Режим',
         voiceGenerateTitle: 'Озвучка текста',
         musicGenerateTitle: 'Генерация музыки',
@@ -702,6 +723,19 @@ const translations = {
         imageEditPlaceholder: 'Опишите, что изменить на последнем изображении...',
         imageEditHint: 'Следующий промт отредактирует последнее изображение',
         imageAttachmentHint: 'Прикреплённое фото будет использовано для редактирования',
+        mediaReferenceImageLabel: 'Референс-изображение',
+        mediaReferenceImageHint: 'Ссылка или файл для редактирования (JPEG, PNG, WebP, GIF — до 8 МБ)',
+        mediaReferenceVideoLabel: 'Референс-видео',
+        mediaReferenceVideoHint: 'Ссылка или файл (MP4, WebM, MOV — до 16 МБ)',
+        mediaReferenceUpload: 'Загрузить файл',
+        mediaReferenceDrop: 'или перетащите сюда',
+        mediaReferenceUrlPlaceholder: 'https://example.com/image.jpg',
+        mediaReferenceVideoUrlPlaceholder: 'https://example.com/video.mp4',
+        videoOptionalImageLabel: 'Стартовое изображение',
+        videoOptionalImageHint: 'Необязательно — анимирует фото в видео (image-to-video)',
+        videoFirstFrameLabel: 'Первый кадр',
+        videoLastFrameLabel: 'Последний кадр',
+        videoSessionVideoHint: 'Если не загрузить новое видео, будет использовано последнее из сессии',
         imageAttachPhoto: 'Прикрепить фото',
         imageRemovePhoto: 'Убрать фото',
         imageEditedNote: 'Изображение отредактировано.',
@@ -721,6 +755,10 @@ const translations = {
         mediaModelVariantLabel: 'Модель',
         mediaModelGroupLabel: 'Нейросеть',
         mediaOptionAspectRatio: 'Формат',
+        mediaOptionDimensions: 'Размер',
+        mediaOptionWidth: 'Ширина',
+        mediaOptionHeight: 'Высота',
+        mediaOptionSwapDimensions: 'Поменять ширину и высоту',
         mediaOptionResolution: 'Разрешение',
         mediaOptionQuality: 'Качество',
         mediaOptionDuration: 'Длительность',
@@ -729,12 +767,18 @@ const translations = {
         mediaOptionImageSearch: 'Поиск по изображениям',
         mediaOptionSize: 'Размер',
         mediaOptionNumImages: 'Количество',
+        mediaOptionNumInferenceSteps: 'Шаги',
+        mediaOptionGuidanceScale: 'Guidance',
+        mediaOptionSeed: 'Seed',
+        mediaOptionStrength: 'Strength',
         mediaToggleOn: 'Вкл',
         mediaToggleOff: 'Выкл',
         mediaQualityLow: 'Низкое',
         mediaQualityMedium: 'Среднее',
         mediaQualityHigh: 'Высокое',
         mediaOptionGenerateAudio: 'Генерировать аудио',
+        mediaOptionEnablePromptExpansion: 'Улучшение промпта',
+        mediaOptionGoFast: 'Быстрый режим',
         mediaOptionCameraFixed: 'Фиксировать камеру',
         mediaOptionTurboMode: 'Быстрое редактирование (Turbo)',
         mediaOptionNegativePrompt: 'Негативный промпт',
@@ -770,8 +814,8 @@ const translations = {
         videoSourceImagePlaceholder: 'https://example.com/photo.jpg',
         videoSourceVideoLabel: 'URL исходного видео',
         videoSourceVideoPlaceholder: 'https://example.com/video.mp4',
-        videoSourceImageRequired: 'Укажите URL исходного изображения для этой модели.',
-        videoSourceVideoRequired: 'Укажите URL исходного видео или сгенерируйте первое видео в сессии.',
+        videoSourceImageRequired: 'Укажите ссылку или загрузите исходное изображение для этой модели.',
+        videoSourceVideoRequired: 'Укажите ссылку, загрузите исходное видео или сгенерируйте первое видео в сессии.',
         videoEditedNote: 'Видео отредактировано.',
         videoExtendedNote: 'Видео продлено.',
         videoGenerateButton: 'Сгенерировать',
@@ -1030,8 +1074,10 @@ const translations = {
         modelHunyuan3dGroupSub: 'Tencent text-to-3D',
         modelHunyuan3dV3Name: 'Hunyuan3D V3',
         modelHunyuan3dV3Sub: 'PBR textures and geometry',
-        modelHunyuan3dRapidName: 'Hunyuan3D V3.1 Rapid',
-        modelHunyuan3dRapidSub: 'Fast generation',
+        modelHunyuan3dRapidT2dName: 'Hunyuan3D V3.1 Rapid T2D',
+        modelHunyuan3dRapidT2dSub: 'Fast text-to-3D',
+        modelHunyuan3dRapidI2dName: 'Hunyuan3D V3.1 Rapid I2D',
+        modelHunyuan3dRapidI2dSub: 'Fast image-to-3D',
         modelMeshyGroupName: 'Meshy 6',
         modelMeshyGroupSub: 'Best geometry and textures',
         modelMeshy6Name: 'Meshy 6',
@@ -1063,6 +1109,13 @@ const translations = {
         mediaOptionMaterial: 'Material',
         mediaOptionGeometryFileFormat: 'File format',
         mediaOptionTextureMode: 'Texture mode',
+        mediaOptionGenerateType: 'Generate type',
+        mediaOptionFaceCount: 'Face count',
+        mediaOptionEnablePbr: 'PBR materials',
+        mediaOptionEnableGeometry: 'Geometry only',
+        mediaGenerateTypeNormal: 'Normal',
+        mediaGenerateTypeLowPoly: 'Low Poly',
+        mediaGenerateTypeGeometry: 'Geometry',
         mediaOptionMode: 'Mode',
         voiceGenerateTitle: 'Text-to-speech',
         musicGenerateTitle: 'Music generation',
@@ -1250,6 +1303,19 @@ const translations = {
         imageEditPlaceholder: 'Describe what to change in the last image...',
         imageEditHint: 'The next prompt will edit the last image',
         imageAttachmentHint: 'The attached photo will be used for editing',
+        mediaReferenceImageLabel: 'Reference image',
+        mediaReferenceImageHint: 'URL or file for editing (JPEG, PNG, WebP, GIF — up to 8 MB)',
+        mediaReferenceVideoLabel: 'Reference video',
+        mediaReferenceVideoHint: 'URL or file (MP4, WebM, MOV — up to 16 MB)',
+        mediaReferenceUpload: 'Upload file',
+        mediaReferenceDrop: 'or drag & drop',
+        mediaReferenceUrlPlaceholder: 'https://example.com/image.jpg',
+        mediaReferenceVideoUrlPlaceholder: 'https://example.com/video.mp4',
+        videoOptionalImageLabel: 'Start image',
+        videoOptionalImageHint: 'Optional — animates the photo into video (image-to-video)',
+        videoFirstFrameLabel: 'First frame',
+        videoLastFrameLabel: 'Last frame',
+        videoSessionVideoHint: 'If you skip upload, the last video from this session will be used',
         imageAttachPhoto: 'Attach photo',
         imageRemovePhoto: 'Remove photo',
         imageEditedNote: 'Image edited.',
@@ -1269,6 +1335,10 @@ const translations = {
         mediaModelVariantLabel: 'Model',
         mediaModelGroupLabel: 'Provider',
         mediaOptionAspectRatio: 'Aspect ratio',
+        mediaOptionDimensions: 'Size',
+        mediaOptionWidth: 'Width',
+        mediaOptionHeight: 'Height',
+        mediaOptionSwapDimensions: 'Swap width and height',
         mediaOptionResolution: 'Resolution',
         mediaOptionQuality: 'Quality',
         mediaOptionDuration: 'Duration',
@@ -1277,12 +1347,18 @@ const translations = {
         mediaOptionImageSearch: 'Image search',
         mediaOptionSize: 'Size',
         mediaOptionNumImages: 'Count',
+        mediaOptionNumInferenceSteps: 'Steps',
+        mediaOptionGuidanceScale: 'Guidance',
+        mediaOptionSeed: 'Seed',
+        mediaOptionStrength: 'Strength',
         mediaToggleOn: 'On',
         mediaToggleOff: 'Off',
         mediaQualityLow: 'Low',
         mediaQualityMedium: 'Medium',
         mediaQualityHigh: 'High',
         mediaOptionGenerateAudio: 'Generate audio',
+        mediaOptionEnablePromptExpansion: 'Prompt expansion',
+        mediaOptionGoFast: 'Go fast',
         mediaOptionCameraFixed: 'Fixed camera',
         mediaOptionTurboMode: 'Fast editing (Turbo)',
         mediaOptionNegativePrompt: 'Negative prompt',
@@ -1318,8 +1394,8 @@ const translations = {
         videoSourceImagePlaceholder: 'https://example.com/photo.jpg',
         videoSourceVideoLabel: 'Source video URL',
         videoSourceVideoPlaceholder: 'https://example.com/video.mp4',
-        videoSourceImageRequired: 'A source image URL is required for this model.',
-        videoSourceVideoRequired: 'Provide a source video URL or generate the first video in this session.',
+        videoSourceImageRequired: 'Provide a source image URL or upload a file for this model.',
+        videoSourceVideoRequired: 'Provide a source video URL, upload a file, or generate the first video in this session.',
         videoEditedNote: 'Video edited.',
         videoExtendedNote: 'Video extended.',
         videoGenerateButton: 'Generate',
@@ -1615,6 +1691,7 @@ function App() {
     ));
     const [imagePrompt, setImagePrompt] = useState('');
     const [imageAttachment, setImageAttachment] = useState(null);
+    const [imageSourceUrl, setImageSourceUrl] = useState('');
     const [imageSessionMessages, setImageSessionMessages] = useState([]);
     const [imageSessionId, setImageSessionId] = useState(() => createChatSessionId());
     const [generatedImageUrl, setGeneratedImageUrl] = useState('');
@@ -1637,8 +1714,19 @@ function App() {
     const [videoCameraRoll, setVideoCameraRoll] = useState(0);
     const [videoCameraZoom, setVideoCameraZoom] = useState(0);
     const [videoSound, setVideoSound] = useState(Boolean(initialVideoDefaults.sound));
+    const [videoSeed, setVideoSeed] = useState(initialVideoDefaults.seed ?? -1);
+    const [videoEnablePromptExpansion, setVideoEnablePromptExpansion] = useState(
+        initialVideoDefaults.enablePromptExpansion ?? true,
+    );
+    const [videoGoFast, setVideoGoFast] = useState(initialVideoDefaults.goFast ?? true);
     const [videoSourceImageUrl, setVideoSourceImageUrl] = useState('');
+    const [videoSourceImageAttachment, setVideoSourceImageAttachment] = useState(null);
     const [videoSourceVideoUrl, setVideoSourceVideoUrl] = useState('');
+    const [videoSourceVideoAttachment, setVideoSourceVideoAttachment] = useState(null);
+    const [videoFirstFrameUrl, setVideoFirstFrameUrl] = useState('');
+    const [videoFirstFrameAttachment, setVideoFirstFrameAttachment] = useState(null);
+    const [videoLastFrameUrl, setVideoLastFrameUrl] = useState('');
+    const [videoLastFrameAttachment, setVideoLastFrameAttachment] = useState(null);
     const [generatedVideoUrl, setGeneratedVideoUrl] = useState('');
     const [videoSessionId, setVideoSessionId] = useState(() => createChatSessionId());
     const [audioModel, setAudioModel] = useState('qwen3-tts');
@@ -1671,6 +1759,10 @@ function App() {
     const [threeDMaterial, setThreeDMaterial] = useState(initialThreeDDefaults.material ?? 'PBR');
     const [threeDGeometryFileFormat, setThreeDGeometryFileFormat] = useState(initialThreeDDefaults.geometryFileFormat ?? 'glb');
     const [threeDTextureMode, setThreeDTextureMode] = useState(initialThreeDDefaults.textureMode ?? 'medium');
+    const [threeDGenerateType, setThreeDGenerateType] = useState(initialThreeDDefaults.generateType ?? 'Normal');
+    const [threeDFaceCount, setThreeDFaceCount] = useState(initialThreeDDefaults.faceCount ?? 500000);
+    const [threeDEnablePbr, setThreeDEnablePbr] = useState(Boolean(initialThreeDDefaults.enablePbr));
+    const [threeDEnableGeometry, setThreeDEnableGeometry] = useState(Boolean(initialThreeDDefaults.enableGeometry));
     const [threeDAttachment, setThreeDAttachment] = useState(null);
     const [threeDAttachments, setThreeDAttachments] = useState([]);
     const [generatedThreeDUrl, setGeneratedThreeDUrl] = useState('');
@@ -2738,6 +2830,9 @@ function App() {
         generateAudio: videoGenerateAudio,
         cameraFixed: videoCameraFixed,
         turboMode: videoTurboMode,
+        seed: videoSeed,
+        enablePromptExpansion: videoEnablePromptExpansion,
+        goFast: videoGoFast,
     }), [
         videoAspectRatio,
         videoDuration,
@@ -2747,6 +2842,9 @@ function App() {
         videoGenerateAudio,
         videoCameraFixed,
         videoTurboMode,
+        videoSeed,
+        videoEnablePromptExpansion,
+        videoGoFast,
     ]);
     const activeVideoCatalogModel = mediaModelsCatalog[videoModel] ?? null;
     const videoGenerationPrice = useMemo(() => {
@@ -2807,6 +2905,10 @@ function App() {
         material: threeDMaterial,
         geometryFileFormat: threeDGeometryFileFormat,
         textureMode: threeDTextureMode,
+        generateType: threeDGenerateType,
+        faceCount: threeDFaceCount,
+        enablePbr: threeDEnablePbr,
+        enableGeometry: threeDEnableGeometry,
     }), [
         threeDNegativePrompt,
         threeDTextureQuality,
@@ -2819,6 +2921,10 @@ function App() {
         threeDMaterial,
         threeDGeometryFileFormat,
         threeDTextureMode,
+        threeDGenerateType,
+        threeDFaceCount,
+        threeDEnablePbr,
+        threeDEnableGeometry,
     ]);
     const activeThreeDCatalogModel = mediaModelsCatalog[threeDModel] ?? null;
     const threeDGenerationPrice = useMemo(() => {
@@ -3627,6 +3733,7 @@ function App() {
 
         setImagePrompt('');
         setImageAttachment(null);
+        setImageSourceUrl('');
         setImageError('');
     };
 
@@ -3642,9 +3749,21 @@ function App() {
         setImageSessionMessages([]);
         setImagePrompt('');
         setImageAttachment(null);
+        setImageSourceUrl('');
         setGeneratedImageUrl('');
         setGeneratedImageUrls([]);
         setImageError('');
+    };
+
+    const handleImageReferenceFile = async (file) => {
+        try {
+            const compressed = await readImageReferenceFile(file, language);
+            setImageAttachment(compressed);
+            setImageSourceUrl('');
+            setImageError('');
+        } catch (error) {
+            setImageError(error?.message || (language === 'ru' ? 'Не удалось обработать изображение.' : 'Failed to process image.'));
+        }
     };
 
     const handleImagePhotoSelect = async (event) => {
@@ -3653,21 +3772,50 @@ function App() {
         if (!file) {
             return;
         }
-        if (!file.type.startsWith('image/')) {
-            setImageError('Можно прикрепить только изображение.');
-            return;
-        }
-        if (file.size > 12 * 1024 * 1024) {
-            setImageError('Изображение слишком большое (макс. 12 МБ).');
-            return;
-        }
+        await handleImageReferenceFile(file);
+    };
 
+    const handleVideoSourceImageFile = async (file) => {
         try {
-            const compressed = await compressImageFile(file);
-            setImageAttachment(compressed);
-            setImageError('');
-        } catch {
-            setImageError('Не удалось обработать изображение.');
+            const attachment = await readImageReferenceFile(file, language);
+            setVideoSourceImageAttachment(attachment);
+            setVideoSourceImageUrl('');
+            setVideoError('');
+        } catch (error) {
+            setVideoError(error?.message || (language === 'ru' ? 'Не удалось обработать изображение.' : 'Failed to process image.'));
+        }
+    };
+
+    const handleVideoSourceVideoFile = async (file) => {
+        try {
+            const attachment = await readVideoReferenceFile(file, language);
+            setVideoSourceVideoAttachment(attachment);
+            setVideoSourceVideoUrl('');
+            setVideoError('');
+        } catch (error) {
+            setVideoError(error?.message || (language === 'ru' ? 'Не удалось обработать видео.' : 'Failed to process video.'));
+        }
+    };
+
+    const handleVideoFirstFrameFile = async (file) => {
+        try {
+            const attachment = await readImageReferenceFile(file, language);
+            setVideoFirstFrameAttachment(attachment);
+            setVideoFirstFrameUrl('');
+            setVideoError('');
+        } catch (error) {
+            setVideoError(error?.message || (language === 'ru' ? 'Не удалось обработать изображение.' : 'Failed to process image.'));
+        }
+    };
+
+    const handleVideoLastFrameFile = async (file) => {
+        try {
+            const attachment = await readImageReferenceFile(file, language);
+            setVideoLastFrameAttachment(attachment);
+            setVideoLastFrameUrl('');
+            setVideoError('');
+        } catch (error) {
+            setVideoError(error?.message || (language === 'ru' ? 'Не удалось обработать изображение.' : 'Failed to process image.'));
         }
     };
 
@@ -3700,6 +3848,9 @@ function App() {
         setVideoCameraRoll(0);
         setVideoCameraZoom(0);
         setVideoSound(Boolean(defaults.sound));
+        setVideoSeed(defaults.seed ?? -1);
+        setVideoEnablePromptExpansion(defaults.enablePromptExpansion ?? true);
+        setVideoGoFast(defaults.goFast ?? true);
     }, []);
 
     const applyAudioModelOptions = useCallback((modelId) => {
@@ -3719,7 +3870,80 @@ function App() {
     }, []);
 
     const handleImageOptionChange = (key, value) => {
-        setImageOptions((prev) => applyBarOptionChange(prev, key, value));
+        if (key === 'swapDimensions' && value && typeof value === 'object') {
+            setImageOptions((prev) => {
+                const width = Number(value.width) || prev.width;
+                const height = Number(value.height) || prev.height;
+                const next = { ...prev, width, height };
+                if (isSeedreamImageModel(imageModel) || isQwenImageModel(imageModel) || isZImageModel(imageModel)) {
+                    return { ...next, size: `${width}*${height}` };
+                }
+                return next;
+            });
+            return;
+        }
+
+        setImageOptions((prev) => {
+            let next = applyBarOptionChange(prev, key, value);
+            if (imageModel === 'flux-dev' && key === 'aspectRatio') {
+                const dims = getFluxDimensionsForAspect(String(value));
+                next = { ...next, width: dims.width, height: dims.height };
+            }
+            if (isSeedreamImageModel(imageModel)) {
+                if (key === 'aspectRatio') {
+                    const dims = getSeedreamDimensionsForAspect(String(value));
+                    next = {
+                        ...next,
+                        width: dims.width,
+                        height: dims.height,
+                        size: `${dims.width}*${dims.height}`,
+                    };
+                } else if (key === 'width' || key === 'height') {
+                    const w = key === 'width' ? Number(value) : Number(next.width);
+                    const h = key === 'height' ? Number(value) : Number(next.height);
+                    if (w > 0 && h > 0) {
+                        next = { ...next, size: `${w}*${h}` };
+                    }
+                }
+            }
+            if (isQwenImageModel(imageModel)) {
+                if (key === 'aspectRatio') {
+                    const dims = getQwenDimensionsForAspect(String(value));
+                    if (dims) {
+                        next = {
+                            ...next,
+                            width: dims.width,
+                            height: dims.height,
+                            size: `${dims.width}*${dims.height}`,
+                        };
+                    }
+                } else if (key === 'width' || key === 'height') {
+                    const w = key === 'width' ? Number(value) : Number(next.width);
+                    const h = key === 'height' ? Number(value) : Number(next.height);
+                    if (w > 0 && h > 0) {
+                        next = { ...next, size: `${w}*${h}` };
+                    }
+                }
+            }
+            if (isZImageModel(imageModel)) {
+                if (key === 'aspectRatio') {
+                    const dims = getZImageDimensionsForAspect(String(value));
+                    next = {
+                        ...next,
+                        width: dims.width,
+                        height: dims.height,
+                        size: `${dims.width}*${dims.height}`,
+                    };
+                } else if (key === 'width' || key === 'height') {
+                    const w = key === 'width' ? Number(value) : Number(next.width);
+                    const h = key === 'height' ? Number(value) : Number(next.height);
+                    if (w > 0 && h > 0) {
+                        next = { ...next, size: `${w}*${h}` };
+                    }
+                }
+            }
+            return next;
+        });
     };
 
     const resetVideoCameraAxes = useCallback(() => {
@@ -3813,6 +4037,15 @@ function App() {
                 }
                 break;
             }
+            case 'seed':
+                setVideoSeed(Number(value));
+                break;
+            case 'enablePromptExpansion':
+                setVideoEnablePromptExpansion(Boolean(value));
+                break;
+            case 'goFast':
+                setVideoGoFast(Boolean(value));
+                break;
             default:
                 break;
         }
@@ -3874,6 +4107,10 @@ function App() {
         setThreeDMaterial(defaults.material ?? 'PBR');
         setThreeDGeometryFileFormat(defaults.geometryFileFormat ?? 'glb');
         setThreeDTextureMode(defaults.textureMode ?? 'medium');
+        setThreeDGenerateType(defaults.generateType ?? 'Normal');
+        setThreeDFaceCount(defaults.faceCount ?? 500000);
+        setThreeDEnablePbr(Boolean(defaults.enablePbr));
+        setThreeDEnableGeometry(Boolean(defaults.enableGeometry));
     }, []);
 
     const handleThreeDOptionChange = (key, value) => {
@@ -3910,6 +4147,24 @@ function App() {
                 break;
             case 'textureMode':
                 setThreeDTextureMode(value);
+                break;
+            case 'generateType':
+                setThreeDGenerateType(value);
+                if (value === 'Geometry') {
+                    setThreeDEnablePbr(false);
+                }
+                break;
+            case 'faceCount':
+                setThreeDFaceCount(Number(value));
+                break;
+            case 'enablePbr':
+                setThreeDEnablePbr(Boolean(value));
+                break;
+            case 'enableGeometry':
+                setThreeDEnableGeometry(Boolean(value));
+                if (value) {
+                    setThreeDEnablePbr(false);
+                }
                 break;
             default:
                 break;
@@ -4012,10 +4267,20 @@ function App() {
             setVideoSessionMessages([]);
             setVideoSourceImageUrl('');
             setVideoSourceVideoUrl('');
+            setVideoSourceImageAttachment(null);
+            setVideoSourceVideoAttachment(null);
+            setVideoFirstFrameUrl('');
+            setVideoFirstFrameAttachment(null);
+            setVideoLastFrameUrl('');
+            setVideoLastFrameAttachment(null);
             setVideoPrompt('');
             setGeneratedVideoUrl('');
         }
 
+        setVideoSourceImageAttachment(null);
+        setVideoSourceVideoAttachment(null);
+        setVideoFirstFrameAttachment(null);
+        setVideoLastFrameAttachment(null);
         setVideoError('');
     };
 
@@ -4037,6 +4302,12 @@ function App() {
         setVideoSessionMessages([]);
         setVideoSourceImageUrl('');
         setVideoSourceVideoUrl('');
+        setVideoSourceImageAttachment(null);
+        setVideoSourceVideoAttachment(null);
+        setVideoFirstFrameUrl('');
+        setVideoFirstFrameAttachment(null);
+        setVideoLastFrameUrl('');
+        setVideoLastFrameAttachment(null);
         setVideoPrompt('');
         setGeneratedVideoUrl('');
         setVideoError('');
@@ -4291,12 +4562,13 @@ function App() {
 
         const contextMessages = buildImageContextMessages(imageSessionMessages);
         const attachedImage = imageAttachment;
+        const manualSourceUrl = imageSourceUrl.trim();
         const canEdit = imageModelSupportsEdit(imageModel);
         const sessionImageUrl = canEdit
             ? (getLastSessionImageUrl(imageSessionMessages) ?? generatedImageUrl?.trim() ?? '')
             : '';
-        const sourceImageUrl = attachedImage ? '' : sessionImageUrl;
-        const isEdit = Boolean(attachedImage || sourceImageUrl);
+        const sourceImageUrl = attachedImage ? '' : (manualSourceUrl || sessionImageUrl);
+        const isEdit = Boolean(attachedImage || manualSourceUrl || sourceImageUrl);
 
         try {
             setIsGeneratingImage(true);
@@ -4337,6 +4609,7 @@ function App() {
             ]);
             setImagePrompt('');
             setImageAttachment(null);
+            setImageSourceUrl('');
             setGeneratedImageUrl(imageUrl);
             setGeneratedImageUrls(imageUrls);
             if (response?.item) {
@@ -4356,43 +4629,68 @@ function App() {
 
     const handleGenerateVideo = async () => {
         const trimmedPrompt = videoPrompt.trim();
+        const videoCatalog = activeVideoCatalogModel ?? mediaModelsCatalog[videoModel] ?? null;
+        const requiresImage = videoModelRequiresImage(videoModel, videoCatalog);
 
-        if (!trimmedPrompt) {
+        if (!trimmedPrompt && !requiresImage) {
             setVideoError(text.textPromptEmpty);
             return;
         }
 
-        const requiresImage = videoModelRequiresImage(videoModel);
-        const requiresVideo = videoModelRequiresVideo(videoModel);
+        const requiresVideo = videoModelRequiresVideo(videoModel, videoCatalog);
+        const supportsOptionalImage = videoModelSupportsOptionalImage(videoModel, videoCatalog);
+        const requiresFirstFrame = videoModelRequiresFirstFrame(videoModel, videoCatalog);
+        const requiresLastFrame = videoModelRequiresLastFrame(videoModel, videoCatalog);
         const isExtend = videoModel === 'seedance-v2-video-extend';
-        const resolvedSourceImageUrl = requiresImage
+        const sessionVideoUrl = getLastSessionVideoUrl(videoSessionMessages) ?? generatedVideoUrl?.trim() ?? '';
+        const hasSessionVideo = Boolean(requiresVideo && sessionVideoUrl);
+
+        const resolvedSourceImageUrl = requiresImage && !videoSourceImageAttachment
             ? (
                 videoSourceImageUrl.trim()
                 || getLastSessionSourceImageUrl(videoSessionMessages)
                 || ''
             )
             : '';
-        const resolvedSourceVideoUrl = requiresVideo
+        const optionalSourceImageUrl = supportsOptionalImage && !videoSourceImageAttachment
+            ? videoSourceImageUrl.trim()
+            : '';
+        const resolvedSourceVideoUrl = requiresVideo && !videoSourceVideoAttachment
             ? (
-                getLastSessionVideoUrl(videoSessionMessages)
-                || generatedVideoUrl?.trim()
-                || videoSourceVideoUrl.trim()
+                videoSourceVideoUrl.trim()
+                || sessionVideoUrl
                 || ''
             )
             : '';
+        const resolvedFirstFrameUrl = requiresFirstFrame && !videoFirstFrameAttachment
+            ? videoFirstFrameUrl.trim()
+            : '';
+        const resolvedLastFrameUrl = requiresLastFrame && !videoLastFrameAttachment
+            ? videoLastFrameUrl.trim()
+            : '';
 
-        if (requiresImage && !resolvedSourceImageUrl) {
+        if (requiresImage && !resolvedSourceImageUrl && !videoSourceImageAttachment) {
             setVideoError(text.videoSourceImageRequired);
             return;
         }
 
-        if (requiresVideo && !resolvedSourceVideoUrl) {
+        if (requiresFirstFrame && !resolvedFirstFrameUrl && !videoFirstFrameAttachment) {
+            setVideoError(language === 'ru' ? 'Укажите ссылку или загрузите первый кадр.' : 'Provide or upload the first frame.');
+            return;
+        }
+
+        if (requiresLastFrame && !resolvedLastFrameUrl && !videoLastFrameAttachment) {
+            setVideoError(language === 'ru' ? 'Укажите ссылку или загрузите последний кадр.' : 'Provide or upload the last frame.');
+            return;
+        }
+
+        if (requiresVideo && !resolvedSourceVideoUrl && !videoSourceVideoAttachment && !hasSessionVideo) {
             setVideoError(text.videoSourceVideoRequired);
             return;
         }
 
         const contextMessages = buildImageContextMessages(videoSessionMessages);
-        const hasVideoContext = Boolean(resolvedSourceVideoUrl && requiresVideo);
+        const hasVideoContext = Boolean((resolvedSourceVideoUrl || videoSourceVideoAttachment || hasSessionVideo) && requiresVideo);
 
         try {
             setIsGeneratingVideo(true);
@@ -4423,8 +4721,18 @@ function App() {
                 model: videoModel,
                 messages: contextMessages,
                 sessionId: videoSessionId,
-                sourceImageUrl: resolvedSourceImageUrl || undefined,
+                sourceImageUrl: (resolvedSourceImageUrl || optionalSourceImageUrl) || undefined,
                 sourceVideoUrl: resolvedSourceVideoUrl || undefined,
+                imageBase64: videoSourceImageAttachment?.base64,
+                imageMimeType: videoSourceImageAttachment?.mimeType,
+                videoBase64: videoSourceVideoAttachment?.base64,
+                videoMimeType: videoSourceVideoAttachment?.mimeType,
+                firstFrameUrl: resolvedFirstFrameUrl || undefined,
+                lastFrameUrl: resolvedLastFrameUrl || undefined,
+                firstFrameBase64: videoFirstFrameAttachment?.base64,
+                firstFrameMimeType: videoFirstFrameAttachment?.mimeType,
+                lastFrameBase64: videoLastFrameAttachment?.base64,
+                lastFrameMimeType: videoLastFrameAttachment?.mimeType,
                 ...videoOptionParams,
                 negativePrompt: videoOptionParams.negativePrompt ?? (
                     videoCapabilities.options?.negativePrompt
@@ -5632,7 +5940,7 @@ function App() {
         });
         const canEdit = imageModelSupportsEdit(imageModel);
         const supportsSourceUpload = imageModelSupportsSourceUpload(imageModel);
-        const hasAttachedImage = Boolean(imageAttachment);
+        const hasAttachedImage = Boolean(imageAttachment || imageSourceUrl.trim());
         const sessionImageUrl = canEdit
             ? (getLastSessionImageUrl(imageSessionMessages) ?? generatedImageUrl?.trim() ?? '')
             : '';
@@ -5649,6 +5957,10 @@ function App() {
                 size: 'size',
                 numImages: 'num_images',
                 'num-images': 'num_images',
+                numInferenceSteps: 'num_inference_steps',
+                guidanceScale: 'guidance_scale',
+                seed: 'seed',
+                strength: 'strength',
             };
             const optionKey = optionKeyMap[barKey] ?? barKey;
             return getOptionPriceDelta(catalogModel, optionKey, value, imageOptions);
@@ -5685,11 +5997,21 @@ function App() {
                         labels={{
                             group: text.mediaOptionsGroup,
                             aspectRatio: text.mediaOptionAspectRatio,
+                            dimensions: text.mediaOptionDimensions,
+                            width: text.mediaOptionWidth,
+                            height: text.mediaOptionHeight,
+                            swapDimensions: text.mediaOptionSwapDimensions,
+                            dimensionsHint: (width, height, min, max) => (
+                                language === 'ru'
+                                    ? `${width} × ${height} px · Диапазон: ${min}–${max}`
+                                    : `${width} × ${height} px · Range: ${min}–${max}`
+                            ),
                             resolution: text.mediaOptionResolution,
                             quality: text.mediaOptionQuality,
                             outputFormat: text.mediaOptionOutputFormat,
                             size: text.mediaOptionSize,
                             numImages: text.mediaOptionNumImages,
+                            seed: text.mediaOptionSeed,
                             webSearch: text.mediaOptionWebSearch,
                             imageSearch: text.mediaOptionImageSearch,
                             toggleOn: text.mediaToggleOn,
@@ -5705,6 +6027,25 @@ function App() {
                         collapsed
                         formatOptionDelta={formatImageOptionDelta}
                     />
+
+                    {supportsSourceUpload ? (
+                        <MediaReferenceField
+                            kind="image"
+                            label={text.mediaReferenceImageLabel}
+                            hint={text.mediaReferenceImageHint}
+                            url={imageSourceUrl}
+                            onUrlChange={setImageSourceUrl}
+                            attachment={imageAttachment}
+                            onAttachmentClear={() => setImageAttachment(null)}
+                            onFileSelect={handleImageReferenceFile}
+                            disabled={isGeneratingImage}
+                            idPrefix="image-ref"
+                            language={language}
+                            urlPlaceholder={text.mediaReferenceUrlPlaceholder}
+                            uploadLabel={text.mediaReferenceUpload}
+                            dropHint={text.mediaReferenceDrop}
+                        />
+                    ) : null}
 
                     {usesSessionEdit ? (
                         <p className="ai-image__edit-hint">{text.imageEditHint}</p>
@@ -5786,8 +6127,8 @@ function App() {
                     ) : null}
                 </div>
 
-                <footer className={`ai-chat__composer ${supportsSourceUpload ? '' : 'ai-chat__composer--no-attach'}`}>
-                    {supportsSourceUpload ? (
+                <footer className={`ai-chat__composer ${supportsSourceUpload ? 'ai-chat__composer--no-attach' : ''}`}>
+                    {!supportsSourceUpload ? (
                         <input
                             ref={imagePhotoInputRef}
                             type="file"
@@ -5798,7 +6139,7 @@ function App() {
                             onChange={handleImagePhotoSelect}
                         />
                     ) : null}
-                    {supportsSourceUpload ? (
+                    {!supportsSourceUpload ? (
                             <button
                                 type="button"
                             className="ai-chat__attach"
@@ -5810,7 +6151,7 @@ function App() {
                             </button>
                     ) : null}
                     <div className="ai-chat__composer-field">
-                        {supportsSourceUpload && imageAttachment ? (
+                        {!supportsSourceUpload && imageAttachment ? (
                             <div className="ai-chat__attachment-preview">
                                 <img src={imageAttachment.previewUrl} alt="" />
                                 <button
@@ -5867,12 +6208,26 @@ function App() {
             mediaModelsCatalog,
             priceResolver: (modelId) => getMediaModelMinPrice(mediaModelsCatalog[modelId] ?? { id: modelId, kind: 'video' }),
         });
-        const requiresImage = videoModelRequiresImage(videoModel);
-        const requiresVideo = videoModelRequiresVideo(videoModel);
+        const formatVideoOptionDelta = (barKey, value) => {
+            const optionKeyMap = {
+                duration: 'duration',
+                resolution: 'resolution',
+                generateAudio: 'generate_audio',
+            };
+            const optionKey = optionKeyMap[barKey] ?? barKey;
+            const catalogModel = activeVideoCatalogModel ?? { id: videoModel, kind: 'video' };
+            return getVideoOptionPriceDelta(catalogModel, optionKey, value, videoSelectedOptions);
+        };
+        const requiresImage = videoModelRequiresImage(videoModel, activeVideoCatalogModel);
+        const requiresVideo = videoModelRequiresVideo(videoModel, activeVideoCatalogModel);
+        const supportsOptionalImage = videoModelSupportsOptionalImage(videoModel, activeVideoCatalogModel);
+        const requiresFirstFrame = videoModelRequiresFirstFrame(videoModel, activeVideoCatalogModel);
+        const requiresLastFrame = videoModelRequiresLastFrame(videoModel, activeVideoCatalogModel);
         const isExtend = videoModel === 'seedance-v2-video-extend';
         const isUnifiedEdit = videoModel === 'seedance-v2-video-edit';
         const sessionVideoUrl = getLastSessionVideoUrl(videoSessionMessages) ?? generatedVideoUrl?.trim() ?? '';
-        const hasVideoContext = Boolean(requiresVideo && sessionVideoUrl);
+        const hasSessionVideo = Boolean(requiresVideo && sessionVideoUrl);
+        const hasVideoContext = Boolean(hasSessionVideo);
         const promptPlaceholder = hasVideoContext
             ? (isExtend ? text.videoExtendPlaceholder : text.videoEditPlaceholder)
             : text.videoPromptPlaceholder;
@@ -5918,6 +6273,9 @@ function App() {
                         generateAudio: videoGenerateAudio,
                         cameraFixed: videoCameraFixed,
                         turboMode: videoTurboMode,
+                        seed: videoSeed,
+                        enablePromptExpansion: videoEnablePromptExpansion,
+                        goFast: videoGoFast,
                     }}
                     onChange={handleVideoOptionChange}
                     labels={{
@@ -5950,6 +6308,9 @@ function App() {
                         generateAudio: text.mediaOptionGenerateAudio,
                         cameraFixed: text.mediaOptionCameraFixed,
                         turboMode: text.mediaOptionTurboMode,
+                        seed: text.mediaOptionSeed,
+                        enablePromptExpansion: text.mediaOptionEnablePromptExpansion,
+                        goFast: text.mediaOptionGoFast,
                         toggleOn: text.mediaToggleOn,
                         toggleOff: text.mediaToggleOff,
                         durationValue: (seconds) => `${seconds} ${language === 'en' ? 'sec' : 'сек'}`,
@@ -5957,40 +6318,110 @@ function App() {
                     disabled={isGeneratingVideo}
                     idPrefix="video"
                     collapsed
+                    formatOptionDelta={formatVideoOptionDelta}
                 />
 
                 {isUnifiedEdit ? (
                     <p className="ai-video__edit-hint">{text.videoEditTurboHint}</p>
                     ) : null}
 
-                {requiresImage ? (
-                    <label className="ai-video__source-field" htmlFor="ai-video-source-image">
-                        <span className="ai-image__label">{text.videoSourceImageLabel}</span>
-                        <input
-                            id="ai-video-source-image"
-                            className="ai-video__source-input"
-                            type="url"
-                            value={videoSourceImageUrl}
-                            onChange={(event) => setVideoSourceImageUrl(event.target.value)}
-                            placeholder={text.videoSourceImagePlaceholder}
-                            disabled={isGeneratingVideo}
-                        />
-                    </label>
+                {supportsOptionalImage ? (
+                    <MediaReferenceField
+                        kind="image"
+                        label={text.videoOptionalImageLabel}
+                        hint={text.videoOptionalImageHint}
+                        url={videoSourceImageUrl}
+                        onUrlChange={setVideoSourceImageUrl}
+                        attachment={videoSourceImageAttachment}
+                        onAttachmentClear={() => setVideoSourceImageAttachment(null)}
+                        onFileSelect={handleVideoSourceImageFile}
+                        disabled={isGeneratingVideo}
+                        idPrefix="video-optional-image"
+                        language={language}
+                        urlPlaceholder={text.mediaReferenceUrlPlaceholder}
+                        uploadLabel={text.mediaReferenceUpload}
+                        dropHint={text.mediaReferenceDrop}
+                    />
                 ) : null}
 
-                {requiresVideo && !hasVideoContext ? (
-                    <label className="ai-video__source-field" htmlFor="ai-video-source-video">
-                        <span className="ai-image__label">{text.videoSourceVideoLabel}</span>
-                        <input
-                            id="ai-video-source-video"
-                            className="ai-video__source-input"
-                            type="url"
-                            value={videoSourceVideoUrl}
-                            onChange={(event) => setVideoSourceVideoUrl(event.target.value)}
-                            placeholder={text.videoSourceVideoPlaceholder}
-                            disabled={isGeneratingVideo}
-                        />
-                    </label>
+                {requiresFirstFrame ? (
+                    <MediaReferenceField
+                        kind="image"
+                        label={text.videoFirstFrameLabel}
+                        hint={text.mediaReferenceImageHint}
+                        required
+                        url={videoFirstFrameUrl}
+                        onUrlChange={setVideoFirstFrameUrl}
+                        attachment={videoFirstFrameAttachment}
+                        onAttachmentClear={() => setVideoFirstFrameAttachment(null)}
+                        onFileSelect={handleVideoFirstFrameFile}
+                        disabled={isGeneratingVideo}
+                        idPrefix="video-first-frame"
+                        language={language}
+                        urlPlaceholder={text.mediaReferenceUrlPlaceholder}
+                        uploadLabel={text.mediaReferenceUpload}
+                        dropHint={text.mediaReferenceDrop}
+                    />
+                ) : null}
+
+                {requiresLastFrame ? (
+                    <MediaReferenceField
+                        kind="image"
+                        label={text.videoLastFrameLabel}
+                        hint={text.mediaReferenceImageHint}
+                        required
+                        url={videoLastFrameUrl}
+                        onUrlChange={setVideoLastFrameUrl}
+                        attachment={videoLastFrameAttachment}
+                        onAttachmentClear={() => setVideoLastFrameAttachment(null)}
+                        onFileSelect={handleVideoLastFrameFile}
+                        disabled={isGeneratingVideo}
+                        idPrefix="video-last-frame"
+                        language={language}
+                        urlPlaceholder={text.mediaReferenceUrlPlaceholder}
+                        uploadLabel={text.mediaReferenceUpload}
+                        dropHint={text.mediaReferenceDrop}
+                    />
+                ) : null}
+
+                {requiresImage ? (
+                    <MediaReferenceField
+                        kind="image"
+                        label={text.videoSourceImageLabel}
+                        hint={text.mediaReferenceImageHint}
+                        required
+                        url={videoSourceImageUrl}
+                        onUrlChange={setVideoSourceImageUrl}
+                        attachment={videoSourceImageAttachment}
+                        onAttachmentClear={() => setVideoSourceImageAttachment(null)}
+                        onFileSelect={handleVideoSourceImageFile}
+                        disabled={isGeneratingVideo}
+                        idPrefix="video-source-image"
+                        language={language}
+                        urlPlaceholder={text.mediaReferenceUrlPlaceholder}
+                        uploadLabel={text.mediaReferenceUpload}
+                        dropHint={text.mediaReferenceDrop}
+                    />
+                ) : null}
+
+                {requiresVideo ? (
+                    <MediaReferenceField
+                        kind="video"
+                        label={text.videoSourceVideoLabel}
+                        hint={hasSessionVideo ? `${text.mediaReferenceVideoHint}. ${text.videoSessionVideoHint}` : text.mediaReferenceVideoHint}
+                        required={!hasSessionVideo}
+                        url={videoSourceVideoUrl}
+                        onUrlChange={setVideoSourceVideoUrl}
+                        attachment={videoSourceVideoAttachment}
+                        onAttachmentClear={() => setVideoSourceVideoAttachment(null)}
+                        onFileSelect={handleVideoSourceVideoFile}
+                        disabled={isGeneratingVideo}
+                        idPrefix="video-source-video"
+                        language={language}
+                        urlPlaceholder={text.mediaReferenceVideoUrlPlaceholder}
+                        uploadLabel={text.mediaReferenceUpload}
+                        dropHint={text.mediaReferenceDrop}
+                    />
                 ) : null}
 
                 {hasVideoContext ? (
@@ -6300,6 +6731,16 @@ function App() {
         const requiresMultiImage = threeDModelRequiresMultiImage(threeDModel);
         const requiresPrompt = threeDModelRequiresPrompt(threeDModel);
         const promptOptional = !requiresPrompt;
+        const formatThreeDFaceCount = (value) => new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US').format(Math.round(value));
+        const formatThreeDOptionDelta = (barKey, value) => {
+            const optionKeyMap = {
+                generateType: 'generate_type',
+                enablePbr: 'enable_pbr',
+            };
+            const optionKey = optionKeyMap[barKey] ?? barKey;
+            const catalogModel = activeThreeDCatalogModel ?? { id: threeDModel, kind: '3d' };
+            return getThreeDOptionPriceDelta(catalogModel, optionKey, value, threeDSelectedOptions);
+        };
 
         return (
             <section className="ai-image-screen ai-image-screen--concept" aria-label={text.threeDGenerateTitle}>
@@ -6345,6 +6786,10 @@ function App() {
                             material: threeDMaterial,
                             geometryFileFormat: threeDGeometryFileFormat,
                             textureMode: threeDTextureMode,
+                            generateType: threeDGenerateType,
+                            faceCount: threeDFaceCount,
+                            enablePbr: threeDEnablePbr,
+                            enableGeometry: threeDEnableGeometry,
                         }}
                         onChange={handleThreeDOptionChange}
                         labels={{
@@ -6361,7 +6806,20 @@ function App() {
                             material: text.mediaOptionMaterial,
                             geometryFileFormat: text.mediaOptionGeometryFileFormat,
                             textureMode: text.mediaOptionTextureMode,
+                            generateType: text.mediaOptionGenerateType,
+                            faceCount: text.mediaOptionFaceCount,
+                            enablePbr: text.mediaOptionEnablePbr,
+                            enableGeometry: text.mediaOptionEnableGeometry,
+                            generateTypeValues: {
+                                Normal: text.mediaGenerateTypeNormal,
+                                LowPoly: text.mediaGenerateTypeLowPoly,
+                                Geometry: text.mediaGenerateTypeGeometry,
+                            },
+                            formatFaceCount: formatThreeDFaceCount,
+                            toggleOn: text.mediaToggleOn,
+                            toggleOff: text.mediaToggleOff,
                         }}
+                        formatOptionDelta={formatThreeDOptionDelta}
                         disabled={isGeneratingThreeD}
                         idPrefix="three-d"
                         collapsed

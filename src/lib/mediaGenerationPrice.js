@@ -7,6 +7,19 @@ const TTS_MODEL_IDS = new Set([
     'minimax-speech-2.6',
 ]);
 
+const QWEN_PIXEL_IMAGE_MODELS = new Set(['qwen-image', 'qwen-image-2512']);
+const Z_IMAGE_MODELS = new Set(['z-image-base', 'z-image-turbo']);
+const QWEN_IMAGE_BASE_PIXELS = 1024 * 1024;
+const Z_IMAGE_BASE_PIXELS = 1024 * 1024;
+
+/** Mirrors pkg/billing/image_option_prices.go grokImagineUSD */
+const GROK_IMAGINE_USD = {
+    '1k': 0.07,
+    '2k': 0.09,
+};
+
+const lc = (value) => String(value ?? '').trim().toLowerCase();
+
 const TTS_BASE_USD = {
     'qwen3-tts': 0.005,
     'qwen3-tts-clone': 0.005,
@@ -72,6 +85,61 @@ export function calculateTTSPrice(model, textLength, voiceClone = false) {
 }
 
 /**
+ * @param {unknown} size
+ */
+function parseImageSizePixels(size) {
+    const match = String(size ?? '').match(/(\d+)\s*[*x×]\s*(\d+)/i);
+    if (!match) {
+        return QWEN_IMAGE_BASE_PIXELS;
+    }
+    return Number(match[1]) * Number(match[2]);
+}
+
+/**
+ * @param {number} baseCoins
+ * @param {Record<string, unknown>} selected
+ */
+function qwenPixelImagePrice(baseCoins, selected) {
+    const width = Number(selected.width);
+    const height = Number(selected.height);
+    const pixels = width > 0 && height > 0
+        ? width * height
+        : parseImageSizePixels(selected.size);
+    return Math.max(1, Math.round(baseCoins * pixels / QWEN_IMAGE_BASE_PIXELS));
+}
+
+function zImagePixelPrice(baseCoins, selected) {
+    const width = Number(selected.width);
+    const height = Number(selected.height);
+    const pixels = width > 0 && height > 0
+        ? width * height
+        : parseImageSizePixels(selected.size);
+    return Math.max(1, Math.round(baseCoins * pixels / Z_IMAGE_BASE_PIXELS));
+}
+
+function normalizeGrokResolution(resolution) {
+    return lc(resolution) === '2k' ? '2k' : '1k';
+}
+
+/**
+ * Grok Imagine Edit: per-image USD by resolution × image count.
+ * @param {number} baseCoins
+ * @param {Record<string, unknown>} selected
+ */
+function grokImagineEditPrice(baseCoins, selected) {
+    const resolution = normalizeGrokResolution(selected.resolution);
+    let num = Number(selected.num_images ?? selected.numImages ?? 1);
+    if (!Number.isFinite(num) || num <= 0) {
+        num = 1;
+    }
+    if (num > 4) {
+        num = 4;
+    }
+    const perImageUSD = GROK_IMAGINE_USD[resolution] ?? GROK_IMAGINE_USD['1k'];
+    return cyberCoinsFromUSD(perImageUSD * num, baseCoins, GROK_IMAGINE_USD['1k']);
+}
+
+/**
  * @param {import('./types').MediaOption} option
  * @param {unknown} raw
  */
@@ -110,6 +178,18 @@ export function calculatePrice(model, selected = {}, context = {}) {
     }
 
     let price = model?.price ?? fallback;
+
+    if (kind === 'image' && QWEN_PIXEL_IMAGE_MODELS.has(modelId)) {
+        return qwenPixelImagePrice(price, selected);
+    }
+
+    if (kind === 'image' && Z_IMAGE_MODELS.has(modelId)) {
+        return zImagePixelPrice(price, selected);
+    }
+
+    if (kind === 'image' && modelId === 'grok-imagine-edit') {
+        return grokImagineEditPrice(price, selected);
+    }
 
     for (const option of model?.options ?? []) {
         if (option.key === 'text_length') {
@@ -226,8 +306,6 @@ const SEEDANCE_V2_EDIT_PER_SECOND_USD = {
     turbo: { '720p': 0.085, '1080p': 0.095 },
 };
 
-const lc = (value) => String(value ?? '').trim().toLowerCase();
-
 const isKlingModel = (id) => lc(id).startsWith('kling-v3');
 const isSeedance15Model = (id) => lc(id).startsWith('seedance-v1.5');
 const isWANModel = (id) => lc(id).startsWith('wan-');
@@ -257,9 +335,19 @@ function videoBillingModelId(p) {
     return modelId;
 }
 
+const VEO_EXTEND_BASE_USD = 1.05;
+const VEO_EXTEND_DEFAULT_DURATION = 4;
+
 function defaultVideoDuration(modelId) {
-    if (lc(modelId).startsWith('hailuo-2.3-t2v')) {
+    const id = lc(modelId);
+    if (id.startsWith('hailuo-2.3-i2v-pro')) {
+        return 5;
+    }
+    if (id.startsWith('hailuo-2.3')) {
         return 6;
+    }
+    if (id === 'veo-3.1-extend') {
+        return VEO_EXTEND_DEFAULT_DURATION;
     }
     return 5;
 }
@@ -277,6 +365,23 @@ function defaultVideoResolution(modelId) {
 }
 
 const defaultSeedance15Audio = (modelId) => isSeedance15Model(modelId);
+
+function defaultVideoGenerateAudio(modelId) {
+    const id = lc(modelId);
+    return id === 'veo-3.1-extend' || isSeedance15Model(id);
+}
+
+function veoExtendUSD(duration, resolution, generateAudio) {
+    const dur = normalizeVideoDuration(duration, VEO_EXTEND_DEFAULT_DURATION);
+    let usd = VEO_EXTEND_BASE_USD * (dur / VEO_EXTEND_DEFAULT_DURATION);
+    if (lc(resolution) === '720p') {
+        usd *= 0.85;
+    }
+    if (!generateAudio) {
+        usd *= 0.67;
+    }
+    return usd;
+}
 
 function normalizeVideoDuration(duration, fallback) {
     const value = Number(duration);
@@ -303,7 +408,7 @@ function hailuoUSD(modelId, duration) {
         case 'hailuo-2.3-t2v':
             return duration >= 10 ? 0.56 : 0.23;
         case 'hailuo-2.3-i2v-fast':
-            return 0.19;
+            return duration >= 10 ? 0.32 : 0.19;
         case 'hailuo-2.3-i2v-pro':
             return 0.49;
         default:
@@ -383,7 +488,8 @@ function videoGenerationUSD(p) {
         return happyHorseUSD(p.resolution, duration);
     }
     if (modelId === 'veo-3.1-extend') {
-        return 1.05;
+        const res = lc(p.resolution) || defaultVideoResolution(modelId);
+        return veoExtendUSD(duration, res, p.generateAudio);
     }
     if (modelId === 'vidu-q3-i2v-spicy') {
         return VIDU_PER_SECOND_USD[normalizeViduResolution(p.resolution)] * duration;
@@ -401,8 +507,18 @@ function defaultVideoUSD(modelId) {
         modelId,
         duration,
         resolution,
-        generateAudio: defaultSeedance15Audio(modelId),
+        generateAudio: defaultVideoGenerateAudio(modelId),
     });
+}
+
+function videoGenerateAudioFromSelected(modelId, selected) {
+    if (selected.generate_audio === false || selected.generate_audio === 'false') {
+        return false;
+    }
+    if (selected.generate_audio === true || selected.generate_audio === 'true') {
+        return true;
+    }
+    return defaultVideoGenerateAudio(modelId);
 }
 
 export function calculateVideoPrice(model, selected = {}) {
@@ -413,7 +529,7 @@ export function calculateVideoPrice(model, selected = {}) {
         extendBy: Number(selected.extend_by) || 0,
         resolution: selected.resolution != null ? String(selected.resolution) : '',
         sound: selected.sound === true || selected.sound === 'true',
-        generateAudio: selected.generate_audio === true || selected.generate_audio === 'true',
+        generateAudio: videoGenerateAudioFromSelected(modelId, selected),
         turboMode: selected.turbo_mode === true || selected.turbo_mode === 'true',
     };
 
@@ -430,6 +546,18 @@ export function calculateVideoPrice(model, selected = {}) {
 
     const baseUSD = defaultVideoUSD(effectiveId);
     return Math.max(1, cyberCoinsFromUSD(usd, base, baseUSD));
+}
+
+/**
+ * @param {import('./types').MediaModel | null | undefined} model
+ * @param {string} optionKey
+ * @param {unknown} value
+ * @param {Record<string, unknown>} [currentSelected]
+ */
+export function getVideoOptionPriceDelta(model, optionKey, value, currentSelected = {}) {
+    const basePrice = calculateVideoPrice(model, currentSelected);
+    const withValue = calculateVideoPrice(model, { ...currentSelected, [optionKey]: value });
+    return withValue - basePrice;
 }
 
 /* ------------------------------------------------------------------ *
@@ -499,6 +627,8 @@ const TRIPO_H31_DETAILED_GEOM = 0.20;
 const TRIPO_H31_QUAD_USD = 0.05;
 
 const HUNYUAN_RAPID_USD = 0.0225;
+const HUNYUAN_RAPID_I2D_USD = 0.225;
+const HUNYUAN_RAPID_PBR_USD = 0.15;
 const HUNYUAN_GEOMETRY_USD = 0.25;
 const HUNYUAN_NORMAL_USD = 0.375;
 const HUNYUAN_LOWPOLY_USD = 0.45;
@@ -547,6 +677,14 @@ function rodinV25USD(tier, addons) {
     return usd;
 }
 
+function hunyuanRapidT2DUSD(enablePbr) {
+    return HUNYUAN_RAPID_USD + (enablePbr ? HUNYUAN_RAPID_PBR_USD : 0);
+}
+
+function hunyuanRapidI2DUSD(enablePbr) {
+    return HUNYUAN_RAPID_I2D_USD + (enablePbr ? HUNYUAN_RAPID_PBR_USD : 0);
+}
+
 function threeDGenerationUSD(modelId, p) {
     switch (modelId) {
         case 'tripo3d-v2.5-i2d':
@@ -556,7 +694,9 @@ function threeDGenerationUSD(modelId, p) {
         case 'tripo3d-h3.1-i2d':
             return tripoH31USD(p);
         case 'hunyuan3d-v3.1-rapid':
-            return HUNYUAN_RAPID_USD;
+            return hunyuanRapidT2DUSD(p.enablePbr);
+        case 'hunyuan3d-v3.1-rapid-i2d':
+            return hunyuanRapidI2DUSD(p.enablePbr);
         case 'hunyuan3d-v3-t2d':
             return hunyuanV3USD(p.generateType);
         case 'meshy6-t2d':
@@ -580,6 +720,8 @@ function defaultThreeDUSD(modelId) {
             return tripoH31USD({ texture: true, textureSet: true, textureQuality: 'standard', geometryQuality: 'standard' });
         case 'hunyuan3d-v3.1-rapid':
             return HUNYUAN_RAPID_USD;
+        case 'hunyuan3d-v3.1-rapid-i2d':
+            return HUNYUAN_RAPID_I2D_USD;
         case 'hunyuan3d-v3-t2d':
             return HUNYUAN_NORMAL_USD;
         case 'meshy6-t2d':
@@ -593,10 +735,6 @@ function defaultThreeDUSD(modelId) {
     }
 }
 
-/**
- * @param {import('./types').MediaModel | null | undefined} model
- * @param {Record<string, unknown>} [selected]
- */
 export function calculateThreeDPrice(model, selected = {}) {
     const modelId = lc(model?.id);
     const base = model?.price ?? getModelPrice(modelId, '3d');
@@ -609,6 +747,8 @@ export function calculateThreeDPrice(model, selected = {}) {
         geometryQuality: selected.geometry_quality != null ? String(selected.geometry_quality) : '',
         quad: selected.quad === true || selected.quad === 'true',
         generateType: selected.generate_type != null ? String(selected.generate_type) : '',
+        enablePbr: selected.enable_pbr === true || selected.enable_pbr === 'true',
+        enablePbrSet: selected.enable_pbr != null,
         tier: selected.tier != null ? String(selected.tier) : '',
         addons: selected.addons != null ? String(selected.addons) : '',
     };
@@ -620,4 +760,25 @@ export function calculateThreeDPrice(model, selected = {}) {
 
     const baseUSD = defaultThreeDUSD(modelId);
     return Math.max(1, cyberCoinsFromUSD(usd, base, baseUSD));
+}
+
+/**
+ * @param {import('./types').MediaModel | null | undefined} model
+ * @param {string} optionKey
+ * @param {unknown} value
+ * @param {Record<string, unknown>} [currentSelected]
+ */
+export function getThreeDOptionPriceDelta(model, optionKey, value, currentSelected = {}) {
+    const modelId = lc(model?.id);
+    if (optionKey === 'generate_type' && modelId === 'hunyuan3d-v3-t2d') {
+        const basePrice = calculateThreeDPrice(model, currentSelected);
+        const nextPrice = calculateThreeDPrice(model, { ...currentSelected, generate_type: value });
+        return nextPrice - basePrice;
+    }
+    if (optionKey === 'enable_pbr' && (modelId === 'hunyuan3d-v3.1-rapid' || modelId === 'hunyuan3d-v3.1-rapid-i2d')) {
+        const basePrice = calculateThreeDPrice(model, currentSelected);
+        const nextPrice = calculateThreeDPrice(model, { ...currentSelected, enable_pbr: value === true || value === 'true' });
+        return nextPrice - basePrice;
+    }
+    return 0;
 }

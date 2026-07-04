@@ -2,6 +2,109 @@ const GPT_ASPECT_RATIOS = ['1:1', '3:2', '2:3', '3:4', '4:3', '4:5', '5:4', '9:1
 const RES_1K_4K = ['1k', '2k', '4k'];
 const QUALITY_LEVELS = ['low', 'medium', 'high'];
 
+/** @type {Record<string, { width: number, height: number }>} */
+export const FLUX_ASPECT_DIMENSIONS = {
+    '1:1': { width: 1024, height: 1024 },
+    '16:9': { width: 1024, height: 576 },
+    '9:16': { width: 576, height: 1024 },
+    '4:3': { width: 1024, height: 768 },
+    '3:4': { width: 768, height: 1024 },
+    '3:2': { width: 1152, height: 768 },
+    '2:3': { width: 768, height: 1152 },
+};
+
+export function getFluxDimensionsForAspect(aspectRatio) {
+    return FLUX_ASPECT_DIMENSIONS[aspectRatio] ?? FLUX_ASPECT_DIMENSIONS['1:1'];
+}
+
+/** @type {Record<string, { width: number, height: number }>} */
+export const SEEDREAM_ASPECT_DIMENSIONS_2K = {
+    '1:1': { width: 2048, height: 2048 },
+    '16:9': { width: 2560, height: 1440 },
+    '9:16': { width: 1440, height: 2560 },
+    '4:3': { width: 2688, height: 2016 },
+    '3:4': { width: 2016, height: 2688 },
+    '3:2': { width: 2688, height: 1792 },
+    '2:3': { width: 1792, height: 2688 },
+};
+
+const SEEDREAM_DIMENSIONS_MAX = 8192;
+
+const QWEN_DIMENSIONS_MIN = 384;
+const QWEN_DIMENSIONS_MAX = 2048;
+const QWEN_ASPECT_VALUES = ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'];
+
+/** @type {Record<string, { width: number, height: number }>} */
+export const QWEN_ASPECT_DIMENSIONS = {
+    '1:1': { width: 1024, height: 1024 },
+    '16:9': { width: 1280, height: 720 },
+    '9:16': { width: 720, height: 1280 },
+    '4:3': { width: 1280, height: 960 },
+    '3:4': { width: 960, height: 1280 },
+    '3:2': { width: 1280, height: 854 },
+    '2:3': { width: 854, height: 1280 },
+};
+
+const Z_IMAGE_DIMENSIONS_MIN = 256;
+const Z_IMAGE_DIMENSIONS_MAX = 1536;
+const Z_IMAGE_ASPECT_VALUES = ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'];
+
+const Z_IMAGE_BASE_OPTIONS = {
+    aspectRatio: { values: Z_IMAGE_ASPECT_VALUES, default: '1:1' },
+    dimensions: {
+        min: Z_IMAGE_DIMENSIONS_MIN,
+        max: Z_IMAGE_DIMENSIONS_MAX,
+        defaultWidth: 1024,
+        defaultHeight: 1024,
+    },
+    seed: { default: -1 },
+    outputFormat: { values: ['jpeg', 'png', 'webp'], default: 'jpeg' },
+};
+
+export function isSeedreamImageModel(modelId) {
+    const id = String(modelId || '').trim();
+    return id === 'seedream-v4.5' || id === 'seedream-v5.0-lite';
+}
+
+export function getSeedreamDimensionsForAspect(aspectRatio) {
+    return SEEDREAM_ASPECT_DIMENSIONS_2K[aspectRatio] ?? SEEDREAM_ASPECT_DIMENSIONS_2K['1:1'];
+}
+
+export function isQwenImageModel(modelId) {
+    const id = String(modelId || '').trim();
+    return id === 'qwen-image'
+        || id === 'qwen-image-2512'
+        || id === 'qwen-image-2.0'
+        || id === 'qwen-image-2.0-pro';
+}
+
+export function getQwenDimensionsForAspect(aspectRatio) {
+    if (!aspectRatio || aspectRatio === 'auto') {
+        return null;
+    }
+    return QWEN_ASPECT_DIMENSIONS[aspectRatio] ?? QWEN_ASPECT_DIMENSIONS['1:1'];
+}
+
+export function isZImageModel(modelId) {
+    const id = String(modelId || '').trim();
+    return id === 'z-image-base' || id === 'z-image-turbo';
+}
+
+export function getZImageDimensionsForAspect(aspectRatio) {
+    return FLUX_ASPECT_DIMENSIONS[aspectRatio] ?? FLUX_ASPECT_DIMENSIONS['1:1'];
+}
+
+const QWEN_IMAGE_BASE_OPTIONS = {
+    aspectRatio: { values: QWEN_ASPECT_VALUES, default: 'auto' },
+    dimensions: {
+        min: QWEN_DIMENSIONS_MIN,
+        max: QWEN_DIMENSIONS_MAX,
+        defaultWidth: 1024,
+        defaultHeight: 1024,
+    },
+    seed: { default: -1 },
+};
+
 export const IMAGE_MODEL_CAPABILITIES = {
     'nano-banana': {
         supportsEdit: true,
@@ -56,8 +159,14 @@ export const IMAGE_MODEL_CAPABILITIES = {
         },
     },
     'flux-dev': {
+        supportsEdit: true,
         options: {
-            aspectRatio: { values: ['1:1', '16:9', '9:16'], default: '1:1' },
+            aspectRatio: {
+                values: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'],
+                default: '1:1',
+            },
+            dimensions: { min: 256, max: 2048, defaultWidth: 1024, defaultHeight: 1024 },
+            seed: { default: -1 },
         },
     },
     'alice-ai-art': {
@@ -67,7 +176,11 @@ export const IMAGE_MODEL_CAPABILITIES = {
         supportsEdit: true,
         supportsMulti: true,
         options: {
-            aspectRatio: { values: ['1:1', '16:9', '9:16', '4:3', '3:4'], default: '1:1' },
+            aspectRatio: {
+                values: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'],
+                default: '1:1',
+            },
+            dimensions: { min: 512, max: SEEDREAM_DIMENSIONS_MAX, defaultWidth: 2048, defaultHeight: 2048 },
             outputFormat: { values: ['jpeg', 'png', 'webp'], default: 'jpeg' },
         },
     },
@@ -75,48 +188,46 @@ export const IMAGE_MODEL_CAPABILITIES = {
         supportsEdit: true,
         supportsMulti: true,
         options: {
-            aspectRatio: { values: ['1:1', '16:9', '9:16', '4:3', '3:4'], default: '1:1' },
+            aspectRatio: {
+                values: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'],
+                default: '1:1',
+            },
+            dimensions: { min: 512, max: SEEDREAM_DIMENSIONS_MAX, defaultWidth: 2048, defaultHeight: 2048 },
             outputFormat: { values: ['jpeg', 'png', 'webp'], default: 'jpeg' },
         },
     },
     'qwen-image': {
         options: {
-            size: {
-                values: ['1024*1024', '1024x1024'],
-                default: '1024*1024',
-                valuePrices: { '1328*1328': 3 },
-            },
+            ...QWEN_IMAGE_BASE_OPTIONS,
         },
     },
     'qwen-image-2512': {
         options: {
-            size: {
-                values: ['1024*1024', '1328*1328'],
-                default: '1024*1024',
-                valuePrices: { '1328*1328': 3 },
-            },
+            ...QWEN_IMAGE_BASE_OPTIONS,
             negativePrompt: { default: '' },
         },
     },
     'qwen-image-2.0': {
         options: {
-            aspectRatio: { values: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'], default: '16:9' },
+            ...QWEN_IMAGE_BASE_OPTIONS,
+            aspectRatio: { values: QWEN_ASPECT_VALUES, default: '16:9' },
         },
     },
     'qwen-image-2.0-pro': {
         supportsEdit: true,
-        options: {},
+        options: {
+            ...QWEN_IMAGE_BASE_OPTIONS,
+        },
     },
     'z-image-base': {
         supportsEdit: true,
         options: {
-            size: { values: ['1024*1024'], default: '1024*1024' },
-            negativePrompt: { default: '' },
+            ...Z_IMAGE_BASE_OPTIONS,
         },
     },
     'z-image-turbo': {
         options: {
-            size: { values: ['1024*1024'], default: '1024*1024' },
+            ...Z_IMAGE_BASE_OPTIONS,
         },
     },
     'grok-imagine-edit': {
@@ -159,12 +270,14 @@ const KLING_BASE_OPTIONS = {
 
 export const VIDEO_MODEL_CAPABILITIES = {
     'kling-v3-std': {
+        supportsOptionalImage: true,
         options: {
             ...KLING_BASE_OPTIONS,
             resolution: { values: KLING_RESOLUTIONS, default: '720p' },
         },
     },
     'kling-v3-pro': {
+        supportsOptionalImage: true,
         options: {
             ...KLING_BASE_OPTIONS,
             resolution: { values: KLING_RESOLUTIONS, default: '1080p' },
@@ -172,6 +285,7 @@ export const VIDEO_MODEL_CAPABILITIES = {
         },
     },
     'kling-v3-4k': {
+        supportsOptionalImage: true,
         options: {
             ...KLING_BASE_OPTIONS,
             resolution: { values: KLING_RESOLUTIONS, default: '4k' },
@@ -197,6 +311,7 @@ export const VIDEO_MODEL_CAPABILITIES = {
         },
     },
     'seedance-v1.5-t2v-fast': {
+        supportsOptionalImage: true,
         options: {
             aspectRatio: { values: SEEDANCE_V15_ASPECT, default: '16:9' },
             duration: { values: [4, 5, 8, 10, 12], default: 5 },
@@ -233,6 +348,7 @@ export const VIDEO_MODEL_CAPABILITIES = {
         },
     },
     'wan-2.5-t2v': {
+        supportsOptionalImage: true,
         options: {
             duration: { values: [2, 5, 10, 15], default: 5 },
             resolution: { values: ['480P', '720P', '1080P'], default: '720P' },
@@ -240,24 +356,55 @@ export const VIDEO_MODEL_CAPABILITIES = {
         },
     },
     'wan-2.6-i2v': { requiresImage: true, options: { duration: { values: [5, 8], default: 5 }, resolution: { values: ['480P', '720P'], default: '720P' } } },
-    'wan-2.7-t2v': { options: { duration: { values: [5, 10, 15], default: 5 }, resolution: { values: ['720P', '1080P'], default: '1080P' }, negativePrompt: { default: '' } } },
-    'wan-2.7-flf': { options: { duration: { values: [5, 10], default: 5 } } },
+    'wan-2.7-t2v': { supportsOptionalImage: true, options: { duration: { values: [5, 10, 15], default: 5 }, resolution: { values: ['720P', '1080P'], default: '1080P' }, negativePrompt: { default: '' } } },
+    'wan-2.7-flf': {
+        requiresFirstFrame: true,
+        requiresLastFrame: true,
+        options: { duration: { values: [5, 10], default: 5 } },
+    },
     'wan-2.7-grid': { requiresImage: true, options: { duration: { values: [5, 10], default: 5 } } },
     'wan-2.7-edit': { requiresVideo: true, options: {} },
     'wan-2.2-spicy-i2v': { requiresImage: true, options: { duration: { values: [5, 8], default: 5 }, resolution: { values: ['480p', '720p'], default: '720p' } } },
-    'happyhorse-t2v': { options: { aspectRatio: { values: ['16:9', '9:16', '1:1', '4:3', '3:4'], default: '16:9' }, duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
+    'happyhorse-t2v': { supportsOptionalImage: true, options: { aspectRatio: { values: ['16:9', '9:16', '1:1', '4:3', '3:4'], default: '16:9' }, duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
     'happyhorse-i2v': { requiresImage: true, options: { duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
     'happyhorse-ref2v': { requiresImage: true, options: { duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
     'happyhorse-video-edit': { requiresVideo: true, options: {} },
     'happyhorse-video-extend': { requiresVideo: true, options: { duration: { values: [3, 5, 10], default: 5 } } },
-    'sora-2-t2v': { options: { duration: { values: [5, 10], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
+    'sora-2-t2v': { supportsOptionalImage: true, options: { duration: { values: [5, 10], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
     'sora-2-i2v': { requiresImage: true, options: { duration: { values: [5, 10], default: 5 } } },
-    'sora-2-t2v-pro': { options: { duration: { values: [5, 10], default: 5 } } },
-    'veo-3.1-extend': { requiresVideo: true, options: { resolution: { values: ['720p', '1080p'], default: '1080p' }, negativePrompt: { default: '' } } },
+    'sora-2-t2v-pro': { supportsOptionalImage: true, options: { duration: { values: [5, 10], default: 5 } } },
+    'veo-3.1-extend': {
+        requiresVideo: true,
+        options: {
+            duration: { values: [4, 7], default: 4 },
+            resolution: { values: ['720p', '1080p'], default: '1080p' },
+            negativePrompt: { default: '' },
+            seed: { default: -1 },
+            generateAudio: { default: true },
+        },
+    },
     'vidu-q3-i2v-spicy': { requiresImage: true, options: { duration: { values: [1, 5, 10, 16], default: 5 }, resolution: { values: ['540p', '720p', '1080p'], default: '720p' }, generateAudio: { default: true } } },
-    'hailuo-2.3-t2v': { options: { duration: { values: [6], default: 6 } } },
-    'hailuo-2.3-i2v-fast': { requiresImage: true, options: { duration: { values: [6], default: 6 } } },
-    'hailuo-2.3-i2v-pro': { requiresImage: true, options: { duration: { values: [6], default: 6 } } },
+    'hailuo-2.3-t2v': {
+        options: {
+            duration: { values: [6, 10], default: 6 },
+            enablePromptExpansion: { default: true },
+        },
+    },
+    'hailuo-2.3-i2v-fast': {
+        requiresImage: true,
+        options: {
+            duration: { values: [6, 10], default: 6 },
+            enablePromptExpansion: { default: true },
+            goFast: { default: true },
+        },
+    },
+    'hailuo-2.3-i2v-pro': {
+        requiresImage: true,
+        options: {
+            duration: { values: [5], default: 5 },
+            enablePromptExpansion: { default: true },
+        },
+    },
 };
 
 function buildDefaults(capabilities) {
@@ -288,6 +435,12 @@ function buildDefaults(capabilities) {
     if (options.turboMode) {
         defaults.turboMode = options.turboMode.default;
     }
+    if (options.enablePromptExpansion) {
+        defaults.enablePromptExpansion = options.enablePromptExpansion.default !== false;
+    }
+    if (options.goFast) {
+        defaults.goFast = options.goFast.default !== false;
+    }
     if (options.negativePrompt) {
         defaults.negativePrompt = options.negativePrompt.default ?? '';
     }
@@ -316,6 +469,37 @@ function buildDefaults(capabilities) {
     }
     if (options.numImages) {
         defaults.numImages = options.numImages.default ?? '1';
+    }
+    if (options.seed) {
+        defaults.seed = options.seed.default ?? -1;
+    }
+    if (options.dimensions && options.aspectRatio && options.dimensions.max === SEEDREAM_DIMENSIONS_MAX) {
+        const dims = getSeedreamDimensionsForAspect(options.aspectRatio.default ?? '1:1');
+        defaults.width = dims.width;
+        defaults.height = dims.height;
+        defaults.size = `${dims.width}*${dims.height}`;
+    } else if (options.dimensions && options.aspectRatio && options.dimensions.min === QWEN_DIMENSIONS_MIN) {
+        const dims = getQwenDimensionsForAspect(options.aspectRatio.default ?? 'auto');
+        if (dims) {
+            defaults.width = dims.width;
+            defaults.height = dims.height;
+        } else {
+            defaults.width = options.dimensions.defaultWidth ?? 1024;
+            defaults.height = options.dimensions.defaultHeight ?? 1024;
+        }
+        defaults.size = `${defaults.width}*${defaults.height}`;
+    } else if (options.dimensions && options.aspectRatio && options.dimensions.max === Z_IMAGE_DIMENSIONS_MAX) {
+        const dims = getZImageDimensionsForAspect(options.aspectRatio.default ?? '1:1');
+        defaults.width = dims.width;
+        defaults.height = dims.height;
+        defaults.size = `${dims.width}*${dims.height}`;
+    } else if (options.dimensions && options.aspectRatio) {
+        const dims = getFluxDimensionsForAspect(options.aspectRatio.default ?? '1:1');
+        defaults.width = dims.width;
+        defaults.height = dims.height;
+    } else if (options.dimensions) {
+        defaults.width = options.dimensions.defaultWidth ?? 1024;
+        defaults.height = options.dimensions.defaultHeight ?? 1024;
     }
     if (options.language) {
         defaults.language = options.language.default;
@@ -373,6 +557,18 @@ function buildDefaults(capabilities) {
     }
     if (options.textureMode) {
         defaults.textureMode = options.textureMode.default;
+    }
+    if (options.generateType) {
+        defaults.generateType = options.generateType.default;
+    }
+    if (options.faceCount) {
+        defaults.faceCount = options.faceCount.default ?? 500000;
+    }
+    if (options.enablePbr) {
+        defaults.enablePbr = options.enablePbr.default === true;
+    }
+    if (options.enableGeometry) {
+        defaults.enableGeometry = options.enableGeometry.default === true;
     }
 
     return defaults;
@@ -518,10 +714,24 @@ export const THREE_D_MODEL_CAPABILITIES = {
     'hunyuan3d-v3-t2d': {
         options: {
             negativePrompt: { default: '' },
+            generateType: { values: ['Normal', 'LowPoly', 'Geometry'], default: 'Normal' },
+            faceCount: { min: 40000, max: 1500000, default: 500000, step: 10000 },
+            enablePbr: { default: false },
         },
     },
     'hunyuan3d-v3.1-rapid': {
-        options: {},
+        options: {
+            generateType: { values: ['Normal', 'Geometry'], default: 'Normal' },
+            faceCount: { min: 40000, max: 1500000, default: 500000, step: 10000 },
+            enablePbr: { default: false },
+        },
+    },
+    'hunyuan3d-v3.1-rapid-i2d': {
+        requiresImage: true,
+        options: {
+            enablePbr: { default: false },
+            enableGeometry: { default: false },
+        },
     },
     'meshy6-t2d': {
         options: {
@@ -563,12 +773,6 @@ export function imageModelSupportsEdit(modelId) {
 }
 
 export function imageModelSupportsSourceUpload(modelId) {
-    const id = String(modelId || '').trim().toLowerCase();
-    return id === 'nano-banana'
-        || id === 'nano-banana-pro'
-        || id === 'nano-banana-2'
-        || id.startsWith('seedream-')
-        || id === 'qwen-image-2.0-pro'
-        || id === 'z-image-base'
-        || id === 'grok-imagine-edit';
+    const caps = getImageModelCapabilities(modelId);
+    return Boolean(caps.supportsEdit || caps.supportsMulti);
 }

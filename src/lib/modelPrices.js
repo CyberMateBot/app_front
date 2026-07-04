@@ -67,6 +67,7 @@ const MODEL_PRICES = {
     'mureka-v9': 50,
     'ace-step-1.5': 40,
     'hunyuan3d-v3.1-rapid': 25,
+    'hunyuan3d-v3.1-rapid-i2d': 250,
     'hunyuan3d-v3-t2d': 30,
     'tripo3d-v2.5-i2d': 48,
     'tripo3d-v2.5-multiview': 48,

@@ -1,5 +1,30 @@
 import { getVideoModelCapabilities } from '../config/mediaModelOptions.js';
 
+/**
+ * @typedef {import('./types').MediaModel | null | undefined} CatalogModel
+ */
+
+/**
+ * @param {string} modelId
+ * @param {CatalogModel} [catalogModel]
+ */
+export function resolveVideoMediaFlags(modelId, catalogModel) {
+    const local = getVideoModelCapabilities(modelId);
+
+    return {
+        requiresImage: Boolean(local.requiresImage || catalogModel?.requires_image),
+        requiresVideo: Boolean(local.requiresVideo || catalogModel?.requires_video),
+        requiresFirstFrame: Boolean(local.requiresFirstFrame),
+        requiresLastFrame: Boolean(local.requiresLastFrame),
+        supportsOptionalImage: Boolean(
+            local.supportsOptionalImage
+            && !local.requiresImage
+            && !local.requiresFirstFrame
+            && !local.requiresLastFrame,
+        ),
+    };
+}
+
 /** @returns {string|null} */
 export function getLastSessionVideoUrl(messages) {
     if (!Array.isArray(messages)) {
@@ -38,12 +63,44 @@ export function getLastSessionSourceImageUrl(messages) {
     return null;
 }
 
-export function videoModelRequiresImage(modelId) {
-    return Boolean(getVideoModelCapabilities(modelId).requiresImage);
+/**
+ * @param {string} modelId
+ * @param {CatalogModel} [catalogModel]
+ */
+export function videoModelRequiresImage(modelId, catalogModel) {
+    return resolveVideoMediaFlags(modelId, catalogModel).requiresImage;
 }
 
-export function videoModelRequiresVideo(modelId) {
-    return Boolean(getVideoModelCapabilities(modelId).requiresVideo);
+/**
+ * @param {string} modelId
+ * @param {CatalogModel} [catalogModel]
+ */
+export function videoModelRequiresVideo(modelId, catalogModel) {
+    return resolveVideoMediaFlags(modelId, catalogModel).requiresVideo;
+}
+
+/**
+ * @param {string} modelId
+ * @param {CatalogModel} [catalogModel]
+ */
+export function videoModelSupportsOptionalImage(modelId, catalogModel) {
+    return resolveVideoMediaFlags(modelId, catalogModel).supportsOptionalImage;
+}
+
+/**
+ * @param {string} modelId
+ * @param {CatalogModel} [catalogModel]
+ */
+export function videoModelRequiresFirstFrame(modelId, catalogModel) {
+    return resolveVideoMediaFlags(modelId, catalogModel).requiresFirstFrame;
+}
+
+/**
+ * @param {string} modelId
+ * @param {CatalogModel} [catalogModel]
+ */
+export function videoModelRequiresLastFrame(modelId, catalogModel) {
+    return resolveVideoMediaFlags(modelId, catalogModel).requiresLastFrame;
 }
 
 export function videoModelSupportsEdit(modelId) {

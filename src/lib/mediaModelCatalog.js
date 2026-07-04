@@ -1,5 +1,5 @@
 import { getModelPrice } from './modelPrices.js';
-import { getImageModelCapabilities } from '../config/mediaModelOptions.js';
+import { getImageModelCapabilities, getImageModelDefaults, getQwenDimensionsForAspect, getSeedreamDimensionsForAspect, getZImageDimensionsForAspect, isQwenImageModel, isSeedreamImageModel, isZImageModel } from '../config/mediaModelOptions.js';
 
 const KIND_BY_PAYLOAD_KEY = {
     image_models: 'image',
@@ -18,6 +18,12 @@ export const IMAGE_BAR_TO_OPTION = {
     imageSearch: 'image_search',
     size: 'size',
     numImages: 'num_images',
+    seed: 'seed',
+    width: 'width',
+    height: 'height',
+    strength: 'strength',
+    guidanceScale: 'guidance_scale',
+    numInferenceSteps: 'num_inference_steps',
 };
 
 /** @type {Record<string, string>} */
@@ -31,6 +37,9 @@ export const VIDEO_BAR_TO_OPTION = {
     cameraFixed: 'camera_fixed',
     turboMode: 'turbo_mode',
     extendBy: 'extend_by',
+    seed: 'seed',
+    enablePromptExpansion: 'enable_prompt_expansion',
+    goFast: 'go_fast',
 };
 
 /** @type {Record<string, string>} */
@@ -61,6 +70,9 @@ export const THREE_D_BAR_TO_OPTION = {
     texture: 'texture',
     quad: 'quad',
     generateType: 'generate_type',
+    faceCount: 'face_limit',
+    enablePbr: 'enable_pbr',
+    enableGeometry: 'enable_geometry',
     addons: 'addons',
     negativePrompt: 'negative_prompt',
 };
@@ -97,6 +109,8 @@ export function normalizeMediaModel(raw, kind = 'image') {
             : getModelPrice(id, resolvedKind === '3d' ? '3d' : resolvedKind),
         supports_edit: Boolean(model.supports_edit),
         supports_multi: Boolean(model.supports_multi),
+        requires_image: Boolean(model.requires_image),
+        requires_video: Boolean(model.requires_video),
         options,
     };
 }
@@ -250,8 +264,14 @@ export function applyBarChange(selected, barKey, value, barToOption) {
         || optionKey === 'duration'
         || optionKey === 'extend_by'
         || optionKey === 'number_of_songs'
+        || optionKey === 'num_inference_steps'
+        || optionKey === 'seed'
+        || optionKey === 'width'
+        || optionKey === 'height'
     ) {
         normalized = Number(value) || value;
+    } else if (optionKey === 'guidance_scale' || optionKey === 'strength') {
+        normalized = Number(value);
     }
 
     return { ...selected, [optionKey]: normalized };
@@ -276,6 +296,10 @@ export function selectedToBarValues(selected, barToOption) {
             || optionKey === 'number_of_songs'
             || optionKey === 'duration'
             || optionKey === 'extend_by'
+            || optionKey === 'num_inference_steps'
+            || optionKey === 'seed'
+            || optionKey === 'width'
+            || optionKey === 'height'
         ) ? String(value) : value;
     }
 
@@ -297,6 +321,12 @@ export function pickImageGenerateParams(modelId, catalog, selected) {
         image_search: 'imageSearch',
         size: 'size',
         num_images: 'numImages',
+        seed: 'seed',
+        width: 'width',
+        height: 'height',
+        strength: 'strength',
+        guidance_scale: 'guidanceScale',
+        num_inference_steps: 'numInferenceSteps',
     });
 }
 
@@ -316,6 +346,9 @@ export function pickVideoGenerateParams(modelId, catalog, selected) {
         camera_fixed: 'cameraFixed',
         turbo_mode: 'turboMode',
         extend_by: 'extendBy',
+        seed: 'seed',
+        enable_prompt_expansion: 'enablePromptExpansion',
+        go_fast: 'goFast',
     });
 }
 
@@ -375,6 +408,9 @@ export function pickThreeDGenerateParams(modelId, catalog, selected) {
         texture: 'texture',
         quad: 'quad',
         generate_type: 'generateType',
+        face_limit: 'faceLimit',
+        enable_pbr: 'enablePbr',
+        enable_geometry: 'enableGeometry',
         addons: 'addons',
     });
 }
@@ -387,13 +423,20 @@ export function pickThreeDGenerateParams(modelId, catalog, selected) {
  */
 function pickGenerateParams(modelId, catalog, selected, keyMap) {
     const apiModel = catalog?.[modelId];
-    const optionKeys = apiModel?.options?.map((opt) => opt.key) ?? Object.keys(selected);
+    const catalogKeys = apiModel?.options?.map((opt) => opt.key) ?? [];
+    const optionKeys = catalogKeys.length > 0
+        ? [...new Set([...catalogKeys, ...Object.keys(selected)])]
+        : Object.keys(selected);
     /** @type {Record<string, unknown>} */
     const params = {};
 
     for (const key of optionKeys) {
         const value = selected[key];
         if (value == null || value === '') {
+            continue;
+        }
+
+        if (key === 'aspect_ratio' && String(value).toLowerCase() === 'auto') {
             continue;
         }
 
@@ -409,12 +452,28 @@ function pickGenerateParams(modelId, catalog, selected, keyMap) {
             || key === 'generate_audio'
             || key === 'camera_fixed'
             || key === 'turbo_mode'
+            || key === 'enable_prompt_expansion'
+            || key === 'go_fast'
             || key === 'texture'
             || key === 'quad'
+            || key === 'enable_pbr'
+            || key === 'enable_geometry'
         ) {
             params[paramKey] = Boolean(value);
-        } else if (key === 'num_images' || key === 'duration' || key === 'extend_by' || key === 'number_of_songs') {
+        } else if (
+            key === 'num_images'
+            || key === 'duration'
+            || key === 'extend_by'
+            || key === 'number_of_songs'
+            || key === 'num_inference_steps'
+            || key === 'seed'
+            || key === 'width'
+            || key === 'height'
+            || key === 'face_limit'
+        ) {
             params[paramKey] = Number(value) || value;
+        } else if (key === 'guidance_scale' || key === 'strength') {
+            params[paramKey] = Number(value);
         } else {
             params[paramKey] = value;
         }
@@ -432,11 +491,51 @@ export const OPTION_KEY_TO_BAR = Object.fromEntries(
 );
 
 export function buildImageOptionsFromModel(modelId, catalog) {
+    const staticSelected = barValuesToSelected(getImageModelDefaults(modelId), IMAGE_BAR_TO_OPTION);
     const model = catalog?.[modelId];
-    if (model?.options?.length) {
-        return buildSelectedFromModel(model);
+    const selected = !model?.options?.length
+        ? staticSelected
+        : { ...staticSelected, ...buildSelectedFromModel(model) };
+
+    if (isSeedreamImageModel(modelId)) {
+        const { resolution: _resolution, ...seedreamSelected } = selected;
+        const aspect = String(seedreamSelected.aspect_ratio ?? '1:1');
+        const dims = getSeedreamDimensionsForAspect(aspect);
+        return {
+            ...seedreamSelected,
+            width: dims.width,
+            height: dims.height,
+            size: `${dims.width}*${dims.height}`,
+        };
     }
-    return {};
+
+    if (isQwenImageModel(modelId)) {
+        const { size: _size, ...qwenSelected } = selected;
+        const aspect = String(qwenSelected.aspect_ratio ?? 'auto');
+        const dims = getQwenDimensionsForAspect(aspect);
+        const width = dims?.width ?? (Number(qwenSelected.width) || 1024);
+        const height = dims?.height ?? (Number(qwenSelected.height) || 1024);
+        return {
+            ...qwenSelected,
+            width,
+            height,
+            size: `${width}*${height}`,
+        };
+    }
+
+    if (isZImageModel(modelId)) {
+        const { size: _size, negative_prompt: _negativePrompt, ...zSelected } = selected;
+        const aspect = String(zSelected.aspect_ratio ?? '1:1');
+        const dims = getZImageDimensionsForAspect(aspect);
+        return {
+            ...zSelected,
+            width: dims.width,
+            height: dims.height,
+            size: `${dims.width}*${dims.height}`,
+        };
+    }
+
+    return selected;
 }
 
 export function buildVideoSelectedFromApp(state) {
@@ -450,6 +549,9 @@ export function buildVideoSelectedFromApp(state) {
         camera_fixed: state.cameraFixed,
         turbo_mode: state.turboMode,
         extend_by: state.extendBy,
+        seed: state.seed,
+        enable_prompt_expansion: state.enablePromptExpansion,
+        go_fast: state.goFast,
     };
 }
 
@@ -479,6 +581,10 @@ export function buildThreeDSelectedFromApp(state) {
         material: state.material,
         geometry_file_format: state.geometryFileFormat,
         texture_mode: state.textureMode,
+        generate_type: state.generateType,
+        face_limit: state.faceCount,
+        enable_pbr: state.enablePbr,
+        enable_geometry: state.enableGeometry,
     };
 }
 
@@ -510,6 +616,15 @@ export function resolveImageCapabilities(modelId, catalog) {
     const options = { ...staticCaps.options };
 
     for (const opt of apiModel.options) {
+        if (isSeedreamImageModel(modelId) && opt.key === 'resolution') {
+            continue;
+        }
+        if (isQwenImageModel(modelId) && opt.key === 'size') {
+            continue;
+        }
+        if (isZImageModel(modelId) && (opt.key === 'size' || opt.key === 'negative_prompt')) {
+            continue;
+        }
         const barKey = OPTION_KEY_TO_BAR[opt.key] ?? opt.key;
         const existing = /** @type {Record<string, unknown>} */ (options[barKey] ?? {});
         options[barKey] = {

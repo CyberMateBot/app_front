@@ -18,6 +18,8 @@
  * @property {number} [price]
  * @property {boolean} [supports_edit]
  * @property {boolean} [supports_multi]
+ * @property {boolean} [requires_image]
+ * @property {boolean} [requires_video]
  * @property {MediaOption[]} [options]
  */
 
