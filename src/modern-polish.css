@@ -514,6 +514,20 @@ html[data-tg-layout='desktop-full'] .home-screen--widgets {
   margin-inline: auto;
 }
 
+html[data-tg-layout='desktop-full'][data-tg-fullscreen='1'] .home-screen--widgets,
+html[data-tg-fullscreen='1'] .home-screen--widgets {
+  max-width: 100%;
+  margin-inline: 0;
+}
+
+html[data-tg-layout='desktop-full'][data-tg-fullscreen='1'] .home-news-widget,
+html[data-tg-fullscreen='1'] .home-news-widget {
+  flex: 1 1 auto;
+  min-height: 160px;
+  max-height: min(42vh, 420px);
+  aspect-ratio: auto;
+}
+
 html[data-tg-layout='desktop-full'] .home-news-widget {
   aspect-ratio: 16 / 9;
   max-height: 300px;
@@ -547,6 +561,10 @@ html[data-tg-layout='desktop-full'] .home-news-widget__desc {
 
 html[data-tg-layout='desktop-full'] .app-main {
   contain: layout style;
+}
+
+html[data-tg-layout='desktop-full'] .app-shell[data-page='home'] .app-main {
+  contain: none;
 }
 
 html[data-tg-layout='desktop-full'] .subscription-page__plans {
