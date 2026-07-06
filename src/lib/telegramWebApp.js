@@ -11,6 +11,7 @@ const EXPAND_DISMISS_KEY = 'cybermate.tg_expand_dismissed';
 const layoutListeners = new Set();
 let desktopFullscreenUnsupported = false;
 let desktopEventBridgeInstalled = false;
+let viewportResizeBound = false;
 
 const DESKTOP_PARENT_ORIGINS = [
     'https://web.telegram.org',
@@ -889,20 +890,51 @@ export function waitForTelegramWebApp({ timeoutMs = 12000, intervalMs = 50 } = {
     });
 }
 
+function resolveAppHeight(tg) {
+    const stable = Number(tg?.viewportStableHeight);
+    const current = Number(tg?.viewportHeight);
+    const windowHeight = typeof window !== 'undefined' ? Number(window.innerHeight) : 0;
+    const visualHeight = typeof window !== 'undefined' && window.visualViewport
+        ? Number(window.visualViewport.height)
+        : 0;
+    const layoutMode = resolveTelegramLayoutMode(tg);
+    const isFullscreen = Boolean(tg?.isFullscreen || readLaunchFullscreenFlag());
+    const shouldFillViewport = isFullscreen || layoutMode === 'desktop-full';
+
+    const tgPreferred = Number.isFinite(stable) && stable > 0
+        ? stable
+        : (Number.isFinite(current) && current > 0 ? current : 0);
+
+    if (shouldFillViewport) {
+        return Math.max(
+            tgPreferred,
+            Number.isFinite(current) && current > 0 ? current : 0,
+            Number.isFinite(visualHeight) && visualHeight > 0 ? visualHeight : 0,
+            Number.isFinite(windowHeight) && windowHeight > 0 ? windowHeight : 0,
+            0,
+        );
+    }
+
+    if (tgPreferred > 0) {
+        return tgPreferred;
+    }
+    if (Number.isFinite(current) && current > 0) {
+        return current;
+    }
+    if (Number.isFinite(visualHeight) && visualHeight > 0) {
+        return visualHeight;
+    }
+    return Number.isFinite(windowHeight) && windowHeight > 0 ? windowHeight : 0;
+}
+
 function applyTelegramLayoutVars(tg) {
     if (typeof document === 'undefined') {
         return;
     }
 
     const root = document.documentElement;
-    const rawHeight = tg?.viewportStableHeight || tg?.viewportHeight;
-    const tgHeight = Number(rawHeight);
-    const windowHeight = typeof window !== 'undefined' ? Number(window.innerHeight) : 0;
-    const height = (
-        Number.isFinite(tgHeight) && tgHeight > 0
-            ? tgHeight
-            : (Number.isFinite(windowHeight) && windowHeight > 0 ? windowHeight : 0)
-    );
+    const height = resolveAppHeight(tg);
+    const isFullscreen = Boolean(tg?.isFullscreen || readLaunchFullscreenFlag());
 
     if (height > 0) {
         root.style.setProperty('--app-height', `${height}px`);
@@ -910,12 +942,32 @@ function applyTelegramLayoutVars(tg) {
         root.style.removeProperty('--app-height');
     }
 
+    root.dataset.tgFullscreen = isFullscreen ? '1' : '0';
+    if (typeof document.body !== 'undefined' && document.body) {
+        document.body.dataset.tgFullscreen = isFullscreen ? '1' : '0';
+    }
+
     const inset = tg?.safeAreaInset ?? tg?.contentSafeAreaInset;
 
     if (inset) {
         root.style.setProperty('--page-pad-top', `${inset.top ?? 0}px`);
         root.style.setProperty('--page-pad-bottom', `${inset.bottom ?? 0}px`);
+    } else {
+        root.style.removeProperty('--page-pad-top');
+        root.style.removeProperty('--page-pad-bottom');
     }
+}
+
+function bindViewportResizeSync() {
+    if (viewportResizeBound || typeof window === 'undefined') {
+        return;
+    }
+
+    viewportResizeBound = true;
+    const sync = () => syncTelegramViewport(getTelegramWebApp());
+
+    window.addEventListener('resize', sync, { passive: true });
+    window.visualViewport?.addEventListener('resize', sync, { passive: true });
 }
 
 function syncTelegramViewport(tg) {
@@ -939,6 +991,8 @@ function bindTelegramMiniAppEvents(tg) {
             desktopFullscreenUnsupported = false;
         }
         syncTelegramViewport(tg);
+        window.setTimeout(() => syncTelegramViewport(tg), 120);
+        window.setTimeout(() => syncTelegramViewport(tg), 320);
     });
     tg.onEvent('fullscreenFailed', (payload) => {
         handleFullscreenFailed(payload);
@@ -960,6 +1014,7 @@ export function initTelegramMiniApp() {
     scheduleDesktopFullscreen(tg);
     maybeAutoRelaunchFullscreen(tg);
     bindTelegramMiniAppEvents(tg);
+    bindViewportResizeSync();
 
     return applyLaunchParamsToWebApp(tg);
 }
@@ -1001,6 +1056,7 @@ export async function initTelegramMiniAppAsync(options = {}) {
     scheduleDesktopFullscreen(tg);
     maybeAutoRelaunchFullscreen(tg);
     bindTelegramMiniAppEvents(tg);
+    bindViewportResizeSync();
 
     return applyLaunchParamsToWebApp(tg);
 }

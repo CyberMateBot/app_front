@@ -43,6 +43,10 @@
   --page-pad-x: clamp(16px, 2.5vw, 32px);
 }
 
+:root[data-tg-layout='desktop-full'][data-tg-fullscreen='1'] {
+  --layout-max-width: 100%;
+}
+
 :root[data-tg-layout='mini-pc'],
 :root[data-tg-desktop-embedded='1'] {
   --layout-max-width: 100%;

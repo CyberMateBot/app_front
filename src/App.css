@@ -339,7 +339,10 @@
 
 .app-shell {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: max(var(--app-height, 100dvh), 100dvh);
+  height: max(var(--app-height, 100dvh), 100dvh);
   width: 100%;
   max-width: 100%;
   color: var(--text-primary);
@@ -347,6 +350,20 @@
   padding-top: var(--page-pad-top, 0px);
   padding-bottom: calc(var(--nav-bar-height, 52px) + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
   overflow-x: hidden;
+}
+
+.app-main {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-pad-x, 16px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 :root[data-theme='light'] .app-shell {
@@ -372,21 +389,13 @@
   }
 }
 
-.app-main {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 0 var(--page-pad-x, 16px);
-  box-sizing: border-box;
-}
-
 .info-screen {
   padding-top: 126px;
 }
 
 .home-screen--concept {
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   margin: 0;
   padding: 8px 0 24px;
@@ -4361,6 +4370,7 @@
 .ai-image-screen--concept {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   width: 100%;
   max-width: 100%;
   margin: 0;
