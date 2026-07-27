@@ -7144,14 +7144,8 @@ html[data-theme='light'][data-tg-desktop-embedded='1'] .app-notifications__panel
   position: absolute;
   inset: 0;
   border: none;
-  background: rgba(0, 0, 0, 0.42);
+  background: transparent;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.plan-detail-modal--visible .plan-detail-modal__backdrop {
-  opacity: 1;
 }
 
 .plan-detail-modal__panel {
