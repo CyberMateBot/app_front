@@ -1,0 +1,10 @@
+fix: robust home widget images, navbar overlap on profile/subscriptions, header subtitle overlap
+
+- HomeNewsWidget: render a blurred cover backdrop plus a sharp contained
+  foreground image so non-wide (square/portrait) admin-uploaded images
+  never get cropped into an unrecognizable blurry sliver
+- Give Profile and Subscriptions pages their own internal scroll
+  container (like Home/Catalog) so bottom-nav clearance is guaranteed
+  even when content is taller than the viewport
+- Restore flex-direction: column on .app-page-header__center so the
+  title and subtitle stack vertically instead of overlapping side by side

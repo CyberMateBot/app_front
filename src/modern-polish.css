@@ -539,7 +539,7 @@ html[data-tg-layout='desktop-full'] .home-news-widget {
   margin-bottom: 16px;
 }
 
-html[data-tg-layout='desktop-full'] .home-news-widget__slide-image {
+html[data-tg-layout='desktop-full'] .home-news-widget__slide-image--backdrop {
   object-fit: cover;
   object-position: center center;
   image-rendering: auto;

@@ -596,9 +596,22 @@
   z-index: 0;
   width: 100%;
   height: 100%;
+  display: block;
+}
+
+/* Blurred, zoomed copy that fills the whole banner so non-wide (square/portrait)
+   admin-uploaded images never look like an oddly cropped, blurry sliver. */
+.home-news-widget__slide-image--backdrop {
   object-fit: cover;
   object-position: center center;
-  display: block;
+  filter: blur(26px) saturate(1.2) brightness(0.65);
+  transform: scale(1.15);
+}
+
+/* Sharp copy shown in full (never cropped), regardless of the image's aspect ratio. */
+.home-news-widget__slide-image--fg {
+  object-fit: contain;
+  object-position: center center;
 }
 
 .home-news-widget__slide-overlay {
@@ -643,7 +656,7 @@
     max-height: none;
   }
 
-  .home-news-widget__slide-image {
+  .home-news-widget__slide-image--backdrop {
     object-position: center top;
   }
 
@@ -1948,6 +1961,7 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
   left: 0;
   z-index: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-width: 0;
@@ -2507,6 +2521,9 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
 
 .app-page-header__subtitle {
   margin: 2px 0 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   font-size: 10px;
   line-height: 1.3;
   color: var(--cm-heading-subtitle);
@@ -3789,6 +3806,40 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
 }
 
 .app-shell[data-page='home'] {
+  padding-bottom: var(--page-pad-bottom, env(safe-area-inset-bottom, 0px));
+}
+
+/* Profile and Subscriptions render their header inline (not sticky), so the whole
+   page can just scroll as one block — but it needs its OWN internal scroll area
+   (like Home/Catalog above) so the bottom-nav clearance is guaranteed even when
+   content is taller than the viewport. Without this, overflowing content bypassed
+   .app-shell's padding-bottom entirely and got hidden behind the fixed nav bar. */
+.app-shell[data-page='profile'] .app-main,
+.app-shell[data-page='subscription'] .app-main {
+  height: calc(
+    max(var(--app-height, 100dvh), 100dvh)
+    - var(--page-pad-top, 0px)
+    - var(--page-pad-bottom, env(safe-area-inset-bottom, 0px))
+  );
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: calc(var(--nav-bar-height, 56px) + 16px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+.app-shell[data-page='profile'] .app-main::-webkit-scrollbar,
+.app-shell[data-page='subscription'] .app-main::-webkit-scrollbar {
+  width: 0;
+  display: none;
+}
+
+.app-shell[data-page='profile'],
+.app-shell[data-page='subscription'] {
   padding-bottom: var(--page-pad-bottom, env(safe-area-inset-bottom, 0px));
 }
 
