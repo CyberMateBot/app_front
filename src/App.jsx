@@ -871,6 +871,10 @@ const translations = {
         settingsLegalSection: 'Документы',
         settingsOfferLabel: 'Публичная оферта',
         settingsPrivacyLabel: 'Политика конфиденциальности',
+        paymentConsentPrefix: 'Оплачивая, вы принимаете условия',
+        paymentConsentOffer: 'публичной оферты',
+        paymentConsentAnd: 'и',
+        paymentConsentPrivacy: 'политики конфиденциальности',
         balanceTitle: 'Баланс',
         subscriptionTitle: 'Подписка',
         subscriptionPageTitle: 'Подписки',
@@ -1454,6 +1458,10 @@ const translations = {
         settingsLegalSection: 'Documents',
         settingsOfferLabel: 'Public offer',
         settingsPrivacyLabel: 'Privacy policy',
+        paymentConsentPrefix: 'By paying, you accept the terms of the',
+        paymentConsentOffer: 'public offer',
+        paymentConsentAnd: 'and',
+        paymentConsentPrivacy: 'privacy policy',
         balanceTitle: 'Balance',
         subscriptionTitle: 'Subscription',
         subscriptionPageTitle: 'Plans',
@@ -5096,6 +5104,27 @@ function App() {
         showAppNotice(text.walletCoinPackSoon);
     };
 
+    const renderPaymentConsentNote = () => (
+        <p className="payment-consent-note">
+            {text.paymentConsentPrefix}{' '}
+            <button
+                type="button"
+                className="payment-consent-note__link"
+                onClick={() => openExternalLink(`${window.location.origin}/legal/offer.html`)}
+            >
+                {text.paymentConsentOffer}
+            </button>{' '}
+            {text.paymentConsentAnd}{' '}
+            <button
+                type="button"
+                className="payment-consent-note__link"
+                onClick={() => openExternalLink(`${window.location.origin}/legal/privacy.html`)}
+            >
+                {text.paymentConsentPrivacy}
+            </button>
+        </p>
+    );
+
     const renderSubscriptionPlanCards = (currentPlanId = 'pro', { variant = 'default' } = {}) => {
         const plans = Array.isArray(billingCatalog?.plans) && billingCatalog.plans.length
             ? billingCatalog.plans
@@ -7301,6 +7330,8 @@ function App() {
                         <ChevronRight size={20} aria-hidden="true" />
                     </button>
                 </div>
+
+                {renderPaymentConsentNote()}
             </section>
         );
     };
@@ -7341,6 +7372,7 @@ function App() {
                     <div className="subscription-concept__coin-packs-grid">
                         {renderCoinPackCards()}
                     </div>
+                    {renderPaymentConsentNote()}
                 </div>
 
                 <p className="profile-concept__section-lbl">{text.walletTransactionsTitle}</p>
