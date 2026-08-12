@@ -1,0 +1,588 @@
+/* Modern polish — additive visual layer (background depth, motion, micro-interactions).
+   Loaded last. Keeps the existing look, only enriches it. All motion respects
+   prefers-reduced-motion. Uses transform/opacity/filter/box-shadow only. */
+
+/* ============================================================
+   1. Background depth — aurora, grain, sheen & vignette
+   ============================================================ */
+
+/* Fine grain to kill gradient banding and add texture (very subtle). */
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* Top sheen + soft bottom vignette for depth. */
+.app-shell::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
+    radial-gradient(140% 80% at 50% 112%, rgba(0, 0, 0, 0.32) 0%, transparent 58%);
+}
+
+:root[data-theme='light'] .app-shell::before {
+  opacity: 0.02;
+  mix-blend-mode: multiply;
+}
+
+:root[data-theme='light'] .app-shell::after {
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(255, 255, 255, 0.6) 0%, transparent 60%),
+    radial-gradient(140% 80% at 50% 112%, rgba(20, 24, 36, 0.07) 0%, transparent 58%);
+}
+
+/* Aurora sweeps painted behind the orbs for extra colour depth. */
+.app-shell__orbs::before,
+.app-shell__orbs::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+.app-shell__orbs::before {
+  top: -10%;
+  left: 30%;
+  width: 70vw;
+  height: 60vh;
+  background: radial-gradient(circle, rgba(90, 70, 255, 0.1) 0%, transparent 65%);
+  filter: blur(70px);
+  animation: mp-aurora-a 90s ease-in-out infinite;
+}
+
+.app-shell__orbs::after {
+  bottom: 4%;
+  right: 20%;
+  width: 60vw;
+  height: 55vh;
+  background: radial-gradient(circle, rgba(0, 170, 255, 0.07) 0%, transparent 65%);
+  filter: blur(80px);
+  animation: mp-aurora-b 110s ease-in-out infinite;
+}
+
+:root[data-theme='light'] .app-shell__orbs::before {
+  background: radial-gradient(circle, rgba(90, 70, 255, 0.05) 0%, transparent 65%);
+}
+
+:root[data-theme='light'] .app-shell__orbs::after {
+  background: radial-gradient(circle, rgba(0, 120, 200, 0.04) 0%, transparent 65%);
+}
+
+/* Fourth ambient orb — slow warm-magenta drift low on screen. */
+.app-shell__orb--4 {
+  bottom: 8%;
+  right: 12%;
+  width: 200px;
+  height: 200px;
+  background: rgba(120, 80, 255, 0.12);
+  filter: blur(46px);
+  animation: mp-orb-float-4 150s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  animation-delay: -36s;
+}
+
+:root[data-theme='light'] .app-shell__orb--4 {
+  background: rgba(120, 80, 255, 0.05);
+  filter: blur(58px);
+}
+
+@keyframes mp-orb-float-4 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.82; }
+  30% { transform: translate3d(-26px, -30px, 0) scale(1.06); opacity: 0.94; }
+  60% { transform: translate3d(-44px, -12px, 0) scale(1.02); opacity: 0.9; }
+  80% { transform: translate3d(-18px, 16px, 0) scale(0.97); opacity: 0.86; }
+}
+
+@keyframes mp-aurora-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-6vw, 5vh, 0) scale(1.12); }
+}
+
+@keyframes mp-aurora-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(5vw, -4vh, 0) scale(1.15); }
+}
+
+/* ============================================================
+   2. Entrance motion — page & staggered cards
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-screen--concept,
+  .catalog-screen--concept,
+  .history-screen--concept,
+  .profile-screen--concept,
+  .settings-screen--concept,
+  .referral-screen--concept,
+  .wallet-screen--concept,
+  .subscription-page,
+  .ai-chat-screen--concept,
+  .ai-image-screen--concept,
+  .ai-video-screen--concept,
+  .ai-voice-screen--concept,
+  .ai-3d-screen--concept {
+    animation: mp-page-in 0.32s ease-out both;
+  }
+
+  .home-concept__grid > *,
+  .subscription-page__plans .subscription-plan-card,
+  .history-concept__item,
+  .profile-concept__balance-card,
+  .profile-concept__menu-item,
+  .subscription-concept__coin-pack,
+  .home-social-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 280px;
+    animation: mp-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Always above the fold — content-visibility only risked a stuck/blurry
+     paint on first render without any real lazy-render benefit here. */
+  .home-news-widget {
+    animation: mp-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .catalog-concept__grid > .catalog-concept__card--reveal {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
+    animation: mp-catalog-card-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(1) { animation-delay: 0.02s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(2) { animation-delay: 0.04s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(3) { animation-delay: 0.06s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(4) { animation-delay: 0.08s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(5) { animation-delay: 0.1s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(6) { animation-delay: 0.12s; }
+  .catalog-concept__grid > .catalog-concept__card--reveal:nth-child(n + 7) { animation-delay: 0.12s; }
+
+  .home-concept__grid > *:nth-child(1),
+  .subscription-page__plans .subscription-plan-card:nth-child(1),
+  .history-concept__item:nth-child(1) { animation-delay: 0.02s; }
+  .home-concept__grid > *:nth-child(2),
+  .subscription-page__plans .subscription-plan-card:nth-child(2),
+  .history-concept__item:nth-child(2) { animation-delay: 0.05s; }
+  .home-concept__grid > *:nth-child(3),
+  .subscription-page__plans .subscription-plan-card:nth-child(3),
+  .history-concept__item:nth-child(3) { animation-delay: 0.08s; }
+  .home-concept__grid > *:nth-child(4),
+  .subscription-page__plans .subscription-plan-card:nth-child(4),
+  .history-concept__item:nth-child(4) { animation-delay: 0.11s; }
+  .home-concept__grid > *:nth-child(5),
+  .subscription-page__plans .subscription-plan-card:nth-child(5),
+  .history-concept__item:nth-child(5) { animation-delay: 0.14s; }
+  .home-concept__grid > *:nth-child(6),
+  .subscription-page__plans .subscription-plan-card:nth-child(6),
+  .history-concept__item:nth-child(6) { animation-delay: 0.17s; }
+  .home-concept__grid > *:nth-child(n + 7),
+  .subscription-page__plans .subscription-plan-card:nth-child(n + 7),
+  .history-concept__item:nth-child(n + 7) { animation-delay: 0.17s; }
+
+  .home-concept__promo,
+  .subscription-page__hero--animate {
+    animation: mp-card-in 0.45s ease-out both;
+    animation-delay: 0.03s;
+  }
+}
+
+@keyframes mp-page-in {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes mp-card-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes mp-catalog-card-in {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* ============================================================
+   3. Card micro-interactions — lift, glow & sheen (GPU-friendly)
+   ============================================================ */
+
+.home-concept__card,
+.catalog-concept__card {
+  position: relative;
+  overflow: hidden;
+  contain: layout style;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.home-concept__card::after,
+.catalog-concept__card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 65%
+  );
+  transform: translate3d(-130%, 0, 0) skewX(-16deg);
+  transition: transform 0.5s ease;
+}
+
+@media (hover: hover) {
+  .home-concept__card:hover,
+  .catalog-concept__card:hover:not(.catalog-concept__card--locked) {
+    transform: translate3d(0, -3px, 0);
+    border-color: var(--cm-tab-active-border);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24);
+  }
+
+  .home-concept__card:hover::after,
+  .catalog-concept__card:hover:not(.catalog-concept__card--locked)::after {
+    transform: translate3d(230%, 0, 0) skewX(-16deg);
+  }
+
+  :root[data-theme='light'] .home-concept__card:hover,
+  :root[data-theme='light'] .catalog-concept__card:hover:not(.catalog-concept__card--locked) {
+    box-shadow: 0 10px 22px rgba(20, 24, 36, 0.1);
+  }
+
+  .home-concept__card:hover .home-concept__card-icon,
+  .catalog-concept__card:hover:not(.catalog-concept__card--locked) .catalog-concept__icon {
+    transform: scale(1.05);
+  }
+}
+
+.home-concept__card:active,
+.catalog-concept__card:active:not(.catalog-concept__card--locked) {
+  transform: translate3d(0, -1px, 0);
+}
+
+.home-concept__card-icon,
+.catalog-concept__icon {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.home-concept__card-icon::after,
+.catalog-concept__icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 55%);
+  opacity: 0.65;
+}
+
+/* ============================================================
+   4. Buttons — gradient depth, sheen & lift
+   ============================================================ */
+
+.home-concept__promo-btn,
+.text-gen__submit,
+.ai-video__submit {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.18s cubic-bezier(0.22, 0.9, 0.3, 1),
+    box-shadow 0.22s ease,
+    filter 0.18s ease;
+}
+
+.home-concept__promo-btn {
+  background: linear-gradient(135deg, #4a3fff, #7a5cff);
+  box-shadow: 0 6px 18px rgba(74, 63, 255, 0.32);
+}
+
+.ai-video__submit {
+  background: linear-gradient(135deg, var(--cm-accent, #6b6fff), var(--cm-accent-violet, #a78bfa));
+  box-shadow: 0 6px 20px rgba(90, 70, 255, 0.28);
+}
+
+/* Glossy sweep shared by primary buttons. */
+.home-concept__promo-btn::after,
+.text-gen__submit::after,
+.ai-video__submit::after,
+.ai-chat__send::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 60%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.7s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+
+.ai-chat__send {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s cubic-bezier(0.22, 0.9, 0.3, 1), box-shadow 0.22s ease, filter 0.18s ease;
+  box-shadow: 0 5px 16px rgba(90, 70, 255, 0.3);
+}
+
+@media (hover: hover) {
+  .home-concept__promo-btn:hover:not(:disabled),
+  .text-gen__submit:hover:not(:disabled),
+  .ai-video__submit:hover:not(:disabled),
+  .ai-chat__send:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.07);
+  }
+
+  .home-concept__promo-btn:hover::after,
+  .text-gen__submit:hover:not(:disabled)::after,
+  .ai-video__submit:hover:not(:disabled)::after,
+  .ai-chat__send:hover:not(:disabled)::after {
+    left: 160%;
+  }
+}
+
+.home-concept__promo-btn:active,
+.text-gen__submit:active:not(:disabled),
+.ai-video__submit:active:not(:disabled),
+.ai-chat__send:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+/* ============================================================
+   5. Headings, inputs & chips
+   ============================================================ */
+
+/* Animated gradient shimmer on the greeting heading. */
+@media (prefers-reduced-motion: no-preference) {
+  .home-concept__greeting-text {
+    background-size: 220% 100%;
+    animation: mp-heading-shimmer 12s ease-in-out infinite;
+  }
+}
+
+@keyframes mp-heading-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Focus glow ring on text fields. */
+.home-concept__search,
+.ai-chat__input,
+.ai-image__prompt,
+.ai-video__prompt,
+.text-gen__textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-chat__input:focus,
+.ai-chat__input:focus-within,
+.ai-image__prompt:focus,
+.ai-video__prompt:focus,
+.text-gen__textarea:focus {
+  outline: none;
+  border-color: rgba(120, 110, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(90, 70, 255, 0.16);
+}
+
+/* Chips — smoother feedback. */
+.home-concept__chip,
+.catalog-concept__tab,
+.catalog-concept__filter {
+  transition: transform 0.18s cubic-bezier(0.22, 0.9, 0.3, 1), border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.home-concept__chip:active,
+.catalog-concept__tab:active {
+  transform: scale(0.94);
+}
+
+/* Header icon buttons — subtle hover. */
+.home-concept__icon-btn {
+  transition: transform 0.18s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.home-concept__icon-btn:active {
+  transform: scale(0.9);
+}
+
+/* ============================================================
+   6. Nav — soft top reflection + active indicator pulse
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-theme='light']):not([data-tg-layout='mini-pc']):not([data-tg-desktop-embedded='1']) .bottom-nav__indicator {
+    animation: mp-indicator-pulse 3.6s ease-in-out infinite;
+  }
+}
+
+@keyframes mp-indicator-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 22px rgba(90, 70, 255, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(90, 70, 255, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+}
+
+/* ============================================================
+   7. Reduced-motion safety net
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__orbs::before,
+  .app-shell__orbs::after,
+  .app-shell__orb--4,
+  .home-concept__greeting-text,
+  :root:not([data-theme='light']) .bottom-nav__indicator {
+    animation: none;
+    will-change: auto;
+  }
+
+  .home-screen--concept,
+  .catalog-screen--concept,
+  .history-screen--concept,
+  .profile-screen--concept,
+  .settings-screen--concept,
+  .referral-screen--concept,
+  .wallet-screen--concept,
+  .home-concept__grid > *,
+  .catalog-concept__grid > .catalog-concept__card--reveal,
+  .home-concept__promo {
+    animation: none;
+  }
+
+  .home-concept__card::after,
+  .catalog-concept__card::after,
+  .home-concept__promo-btn::after,
+  .text-gen__submit::after,
+  .ai-video__submit::after,
+  .ai-chat__send::after {
+    display: none;
+  }
+}
+
+/* mini-pc nav: keep narrow pill after compact-ui mobile rules */
+html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
+html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inner,
+.app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner {
+  width: var(--mini-pc-nav-width, calc(100% - 24px));
+  max-width: var(--mini-pc-nav-width, calc(100% - 24px));
+  padding: 8px 4px;
+}
+
+/* Telegram Desktop fullscreen — lighter ambient effects, smoother scrolling. */
+html[data-tg-layout='desktop-full'] .app-shell::before {
+  display: none;
+}
+
+html[data-tg-layout='desktop-full'] .app-shell__orbs::before,
+html[data-tg-layout='desktop-full'] .app-shell__orbs::after {
+  display: none;
+}
+
+html[data-tg-layout='desktop-full'] .app-shell__orb {
+  filter: blur(22px) !important;
+  animation-duration: 320s !important;
+  will-change: auto;
+}
+
+html[data-tg-layout='desktop-full'] .app-shell__orb--4 {
+  display: none;
+}
+
+html[data-tg-layout='desktop-full'] .home-concept__orb {
+  display: none;
+}
+
+html[data-tg-layout='desktop-full']:not([data-theme='light']) .bottom-nav__indicator {
+  animation: none;
+}
+
+html[data-tg-layout='desktop-full'] .home-screen--widgets {
+  max-width: min(760px, 100%);
+  margin-inline: auto;
+}
+
+html[data-tg-layout='desktop-full'][data-tg-fullscreen='1'] .home-screen--widgets,
+html[data-tg-fullscreen='1'] .home-screen--widgets {
+  max-width: 100%;
+  margin-inline: 0;
+}
+
+html[data-tg-layout='desktop-full'][data-tg-fullscreen='1'] .home-news-widget,
+html[data-tg-fullscreen='1'] .home-news-widget {
+  flex: 1 1 auto;
+  min-height: 160px;
+  max-height: min(42vh, 420px);
+  aspect-ratio: auto;
+}
+
+html[data-tg-layout='desktop-full'] .home-news-widget {
+  aspect-ratio: 16 / 9;
+  max-height: 300px;
+  margin-bottom: 16px;
+}
+
+html[data-tg-layout='desktop-full'] .home-news-widget__slide-image {
+  object-fit: cover;
+  object-position: center center;
+  image-rendering: auto;
+}
+
+html[data-tg-layout='desktop-full'] .home-news-widget__slide-bg {
+  background-size: cover;
+  background-position: center center;
+}
+
+html[data-tg-layout='desktop-full'] .home-continue-card,
+html[data-tg-layout='desktop-full'] .home-subscription-widget,
+html[data-tg-layout='desktop-full'] .home-social-block {
+  width: 100%;
+}
+
+html[data-tg-layout='desktop-full'] .home-news-widget__title {
+  font-size: clamp(15px, 1.6vw, 18px);
+}
+
+html[data-tg-layout='desktop-full'] .home-news-widget__desc {
+  font-size: clamp(11px, 1.1vw, 13px);
+}
+
+html[data-tg-layout='desktop-full'] .app-main {
+  contain: layout style;
+}
+
+html[data-tg-layout='desktop-full'] .app-shell[data-page='home'] .app-main {
+  contain: none;
+}
+
+html[data-tg-layout='desktop-full'] .subscription-page__plans {
+  padding: 4px 0 14px;
+  scroll-padding-inline: 0;
+  scroll-snap-type: none;
+}
+
+html[data-tg-layout='desktop-full'] .subscription-page__plans-scroll {
+  overflow: visible;
+}
+
+html[data-tg-layout='desktop-full'] .subscription-page__plans .subscription-plan-card {
+  flex: 0 0 300px;
+  scroll-snap-align: none;
+}
