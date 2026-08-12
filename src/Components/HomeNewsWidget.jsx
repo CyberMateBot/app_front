@@ -99,25 +99,14 @@ export default function HomeNewsWidget({ slides }) {
                     aria-hidden={index !== current}
                 >
                     {slide.imageUrl ? (
-                        <>
-                            <img
-                                className="home-news-widget__slide-image home-news-widget__slide-image--backdrop"
-                                src={slide.imageUrl}
-                                alt=""
-                                draggable={false}
-                                loading={index === 0 ? 'eager' : 'lazy'}
-                                decoding="async"
-                                aria-hidden="true"
-                            />
-                            <img
-                                className="home-news-widget__slide-image home-news-widget__slide-image--fg"
-                                src={slide.imageUrl}
-                                alt=""
-                                draggable={false}
-                                loading={index === 0 ? 'eager' : 'lazy'}
-                                decoding="async"
-                            />
-                        </>
+                        <img
+                            className="home-news-widget__slide-image"
+                            src={slide.imageUrl}
+                            alt=""
+                            draggable={false}
+                            loading={index === 0 ? 'eager' : 'lazy'}
+                            decoding="async"
+                        />
                     ) : (
                         <div className="home-news-widget__slide-bg" style={{ background: slide.background }} />
                     )}

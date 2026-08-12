@@ -519,8 +519,8 @@
   border-radius: 18px;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 16 / 10;
-  max-height: 380px;
+  aspect-ratio: 4 / 3;
+  max-height: 440px;
 }
 
 .home-news-widget__dots {
@@ -596,22 +596,9 @@
   z-index: 0;
   width: 100%;
   height: 100%;
-  display: block;
-}
-
-/* Blurred, zoomed copy that fills the whole banner so non-wide (square/portrait)
-   admin-uploaded images never look like an oddly cropped, blurry sliver. */
-.home-news-widget__slide-image--backdrop {
   object-fit: cover;
   object-position: center center;
-  filter: blur(26px) saturate(1.2) brightness(0.65);
-  transform: scale(1.15);
-}
-
-/* Sharp copy shown in full (never cropped), regardless of the image's aspect ratio. */
-.home-news-widget__slide-image--fg {
-  object-fit: contain;
-  object-position: center center;
+  display: block;
 }
 
 .home-news-widget__slide-overlay {
@@ -652,16 +639,8 @@
 
 @media (max-width: 767px) {
   .home-news-widget {
-    aspect-ratio: 3 / 2;
+    aspect-ratio: 4 / 3;
     max-height: none;
-  }
-
-  .home-news-widget__slide-image--backdrop {
-    object-position: center top;
-  }
-
-  .home-news-widget__slide-bg {
-    background-position: center top;
   }
 }
 
@@ -3829,7 +3808,7 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: calc(var(--nav-bar-height, 56px) + 16px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  padding-bottom: calc(var(--nav-bar-height, 56px) + 28px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 .app-shell[data-page='profile'] .app-main::-webkit-scrollbar,
