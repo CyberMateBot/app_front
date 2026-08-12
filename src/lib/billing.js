@@ -2,40 +2,39 @@ import { resolveApiUrl } from '../api/httpClient.js';
 import { BILLING_PLAN_FEATURES_RU } from './planFeatureCopy.js';
 
 export const DEFAULT_COIN_PACKS = [
-    { id: 'pack-100', name: '100 монет', coins: 100, price_rub: 129, badge: '', sort_order: 1 },
-    { id: 'pack-300', name: '300 монет', coins: 300, price_rub: 349, badge: '−10%', sort_order: 2 },
-    { id: 'pack-1000', name: '1000 монет', coins: 1000, price_rub: 1049, badge: '−18%', sort_order: 3 },
-    { id: 'pack-2500', name: '2500 монет', coins: 2500, price_rub: 2399, badge: '−26%', sort_order: 4 },
+    { id: 'pack-100', name: '100 монет', coins: 100, price_rub: 99, badge: '', sort_order: 1 },
+    { id: 'pack-500', name: '500 монет', coins: 500, price_rub: 449, badge: '−10%', sort_order: 2 },
+    { id: 'pack-1000', name: '1000 монет', coins: 1000, price_rub: 799, badge: '−20%', sort_order: 3 },
 ];
 
 export const DEFAULT_SUBSCRIPTION_PLANS = [
     {
         id: 'free', name: 'Старт', badge: 'Бесплатно', badge_class: 'free',
-        price_rub: 0, price_sub: 'навсегда', coins: 15, popular: false, sort_order: 1,
+        price_rub: 0, price_sub: 'навсегда', coins: 10, popular: false, sort_order: 1,
         features: BILLING_PLAN_FEATURES_RU.free,
         locked: BILLING_PLAN_FEATURES_RU.freeLocked,
     },
     {
         id: 'basic', name: 'Базовый', badge: 'Доступный', badge_class: 'basic',
-        price_rub: 149, price_sub: '/ месяц', coins: 160, popular: false, sort_order: 2,
+        price_rub: 149, price_sub: '/ месяц', coins: 40, popular: false, sort_order: 2,
         features: BILLING_PLAN_FEATURES_RU.basic,
         locked: BILLING_PLAN_FEATURES_RU.basicLocked,
     },
     {
         id: 'pro', name: 'Про', badge: 'Популярный', badge_class: 'popular',
-        price_rub: 349, price_sub: '/ месяц', coins: 400, popular: true, sort_order: 3,
+        price_rub: 349, price_sub: '/ месяц', coins: 100, popular: true, sort_order: 3,
         features: BILLING_PLAN_FEATURES_RU.pro,
         locked: [],
     },
     {
         id: 'max', name: 'Максимум', badge: 'Выгодный', badge_class: 'max',
-        price_rub: 799, price_sub: '/ месяц', coins: 950, popular: false, sort_order: 4,
+        price_rub: 799, price_sub: '/ месяц', coins: 250, popular: false, sort_order: 4,
         features: BILLING_PLAN_FEATURES_RU.max,
         locked: [],
     },
     {
         id: 'ultra', name: 'Бизнес', badge: 'Для бизнеса', badge_class: 'biz',
-        price_rub: 1999, price_sub: '/ месяц', coins: 2600, popular: false, sort_order: 5,
+        price_rub: 1999, price_sub: '/ месяц', coins: 600, popular: false, sort_order: 5,
         features: BILLING_PLAN_FEATURES_RU.ultra,
         locked: [],
     },

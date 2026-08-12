@@ -130,7 +130,7 @@ export function buildPlanFeatureBullets(planId, catalogs, text = {}, { coins = 0
     if (coinAmount > 0) {
         bullets.push(language === 'ru' ? `${coinAmount} монет / месяц` : `${coinAmount} coins / month`);
     } else if (planId === 'free') {
-        bullets.push(language === 'ru' ? '15 монет для старта' : '15 coins to start');
+        bullets.push(language === 'ru' ? '10 монет / месяц' : '10 coins / month');
     }
 
     sections.forEach((section) => {
