@@ -868,6 +868,9 @@ const translations = {
         settingsLanguageRu: 'Русский',
         settingsLanguageEn: 'English',
         settingsSupportSub: 'Написать в Telegram',
+        settingsLegalSection: 'Документы',
+        settingsOfferLabel: 'Публичная оферта',
+        settingsPrivacyLabel: 'Политика конфиденциальности',
         balanceTitle: 'Баланс',
         subscriptionTitle: 'Подписка',
         subscriptionPageTitle: 'Подписки',
@@ -1448,6 +1451,9 @@ const translations = {
         settingsLanguageRu: 'Русский',
         settingsLanguageEn: 'English',
         settingsSupportSub: 'Message on Telegram',
+        settingsLegalSection: 'Documents',
+        settingsOfferLabel: 'Public offer',
+        settingsPrivacyLabel: 'Privacy policy',
         balanceTitle: 'Balance',
         subscriptionTitle: 'Subscription',
         subscriptionPageTitle: 'Plans',
@@ -7612,6 +7618,37 @@ function App() {
                         <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
                     </button>
                 </div>
+
+                <p className="profile-concept__section-lbl">{text.settingsLegalSection}</p>
+                <div className="profile-concept__menu-list">
+                    <button
+                        type="button"
+                        className="profile-concept__menu-item"
+                        onClick={() => openExternalLink(`${window.location.origin}/legal/offer.html`)}
+                    >
+                        <span className="profile-concept__menu-ico profile-concept__menu-ico--muted">
+                            <FileText size={16} />
+                        </span>
+                        <span className="profile-concept__menu-text">
+                            <span className="profile-concept__menu-title">{text.settingsOfferLabel}</span>
+                        </span>
+                        <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
+                    </button>
+                    <button
+                        type="button"
+                        className="profile-concept__menu-item"
+                        onClick={() => openExternalLink(`${window.location.origin}/legal/privacy.html`)}
+                    >
+                        <span className="profile-concept__menu-ico profile-concept__menu-ico--muted">
+                            <FileText size={16} />
+                        </span>
+                        <span className="profile-concept__menu-text">
+                            <span className="profile-concept__menu-title">{text.settingsPrivacyLabel}</span>
+                        </span>
+                        <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
+                    </button>
+                </div>
+
                 <p className="settings-concept__build-id" aria-label={text.versionLabel}>
                     {text.versionLabel}: {getActiveBuildId() || text.releaseVersion}
                 </p>
