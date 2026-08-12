@@ -10,6 +10,55 @@
     <meta http-equiv="Expires" content="0" />
     <meta name="theme-color" content="#0a0b10" />
     <title>CyberMate</title>
+    <script>
+      (function () {
+        // A plain browser visit (no Telegram launch context at all) — bounce straight
+        // into the bot so the user lands in the real Mini App instead of seeing the
+        // "SDK not found" screen. Legal pages (/legal/*.html) are separate files and
+        // never load this script, so they stay reachable from any browser.
+        var hostname = window.location.hostname || '';
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          return;
+        }
+
+        var search = window.location.search || '';
+        if (/(?:^\?|&)no_redirect=1(?:&|$)/.test(search)) {
+          return;
+        }
+
+        var hash = window.location.hash || '';
+        if (/tgWebApp/i.test(hash)) {
+          return;
+        }
+
+        var hasStoredLaunch = false;
+        try {
+          hasStoredLaunch = !!sessionStorage.getItem('cybermate.tg_launch_hash');
+        } catch (e) {
+          // Private mode / storage blocked — fall through to other checks.
+        }
+        if (hasStoredLaunch) {
+          return;
+        }
+
+        var referrer = document.referrer || '';
+        if (/telegram\.org|(?:^|\/\/)t\.me\//i.test(referrer)) {
+          return;
+        }
+
+        var inIframe = false;
+        try {
+          inIframe = window.parent !== window;
+        } catch (e) {
+          inIframe = true;
+        }
+        if (inIframe) {
+          return;
+        }
+
+        window.location.replace('https://t.me/CyberMate_bot?startapp');
+      })();
+    </script>
     <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
     <script>
       (function () {
@@ -135,11 +184,11 @@
             theme = tg.colorScheme;
           }
         }
-        if (theme !== 'light' && theme !== 'dark' && window.matchMedia) {
-          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
+        // CyberMate is designed dark-first — outside Telegram (no stored choice, no
+        // Telegram colorScheme) always default to dark instead of following the OS/
+        // browser light preference, which used to show a jarring white flash.
         if (theme !== 'light' && theme !== 'dark') {
-          theme = 'light';
+          theme = 'dark';
         }
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
