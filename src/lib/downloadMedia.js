@@ -424,28 +424,41 @@ export async function downloadMediaUrl(url, filename = 'cybermate-media', option
 
 export function guessMediaFilename(url, fallbackBase = 'cybermate') {
     const trimmed = String(url || '').trim();
+
+    // Callers pass a full fallback name that already has an extension
+    // (e.g. "image.png", "video.mp4"). Strip it so we never end up
+    // stacking a second extension on top (e.g. the "image.png.webp" /
+    // "image.png.bin" bug, which several apps/OSes refuse to open at all).
+    const rawBase = String(fallbackBase || 'cybermate').trim() || 'cybermate';
+    const fallbackExt = getFileExtension(rawBase);
+    const baseName = fallbackExt ? rawBase.slice(0, -(fallbackExt.length + 1)) : rawBase;
+
     const path = trimmed.split('?')[0] || '';
     const extMatch = path.match(/\.([a-z0-9]{2,5})$/i);
     const ext = extMatch ? extMatch[1].toLowerCase() : '';
 
     if (ext) {
-        return `${fallbackBase}.${ext}`;
+        return `${baseName}.${ext}`;
     }
 
     if (trimmed.startsWith('data:image/')) {
         const mimeExt = trimmed.match(/^data:image\/([a-z0-9+.-]+)/i)?.[1]?.split('+')[0];
-        return `${fallbackBase}.${mimeExt || 'png'}`;
+        return `${baseName}.${mimeExt || fallbackExt || 'png'}`;
     }
 
     if (trimmed.startsWith('data:video/')) {
         const mimeExt = trimmed.match(/^data:video\/([a-z0-9+.-]+)/i)?.[1]?.split('+')[0];
-        return `${fallbackBase}.${mimeExt || 'mp4'}`;
+        return `${baseName}.${mimeExt || fallbackExt || 'mp4'}`;
     }
 
     if (trimmed.startsWith('data:audio/')) {
         const mimeExt = trimmed.match(/^data:audio\/([a-z0-9+.-]+)/i)?.[1]?.split('+')[0];
-        return `${fallbackBase}.${mimeExt || 'mp3'}`;
+        return `${baseName}.${mimeExt || fallbackExt || 'mp3'}`;
     }
 
-    return `${fallbackBase}.bin`;
+    // Many provider CDN URLs (signed/hashed paths) have no extension at
+    // all — fall back to whatever extension the caller expected for this
+    // media (from fallbackBase) instead of a generic ".bin" that most
+    // photo/video viewers can't open.
+    return `${baseName}.${fallbackExt || 'bin'}`;
 }
