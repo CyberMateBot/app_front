@@ -3813,13 +3813,18 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
    page can just scroll as one block — but it needs its OWN internal scroll area
    (like Home/Catalog above) so the bottom-nav clearance is guaranteed even when
    content is taller than the viewport. Without this, overflowing content bypassed
-   .app-shell's padding-bottom entirely and got hidden behind the fixed nav bar. */
+   .app-shell's padding-bottom entirely and got hidden behind the fixed nav bar.
+   The viewport itself (height) — not just extra scroll padding — must exclude the
+   nav bar, otherwise short pages that already fit the screen never scroll at all
+   and their last row (theme toggle / consent note) renders directly underneath the
+   fixed nav with no way to reveal it without an accidental drag. */
 .app-shell[data-page='profile'] .app-main,
 .app-shell[data-page='subscription'] .app-main {
   height: calc(
     max(var(--app-height, 100dvh), 100dvh)
     - var(--page-pad-top, 0px)
     - var(--page-pad-bottom, env(safe-area-inset-bottom, 0px))
+    - var(--nav-bar-height, 56px)
   );
   min-height: 0;
   overflow-x: hidden;
@@ -3829,7 +3834,7 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: calc(var(--nav-bar-height, 56px) + 28px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  padding-bottom: calc(20px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 .app-shell[data-page='profile'] .app-main::-webkit-scrollbar,
