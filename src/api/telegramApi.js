@@ -1131,6 +1131,44 @@ export async function savePromptHistory({
     return res.json();
 }
 
+/**
+ * Starts a YooKassa checkout for a coin pack or a subscription plan.
+ * Returns { paymentId, confirmationUrl, amountRub, coins } — open confirmationUrl
+ * (e.g. via openExternalLink) to send the buyer to the YooKassa payment page.
+ */
+export async function startBillingCheckout({ kind, itemId }) {
+    const telegramId = getCurrentTelegramId();
+
+    const body = {
+        telegramId: String(telegramId),
+        kind: String(kind || '').trim(),
+        itemId: String(itemId || '').trim(),
+    };
+
+    const res = await apiFetch('/v1/billing/checkout', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+        },
+        body: JSON.stringify(withInitDataRaw(body)),
+    });
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to start checkout.');
+    }
+
+    const payload = await res.json();
+    const data = payload?.data ?? payload;
+
+    return {
+        paymentId: data?.payment_id ?? data?.paymentId ?? null,
+        confirmationUrl: data?.confirmation_url ?? data?.confirmationUrl ?? '',
+        amountRub: data?.amount_rub ?? data?.amountRub ?? 0,
+        coins: data?.coins ?? 0,
+    };
+}
+
 export function normalizeProfileResponse(payload, telegramUser) {
     const profile = payload?.data ?? payload ?? {};
 

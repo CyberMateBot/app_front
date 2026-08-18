@@ -67,6 +67,7 @@ import {
     patchUserTheme,
     registerTelegramUser,
     savePromptHistory,
+    startBillingCheckout,
     LEGACY_TEXT_MODEL_IDS,
     IMAGE_MODEL_IDS,
     VIDEO_MODEL_IDS,
@@ -875,6 +876,11 @@ const translations = {
         paymentConsentOffer: 'публичной оферты',
         paymentConsentAnd: 'и',
         paymentConsentPrivacy: 'политики конфиденциальности',
+        paymentCheckoutOpening: 'Открываем страницу оплаты…',
+        paymentCheckoutPending: 'Открываем…',
+        paymentCheckoutDisabled: 'Оплата временно недоступна. Попробуйте позже.',
+        paymentCheckoutItemUnavailable: 'Этот тариф сейчас недоступен для покупки.',
+        paymentCheckoutError: 'Не удалось начать оплату. Попробуйте позже.',
         balanceTitle: 'Баланс',
         subscriptionTitle: 'Подписка',
         subscriptionPageTitle: 'Подписки',
@@ -1462,6 +1468,11 @@ const translations = {
         paymentConsentOffer: 'public offer',
         paymentConsentAnd: 'and',
         paymentConsentPrivacy: 'privacy policy',
+        paymentCheckoutOpening: 'Opening the payment page…',
+        paymentCheckoutPending: 'Opening…',
+        paymentCheckoutDisabled: 'Payments are temporarily unavailable. Please try again later.',
+        paymentCheckoutItemUnavailable: 'This plan is not available for purchase right now.',
+        paymentCheckoutError: 'Could not start the payment. Please try again later.',
         balanceTitle: 'Balance',
         subscriptionTitle: 'Subscription',
         subscriptionPageTitle: 'Plans',
@@ -1666,6 +1677,7 @@ function App() {
     const [profile, setProfile] = useState(null);
     const [homeWidgetSlides, setHomeWidgetSlides] = useState(null);
     const [billingCatalog, setBillingCatalog] = useState(() => getFallbackBillingCatalog());
+    const [checkoutPendingId, setCheckoutPendingId] = useState(null);
     const [telegramUser, setTelegramUser] = useState(null);
     const [startParam, setStartParam] = useState('');
     const [appNotice, setAppNotice] = useState(null);
@@ -5100,9 +5112,31 @@ function App() {
         />
     );
 
-    const handleCoinPackPurchase = () => {
-        showAppNotice(text.walletCoinPackSoon);
-    };
+    const handlePurchase = useCallback(async (kind, itemId) => {
+        const normalizedItemId = String(itemId || '').trim();
+        if (!normalizedItemId || checkoutPendingId) {
+            return;
+        }
+        setCheckoutPendingId(normalizedItemId);
+        try {
+            const result = await startBillingCheckout({ kind, itemId: normalizedItemId });
+            if (!result?.confirmationUrl) {
+                throw new Error('No confirmation URL returned.');
+            }
+            openExternalLink(result.confirmationUrl);
+        } catch (error) {
+            const status = error?.status;
+            let message = text.paymentCheckoutError;
+            if (status === 503) {
+                message = text.paymentCheckoutDisabled;
+            } else if (status === 404) {
+                message = text.paymentCheckoutItemUnavailable;
+            }
+            showAppNotice(message, 'error');
+        } finally {
+            setCheckoutPendingId(null);
+        }
+    }, [checkoutPendingId, text, showAppNotice]);
 
     const renderPaymentConsentNote = () => (
         <p className="payment-consent-note">
@@ -5232,12 +5266,14 @@ function App() {
                         <button
                             type="button"
                             className={`subscription-plan-card__btn ${isCurrent ? 'subscription-plan-card__btn--current' : ''}`}
-                            disabled={isCurrent}
-                            onClick={isCurrent ? undefined : handleCoinPackPurchase}
+                            disabled={isCurrent || checkoutPendingId === plan.id}
+                            onClick={isCurrent ? undefined : () => handlePurchase('subscription', plan.id)}
                         >
-                            {isCurrent && userData.subscriptionTimeLeft
-                                ? userData.subscriptionTimeLeft
-                                : (isCurrent ? text.planCurrentButton : text.planSelectButton)}
+                            {checkoutPendingId === plan.id
+                                ? text.paymentCheckoutPending
+                                : (isCurrent && userData.subscriptionTimeLeft
+                                    ? userData.subscriptionTimeLeft
+                                    : (isCurrent ? text.planCurrentButton : text.planSelectButton))}
                         </button>
                     </article>
                 );
@@ -5278,10 +5314,12 @@ function App() {
                     <button
                         type="button"
                         className={`subscription-concept__plan-btn ${isCurrent ? 'subscription-concept__plan-btn--current' : ''}`}
-                        disabled={isCurrent}
-                        onClick={isCurrent ? undefined : handleCoinPackPurchase}
+                        disabled={isCurrent || checkoutPendingId === plan.id}
+                        onClick={isCurrent ? undefined : () => handlePurchase('subscription', plan.id)}
                     >
-                        {isCurrent ? text.planCurrentButton : text.planSelectButton}
+                        {checkoutPendingId === plan.id
+                            ? text.paymentCheckoutPending
+                            : (isCurrent ? text.planCurrentButton : text.planSelectButton)}
                     </button>
                 </article>
             );
@@ -5309,9 +5347,10 @@ function App() {
                 <button
                     type="button"
                     className="subscription-concept__plan-btn"
-                    onClick={handleCoinPackPurchase}
+                    disabled={checkoutPendingId === pack.id}
+                    onClick={() => handlePurchase('coin_pack', pack.id)}
                 >
-                    {text.walletCoinPackBuy}
+                    {checkoutPendingId === pack.id ? text.paymentCheckoutPending : text.walletCoinPackBuy}
                 </button>
             </article>
         ));
