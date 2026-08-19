@@ -1169,6 +1169,36 @@ export async function startBillingCheckout({ kind, itemId }) {
     };
 }
 
+export async function submitUserFeedback({ kind, message }) {
+    const telegramId = getCurrentTelegramId();
+
+    const body = {
+        telegramId: String(telegramId),
+        kind: String(kind || '').trim(),
+        message: String(message || '').trim(),
+    };
+
+    const res = await apiFetch('/v1/feedback', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+        },
+        body: JSON.stringify(withInitDataRaw(body)),
+    });
+
+    if (!res.ok) {
+        throw await errorFromResponse(res, 'Failed to submit feedback.');
+    }
+
+    const payload = await res.json();
+    const data = payload?.data ?? payload;
+
+    return {
+        id: data?.id ?? null,
+    };
+}
+
 export function normalizeProfileResponse(payload, telegramUser) {
     const profile = payload?.data ?? payload ?? {};
 

@@ -515,12 +515,12 @@
 
 .home-news-widget {
   position: relative;
-  margin: 0 0 14px;
-  border-radius: 18px;
+  margin: 0 calc(-1 * var(--page-pad-x, 16px)) 14px;
+  border-radius: 0;
   overflow: hidden;
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  max-height: 440px;
+  width: calc(100% + 2 * var(--page-pad-x, 16px));
+  aspect-ratio: 16 / 9;
+  max-height: min(52vw, 320px);
 }
 
 .home-news-widget__dots {
@@ -597,7 +597,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center center;
+  object-position: center top;
   display: block;
 }
 
@@ -639,8 +639,8 @@
 
 @media (max-width: 767px) {
   .home-news-widget {
-    aspect-ratio: 4 / 3;
-    max-height: none;
+    aspect-ratio: 16 / 9;
+    max-height: min(56vw, 300px);
   }
 }
 
@@ -697,6 +697,76 @@
 
 .home-social-block {
   margin-top: 14px;
+}
+
+.home-feedback-block {
+  margin: 18px 0 8px;
+  display: grid;
+  gap: 12px;
+}
+
+.home-feedback-card {
+  padding: 14px;
+  border: 0.5px solid var(--cm-border);
+  border-radius: 16px;
+  background: var(--cm-surface);
+}
+
+.home-feedback-card__title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cm-text);
+}
+
+.home-feedback-card__hint {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--cm-text-dim);
+}
+
+.home-feedback-card__textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: 10px 12px;
+  border: 0.5px solid var(--cm-border);
+  border-radius: 12px;
+  background: var(--cm-bg);
+  color: var(--cm-text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.home-feedback-card__textarea:focus {
+  outline: none;
+  border-color: var(--cm-accent);
+}
+
+.home-feedback-card__btn {
+  margin-top: 10px;
+  width: 100%;
+  min-height: 38px;
+  border: none;
+  border-radius: 12px;
+  background: var(--cm-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.home-feedback-card__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.home-feedback-card--bug .home-feedback-card__btn {
+  background: color-mix(in srgb, #ef4444 85%, var(--cm-accent));
 }
 
 html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
@@ -1345,7 +1415,7 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
 .profile-screen--concept {
   width: 100%;
   margin: 0;
-  padding: 8px 0 24px;
+  padding: 8px 0 32px;
   font-family: 'K2D', 'Inter', sans-serif;
   color: var(--cm-text);
 }
@@ -2058,7 +2128,7 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding-bottom: 12px;
+  padding-bottom: 24px;
 }
 
 .subscription-page__hero {
@@ -2121,7 +2191,7 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
 }
 
 .payment-consent-note {
-  margin: 14px 4px 0;
+  margin: 14px 4px 16px;
   font-size: 11.5px;
   line-height: 1.5;
   color: var(--cm-text-dim);
@@ -3748,7 +3818,7 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: calc(var(--nav-bar-height, 56px) + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)) + 24px);
+  padding-bottom: calc(var(--nav-bar-height, 74px) + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)) + 40px);
 }
 
 .catalog-concept__scroll::-webkit-scrollbar {
@@ -3819,12 +3889,14 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
    and their last row (theme toggle / consent note) renders directly underneath the
    fixed nav with no way to reveal it without an accidental drag. */
 .app-shell[data-page='profile'] .app-main,
-.app-shell[data-page='subscription'] .app-main {
+.app-shell[data-page='subscription'] .app-main,
+.app-shell[data-page='wallet'] .app-main,
+.app-shell[data-page='settings'] .app-main {
   height: calc(
     max(var(--app-height, 100dvh), 100dvh)
     - var(--page-pad-top, 0px)
     - var(--page-pad-bottom, env(safe-area-inset-bottom, 0px))
-    - var(--nav-bar-height, 56px)
+    - var(--nav-bar-height, 74px)
   );
   min-height: 0;
   overflow-x: hidden;
@@ -3834,17 +3906,22 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: calc(20px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  padding-bottom: calc(var(--nav-bar-height, 74px) + 16px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  scroll-padding-bottom: calc(var(--nav-bar-height, 74px) + 8px);
 }
 
 .app-shell[data-page='profile'] .app-main::-webkit-scrollbar,
-.app-shell[data-page='subscription'] .app-main::-webkit-scrollbar {
+.app-shell[data-page='subscription'] .app-main::-webkit-scrollbar,
+.app-shell[data-page='wallet'] .app-main::-webkit-scrollbar,
+.app-shell[data-page='settings'] .app-main::-webkit-scrollbar {
   width: 0;
   display: none;
 }
 
 .app-shell[data-page='profile'],
-.app-shell[data-page='subscription'] {
+.app-shell[data-page='subscription'],
+.app-shell[data-page='wallet'],
+.app-shell[data-page='settings'] {
   padding-bottom: var(--page-pad-bottom, env(safe-area-inset-bottom, 0px));
 }
 
@@ -3910,7 +3987,7 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
 
 .catalog-concept__tabs {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 10px;
   overflow-x: auto;
   scrollbar-width: none;
@@ -3923,14 +4000,15 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
 
 .catalog-concept__tab {
   flex: 0 0 auto;
-  padding: 5px 12px;
+  padding: 8px 16px;
   border-radius: 20px;
   border: 0.5px solid var(--cm-border);
   background: var(--cm-surface);
   color: var(--cm-chip-inactive-fg);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
+  min-height: 36px;
   white-space: nowrap;
   cursor: pointer;
 }

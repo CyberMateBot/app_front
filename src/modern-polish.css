@@ -534,14 +534,14 @@ html[data-tg-fullscreen='1'] .home-news-widget {
 }
 
 html[data-tg-layout='desktop-full'] .home-news-widget {
-  aspect-ratio: 16 / 10;
-  max-height: 340px;
+  aspect-ratio: 16 / 9;
+  max-height: 360px;
   margin-bottom: 16px;
 }
 
 html[data-tg-layout='desktop-full'] .home-news-widget__slide-image {
   object-fit: cover;
-  object-position: center center;
+  object-position: center top;
   image-rendering: auto;
 }
 

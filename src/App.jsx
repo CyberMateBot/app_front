@@ -68,6 +68,7 @@ import {
     registerTelegramUser,
     savePromptHistory,
     startBillingCheckout,
+    submitUserFeedback,
     LEGACY_TEXT_MODEL_IDS,
     IMAGE_MODEL_IDS,
     VIDEO_MODEL_IDS,
@@ -427,6 +428,18 @@ const translations = {
         homeToolsLabel: 'Инструменты',
         homeBrandName: 'CyberMate',
         homeSocialLabel: 'Мы в соцсетях',
+        homeFeedbackTitle: 'Предложения и баги',
+        homeFeedbackSuggestionTitle: 'Нововведения',
+        homeFeedbackSuggestionHint: 'Расскажите, что добавить или улучшить в CyberMate.',
+        homeFeedbackSuggestionPlaceholder: 'Например: добавить модель для озвучки...',
+        homeFeedbackBugTitle: 'Баги',
+        homeFeedbackBugHint: 'Опишите проблему — где возникла и что пошло не так.',
+        homeFeedbackBugPlaceholder: 'Например: на странице профиля не видно переключатель темы...',
+        homeFeedbackSubmit: 'Отправить',
+        homeFeedbackSending: 'Отправляем…',
+        homeFeedbackSuccess: 'Спасибо! Сообщение отправлено.',
+        homeFeedbackError: 'Не удалось отправить. Попробуйте позже.',
+        homeFeedbackTooShort: 'Напишите чуть подробнее (минимум 3 символа).',
         homeSocialTiktok: 'TikTok',
         homeSocialInstagram: 'Instagram',
         homeSocialTelegram: 'Telegram',
@@ -1019,6 +1032,18 @@ const translations = {
         homeToolsLabel: 'Tools',
         homeBrandName: 'CyberMate',
         homeSocialLabel: 'Follow us',
+        homeFeedbackTitle: 'Suggestions & bugs',
+        homeFeedbackSuggestionTitle: 'Suggestions',
+        homeFeedbackSuggestionHint: 'Tell us what to add or improve in CyberMate.',
+        homeFeedbackSuggestionPlaceholder: 'For example: add a voice-over model...',
+        homeFeedbackBugTitle: 'Bugs',
+        homeFeedbackBugHint: 'Describe the issue — where it happened and what went wrong.',
+        homeFeedbackBugPlaceholder: 'For example: theme toggle is hidden on the profile page...',
+        homeFeedbackSubmit: 'Send',
+        homeFeedbackSending: 'Sending…',
+        homeFeedbackSuccess: 'Thanks! Your message was sent.',
+        homeFeedbackError: 'Could not send. Please try again later.',
+        homeFeedbackTooShort: 'Please add a bit more detail (at least 3 characters).',
         homeSocialTiktok: 'TikTok',
         homeSocialInstagram: 'Instagram',
         homeSocialTelegram: 'Telegram',
@@ -1678,6 +1703,9 @@ function App() {
     const [homeWidgetSlides, setHomeWidgetSlides] = useState(null);
     const [billingCatalog, setBillingCatalog] = useState(() => getFallbackBillingCatalog());
     const [checkoutPendingId, setCheckoutPendingId] = useState(null);
+    const [feedbackSuggestion, setFeedbackSuggestion] = useState('');
+    const [feedbackBug, setFeedbackBug] = useState('');
+    const [feedbackPendingKind, setFeedbackPendingKind] = useState(null);
     const [telegramUser, setTelegramUser] = useState(null);
     const [startParam, setStartParam] = useState('');
     const [appNotice, setAppNotice] = useState(null);
@@ -5138,6 +5166,34 @@ function App() {
         }
     }, [checkoutPendingId, text, showAppNotice]);
 
+    const handleFeedbackSubmit = useCallback(async (kind) => {
+        if (feedbackPendingKind) {
+            return;
+        }
+
+        const message = kind === 'bug' ? feedbackBug : feedbackSuggestion;
+        const trimmed = String(message || '').trim();
+        if (trimmed.length < 3) {
+            showAppNotice(text.homeFeedbackTooShort, 'error');
+            return;
+        }
+
+        setFeedbackPendingKind(kind);
+        try {
+            await submitUserFeedback({ kind, message: trimmed });
+            if (kind === 'bug') {
+                setFeedbackBug('');
+            } else {
+                setFeedbackSuggestion('');
+            }
+            showAppNotice(text.homeFeedbackSuccess, 'success');
+        } catch (error) {
+            showAppNotice(text.homeFeedbackError, 'error');
+        } finally {
+            setFeedbackPendingKind(null);
+        }
+    }, [feedbackBug, feedbackPendingKind, feedbackSuggestion, showAppNotice, text]);
+
     const renderPaymentConsentNote = () => (
         <p className="payment-consent-note">
             {text.paymentConsentPrefix}{' '}
@@ -5794,6 +5850,50 @@ function App() {
                     <span className="home-social-card__label">{text.homeSocialTelegram}</span>
                 </button>
             </div>
+            </div>
+
+            <div className="home-feedback-block">
+                <p className="home-concept__section-label home-concept__section-label--widgets">{text.homeFeedbackTitle}</p>
+
+                <article className="home-feedback-card">
+                    <h3 className="home-feedback-card__title">{text.homeFeedbackSuggestionTitle}</h3>
+                    <p className="home-feedback-card__hint">{text.homeFeedbackSuggestionHint}</p>
+                    <textarea
+                        className="home-feedback-card__textarea"
+                        value={feedbackSuggestion}
+                        onChange={(event) => setFeedbackSuggestion(event.target.value)}
+                        placeholder={text.homeFeedbackSuggestionPlaceholder}
+                        maxLength={2000}
+                    />
+                    <button
+                        type="button"
+                        className="home-feedback-card__btn"
+                        disabled={feedbackPendingKind === 'suggestion'}
+                        onClick={() => handleFeedbackSubmit('suggestion')}
+                    >
+                        {feedbackPendingKind === 'suggestion' ? text.homeFeedbackSending : text.homeFeedbackSubmit}
+                    </button>
+                </article>
+
+                <article className="home-feedback-card home-feedback-card--bug">
+                    <h3 className="home-feedback-card__title">{text.homeFeedbackBugTitle}</h3>
+                    <p className="home-feedback-card__hint">{text.homeFeedbackBugHint}</p>
+                    <textarea
+                        className="home-feedback-card__textarea"
+                        value={feedbackBug}
+                        onChange={(event) => setFeedbackBug(event.target.value)}
+                        placeholder={text.homeFeedbackBugPlaceholder}
+                        maxLength={2000}
+                    />
+                    <button
+                        type="button"
+                        className="home-feedback-card__btn"
+                        disabled={feedbackPendingKind === 'bug'}
+                        onClick={() => handleFeedbackSubmit('bug')}
+                    >
+                        {feedbackPendingKind === 'bug' ? text.homeFeedbackSending : text.homeFeedbackSubmit}
+                    </button>
+                </article>
             </div>
         </section>
     );
