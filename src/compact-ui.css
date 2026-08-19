@@ -268,10 +268,10 @@ body {
 }
 
 .ai-chat__model-chip {
-  padding: 4px 8px 4px 5px;
-  font-size: 10px;
-  gap: 5px;
-  border-radius: 16px;
+  padding: 7px 12px 7px 7px;
+  font-size: 12px;
+  min-height: 34px;
+  border-radius: 18px;
 }
 
 .ai-chat__model-chip svg {
@@ -291,9 +291,10 @@ body {
 }
 
 .ai-chat__tier-chip {
-  padding: 4px 8px;
-  font-size: 10px;
-  border-radius: 12px;
+  padding: 7px 14px;
+  font-size: 12px;
+  min-height: 34px;
+  border-radius: 18px;
 }
 
 .ai-chat__composer {
