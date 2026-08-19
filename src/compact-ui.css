@@ -330,9 +330,11 @@ body {
   height: 34px;
 }
 
-.history-concept__filter {
-  padding: 3px 8px;
-  font-size: 10px;
+.history-concept__filters.catalog-concept__tabs .catalog-concept__tab {
+  padding: 8px 16px;
+  font-size: 13px;
+  min-height: 36px;
+  border-radius: 20px;
 }
 
 /* Concept page headers */

@@ -47,7 +47,7 @@ import {
     Zap,
     Play,
 } from 'lucide-react';
-import { FaTelegram } from 'react-icons/fa6';
+import { FaTelegram, FaTiktok, FaInstagram } from 'react-icons/fa6';
 import {
     deletePromptHistoryTopic,
     getMyProfile,
@@ -136,6 +136,7 @@ import {
     loadReadNotificationIds,
     markNotificationsRead,
 } from './lib/appNotifications.js';
+import { formatWalletTransactionReason } from './lib/walletTransactionLabels.js';
 import { buildPlanModelSections } from './lib/planModelsCatalog.js';
 import { fetchUserSubscription } from './api/subscription.js';
 import {
@@ -1709,7 +1710,7 @@ function App() {
     const [homeWidgetSlides, setHomeWidgetSlides] = useState(null);
     const [billingCatalog, setBillingCatalog] = useState(() => getFallbackBillingCatalog());
     const [checkoutPendingId, setCheckoutPendingId] = useState(null);
-    const [feedbackOpen, setFeedbackOpen] = useState(false);
+    const [feedbackReturnPage, setFeedbackReturnPage] = useState('home');
     const [feedbackKind, setFeedbackKind] = useState('suggestion');
     const [feedbackDraft, setFeedbackDraft] = useState('');
     const [feedbackPending, setFeedbackPending] = useState(false);
@@ -2865,15 +2866,47 @@ function App() {
         [promptHistoryData],
     );
     const walletTransactions = Array.isArray(walletData?.transactions) ? walletData.transactions : [];
+    const walletLabelOptions = useMemo(() => ({
+        planNameResolver: (planId) => getSubscriptionPlanDisplayName(planId, {
+            language,
+            text,
+            catalogPlans: billingCatalog?.plans ?? [],
+        }),
+        packNameResolver: (packId) => {
+            const pack = (billingCatalog?.coinPacks ?? []).find((item) => item.id === packId);
+            return pack?.name ?? packId;
+        },
+        modelLabelResolver: (modelId) => {
+            const candidates = [
+                modelId,
+                String(modelId || '').replace(/(\d)-(\d)/g, '$1.$2'),
+            ];
+
+            for (const candidate of candidates) {
+                const textModel = findTextModel(effectiveTextModels, candidate);
+                if (textModel?.label) {
+                    return textModel.label;
+                }
+
+                const mediaModel = mediaModelsCatalog[candidate];
+                if (mediaModel?.label || mediaModel?.name) {
+                    return mediaModel.label || mediaModel.name;
+                }
+            }
+
+            return modelId;
+        },
+    }), [billingCatalog, effectiveTextModels, language, mediaModelsCatalog, text]);
     const appNotifications = useMemo(() => {
         const items = buildAppNotifications({
             subscription: subscriptionState,
             walletTransactions,
             text,
             language,
+            walletLabelOptions,
         });
         return applyReadState(items, readNotificationIds);
-    }, [subscriptionState, walletTransactions, text, language, readNotificationIds]);
+    }, [subscriptionState, walletTransactions, text, language, readNotificationIds, walletLabelOptions]);
     const tokenBalance = resolveGenerationTokenBalance(walletData, profile);
     const activeImageCatalogModel = mediaModelsCatalog[imageModel] ?? null;
     const imageGenerationPrice = useMemo(() => {
@@ -3007,7 +3040,7 @@ function App() {
                 ? currentPage
                 : 'home';
 
-    const showBottomNav = !['ai-chat', 'ai-image', 'ai-video', 'ai-voice', 'ai-3d', 'settings', 'wallet', 'referrals'].includes(currentPage);
+    const showBottomNav = !['ai-chat', 'ai-image', 'ai-video', 'ai-voice', 'ai-3d', 'settings', 'wallet', 'referrals', 'feedback'].includes(currentPage);
     const showNavIndicator = tgLayoutMode !== 'mini-pc';
 
     const navInnerRef = useRef(null);
@@ -5192,14 +5225,14 @@ function App() {
         try {
             await submitUserFeedback({ kind: feedbackKind, message: trimmed });
             setFeedbackDraft('');
-            setFeedbackOpen(false);
+            setCurrentPage(feedbackReturnPage);
             showAppNotice(text.homeFeedbackSuccess, 'success');
         } catch (error) {
             showAppNotice(text.homeFeedbackError, 'error');
         } finally {
             setFeedbackPending(false);
         }
-    }, [feedbackDraft, feedbackKind, feedbackPending, showAppNotice, text]);
+    }, [feedbackDraft, feedbackKind, feedbackPending, feedbackReturnPage, showAppNotice, text]);
 
     const renderPaymentConsentNote = () => (
         <p className="payment-consent-note">
@@ -5832,7 +5865,7 @@ function App() {
                     onClick={() => openExternalLink(HOME_SOCIAL_LINKS.tiktok)}
                         >
                     <span className="home-social-card__ico home-social-card__ico--tiktok" aria-hidden="true">
-                        <img className="home-social-card__img" src="/social-tiktok.png" alt="" />
+                        <FaTiktok size={16} />
                     </span>
                     <span className="home-social-card__label">{text.homeSocialTiktok}</span>
                 </button>
@@ -5842,7 +5875,7 @@ function App() {
                     onClick={() => openExternalLink(HOME_SOCIAL_LINKS.instagram)}
                 >
                     <span className="home-social-card__ico home-social-card__ico--instagram" aria-hidden="true">
-                        <img className="home-social-card__img" src="/social-instagram.png" alt="" />
+                        <FaInstagram size={16} />
                     </span>
                     <span className="home-social-card__label">{text.homeSocialInstagram}</span>
                         </button>
@@ -5864,10 +5897,70 @@ function App() {
                 <button
                     type="button"
                     className="home-feedback-open-btn"
-                    onClick={() => setFeedbackOpen(true)}
+                    onClick={() => {
+                        setFeedbackReturnPage('home');
+                        setCurrentPage('feedback');
+                    }}
                 >
                     {text.homeFeedbackOpenButton}
                 </button>
+            </div>
+        </section>
+    );
+
+    const renderFeedbackScreen = () => (
+        <section className="feedback-screen feedback-screen--concept">
+            {renderConceptPageHeader(text.homeFeedbackModalTitle, () => setCurrentPage(feedbackReturnPage))}
+
+            <div className="feedback-page">
+                <div className="feedback-page__kind-row" role="tablist" aria-label={text.homeFeedbackModalTitle}>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={feedbackKind === 'suggestion'}
+                        className={`feedback-page__kind-btn ${feedbackKind === 'suggestion' ? 'feedback-page__kind-btn--active' : ''}`}
+                        onClick={() => setFeedbackKind('suggestion')}
+                    >
+                        {text.homeFeedbackSuggestionTitle}
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={feedbackKind === 'bug'}
+                        className={`feedback-page__kind-btn ${feedbackKind === 'bug' ? 'feedback-page__kind-btn--active' : ''}`}
+                        onClick={() => setFeedbackKind('bug')}
+                    >
+                        {text.homeFeedbackBugTitle}
+                    </button>
+                </div>
+                <p className="feedback-page__hint">
+                    {feedbackKind === 'bug' ? text.homeFeedbackBugHint : text.homeFeedbackSuggestionHint}
+                </p>
+                <textarea
+                    className="feedback-page__textarea"
+                    value={feedbackDraft}
+                    onChange={(event) => setFeedbackDraft(event.target.value)}
+                    placeholder={text.homeFeedbackPlaceholder}
+                    maxLength={2000}
+                />
+                <div className="feedback-page__actions">
+                    <button
+                        type="button"
+                        className="feedback-page__btn feedback-page__btn--ghost"
+                        disabled={feedbackPending}
+                        onClick={() => setCurrentPage(feedbackReturnPage)}
+                    >
+                        {text.homeFeedbackCancel}
+                    </button>
+                    <button
+                        type="button"
+                        className="feedback-page__btn feedback-page__btn--primary"
+                        disabled={feedbackPending}
+                        onClick={handleFeedbackSubmit}
+                    >
+                        {feedbackPending ? text.homeFeedbackSending : text.homeFeedbackSubmit}
+                    </button>
+                </div>
             </div>
         </section>
     );
@@ -7499,7 +7592,12 @@ function App() {
                     ) : null}
                     {walletTransactions.map((item) => (
                         <div key={item.id} className="subscription-concept__tx">
-                            <span className="subscription-concept__tx-name">{item.description || item.type}</span>
+                            <span className="subscription-concept__tx-name">
+                                {formatWalletTransactionReason(item.reason ?? item.description, {
+                                    language,
+                                    ...walletLabelOptions,
+                                })}
+                            </span>
                             <span className={`subscription-concept__tx-amount ${item.amount < 0 ? 'subscription-concept__tx-amount--minus' : ''}`}>
                                 {`${item.amount > 0 ? '+' : ''}${item.amount}`}
                             </span>
@@ -7550,14 +7648,14 @@ function App() {
                 )}
             />
 
-            <div className="history-concept__filters" role="tablist" aria-label={text.historyTitle}>
+            <div className="catalog-concept__tabs history-concept__filters" role="tablist" aria-label={text.historyTitle}>
                 {historyFilterTabs.map(({ id, labelKey }) => (
                     <button
                         key={id}
                         type="button"
                         role="tab"
                         aria-selected={historyFilter === id}
-                        className={`history-concept__filter ${historyFilter === id ? 'history-concept__filter--active' : ''}`}
+                        className={`catalog-concept__tab ${historyFilter === id ? 'catalog-concept__tab--active' : ''}`}
                         onClick={() => setHistoryFilter(id)}
                     >
                         {text[labelKey]}
@@ -7894,6 +7992,8 @@ function App() {
                                             ? renderWalletScreen()
                                             : currentPage === 'history'
                                                 ? renderHistoryScreen()
+                                                : currentPage === 'feedback'
+                                                    ? renderFeedbackScreen()
                                                 : currentPage === 'ai-chat'
                                                     ? renderAiChatScreen()
                                                     : currentPage === 'ai-image'
@@ -7996,63 +8096,6 @@ function App() {
                                 }}
                             >
                                 {confirmDialog.confirmLabel}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            ) : null}
-
-            {feedbackOpen ? (
-                <div className="home-feedback-modal" role="dialog" aria-modal="true" aria-label={text.homeFeedbackModalTitle}>
-                    <div className="home-feedback-modal__backdrop" onClick={() => !feedbackPending && setFeedbackOpen(false)} />
-                    <div className="home-feedback-modal__panel">
-                        <h2 className="home-feedback-modal__title">{text.homeFeedbackModalTitle}</h2>
-                        <div className="home-feedback-modal__kind-row" role="tablist" aria-label={text.homeFeedbackModalTitle}>
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={feedbackKind === 'suggestion'}
-                                className={`home-feedback-modal__kind-btn ${feedbackKind === 'suggestion' ? 'home-feedback-modal__kind-btn--active' : ''}`}
-                                onClick={() => setFeedbackKind('suggestion')}
-                            >
-                                {text.homeFeedbackSuggestionTitle}
-                            </button>
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={feedbackKind === 'bug'}
-                                className={`home-feedback-modal__kind-btn ${feedbackKind === 'bug' ? 'home-feedback-modal__kind-btn--active' : ''}`}
-                                onClick={() => setFeedbackKind('bug')}
-                            >
-                                {text.homeFeedbackBugTitle}
-                            </button>
-                        </div>
-                        <p className="home-feedback-modal__hint">
-                            {feedbackKind === 'bug' ? text.homeFeedbackBugHint : text.homeFeedbackSuggestionHint}
-                        </p>
-                        <textarea
-                            className="home-feedback-modal__textarea"
-                            value={feedbackDraft}
-                            onChange={(event) => setFeedbackDraft(event.target.value)}
-                            placeholder={text.homeFeedbackPlaceholder}
-                            maxLength={2000}
-                        />
-                        <div className="home-feedback-modal__actions">
-                            <button
-                                type="button"
-                                className="home-feedback-modal__btn home-feedback-modal__btn--ghost"
-                                disabled={feedbackPending}
-                                onClick={() => setFeedbackOpen(false)}
-                            >
-                                {text.homeFeedbackCancel}
-                            </button>
-                            <button
-                                type="button"
-                                className="home-feedback-modal__btn home-feedback-modal__btn--primary"
-                                disabled={feedbackPending}
-                                onClick={handleFeedbackSubmit}
-                            >
-                                {feedbackPending ? text.homeFeedbackSending : text.homeFeedbackSubmit}
                             </button>
                         </div>
                     </div>

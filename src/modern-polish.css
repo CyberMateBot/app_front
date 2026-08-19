@@ -528,7 +528,6 @@ html[data-tg-fullscreen='1'] .home-screen--widgets {
 html[data-tg-layout='desktop-full'][data-tg-fullscreen='1'] .home-news-widget,
 html[data-tg-fullscreen='1'] .home-news-widget {
   flex: 0 0 auto;
-  min-height: 200px;
   max-height: min(42vh, 420px);
   aspect-ratio: 16 / 9;
 }
@@ -541,7 +540,7 @@ html[data-tg-layout='desktop-full'] .home-news-widget {
 
 html[data-tg-layout='desktop-full'] .home-news-widget__slide-image {
   object-fit: cover;
-  object-position: center top;
+  object-position: center center;
   image-rendering: auto;
 }
 

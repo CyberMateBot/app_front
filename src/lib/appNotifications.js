@@ -1,3 +1,5 @@
+import { formatWalletTransactionReason } from './walletTransactionLabels.js';
+
 const READ_STORAGE_KEY = 'cm-app-notifications-read';
 
 const RECENT_SUBSCRIPTION_MS = 14 * 24 * 60 * 60 * 1000;
@@ -77,7 +79,7 @@ function isSubscriptionWalletTransaction(tx) {
         || haystack.includes('plan');
 }
 
-function buildWalletNotifications(walletTransactions = [], language = 'ru', text = {}) {
+function buildWalletNotifications(walletTransactions = [], language = 'ru', text = {}, labelOptions = {}) {
     const items = [];
 
     walletTransactions.forEach((tx, index) => {
@@ -88,54 +90,34 @@ function buildWalletNotifications(walletTransactions = [], language = 'ru', text
 
         const amount = Number(tx?.amount ?? 0);
         const reason = String(tx?.reason ?? tx?.description ?? '').trim();
+        const label = formatWalletTransactionReason(reason, { language, ...labelOptions });
         const id = `wallet-${walletTransactionId(tx, index)}`;
 
         if (amount > 0) {
-            const subscriptionPlanMatch = reason.match(/^subscription:(\w+)$/i);
-            if (subscriptionPlanMatch) {
-                const planId = subscriptionPlanMatch[1];
-                const planKey = `plan${planId.charAt(0).toUpperCase()}${planId.slice(1)}Name`;
-                const planName = text[planKey] ?? planId;
-                items.push({
-                    id,
-                    type: 'coins',
-                    title: language === 'ru' ? 'Начисление коинов' : 'Coins credited',
-                    message: language === 'ru'
-                        ? `+${amount} коинов по подписке «${planName}».`
-                        : `+${amount} coins credited for the "${planName}" plan.`,
-                    action: 'wallet',
-                    unread: true,
-                });
-                return;
-            }
-
             items.push({
                 id,
                 type: 'coins',
                 title: language === 'ru' ? 'Начисление коинов' : 'Coins credited',
-                message: reason
-                    ? (language === 'ru'
-                        ? `+${amount} коинов · ${reason}`
-                        : `+${amount} coins · ${reason}`)
-                    : (language === 'ru'
-                        ? `На баланс зачислено +${amount} коинов.`
-                        : `+${amount} coins were added to your balance.`),
+                message: language === 'ru'
+                    ? `+${amount} коинов · ${label}`
+                    : `+${amount} coins · ${label}`,
                 action: 'wallet',
                 unread: true,
             });
             return;
         }
 
-        if (amount < 0 && isSubscriptionWalletTransaction(tx)) {
+        if (amount < 0) {
             items.push({
                 id,
-                type: 'subscription-purchase',
-                title: language === 'ru' ? 'Покупка подписки' : 'Subscription purchase',
-                message: reason
-                    || (language === 'ru'
-                        ? 'Подписка успешно оформлена.'
-                        : 'Your subscription purchase was successful.'),
-                action: 'subscription',
+                type: isSubscriptionWalletTransaction(tx) ? 'subscription-purchase' : 'coins',
+                title: language === 'ru'
+                    ? (isSubscriptionWalletTransaction(tx) ? 'Покупка подписки' : 'Списание коинов')
+                    : (isSubscriptionWalletTransaction(tx) ? 'Subscription purchase' : 'Coins spent'),
+                message: language === 'ru'
+                    ? `${amount} коинов · ${label}`
+                    : `${amount} coins · ${label}`,
+                action: isSubscriptionWalletTransaction(tx) ? 'subscription' : 'wallet',
                 unread: true,
             });
         }
@@ -149,6 +131,7 @@ export function buildAppNotifications({
     walletTransactions = [],
     text = {},
     language = 'ru',
+    walletLabelOptions = {},
 } = {}) {
     const items = [];
 
@@ -198,7 +181,7 @@ export function buildAppNotifications({
         }
     }
 
-    items.push(...buildWalletNotifications(walletTransactions, language, text));
+    items.push(...buildWalletNotifications(walletTransactions, language, text, walletLabelOptions));
 
     return items;
 }

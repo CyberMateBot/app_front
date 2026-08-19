@@ -521,7 +521,6 @@
   border-radius: 18px;
   overflow: hidden;
   width: 100%;
-  min-height: 200px;
   aspect-ratio: 16 / 9;
   max-height: min(56vw, 340px);
 }
@@ -572,10 +571,8 @@
   inset: 0;
   opacity: 0;
   transition: opacity 0.5s ease;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 14px;
+  display: block;
+  padding: 0;
   pointer-events: none;
 }
 
@@ -600,7 +597,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center top;
+  object-position: center center;
   display: block;
 }
 
@@ -612,8 +609,12 @@
 }
 
 .home-news-widget__slide-content {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 2;
+  padding: 14px;
 }
 
 .home-news-widget__tag {
@@ -643,7 +644,6 @@
 @media (max-width: 767px) {
   .home-news-widget {
     aspect-ratio: 16 / 9;
-    min-height: 180px;
     max-height: min(58vw, 300px);
   }
 }
@@ -715,127 +715,104 @@
   border-radius: 14px;
   background: color-mix(in srgb, var(--cm-surface) 82%, transparent);
   color: var(--cm-text);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
 }
 
-.home-feedback-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
+.feedback-screen--concept {
+  padding-bottom: calc(var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)) + 16px);
+}
+
+.feedback-page {
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 12px 12px calc(12px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  flex-direction: column;
+  gap: 0;
 }
 
-.home-feedback-modal__backdrop {
-  position: absolute;
-  inset: 0;
-  background: var(--cm-overlay);
-}
-
-.home-feedback-modal__panel {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 480px);
-  padding: 16px;
-  border: 0.5px solid var(--cm-border);
-  border-radius: 18px;
-  background: var(--cm-surface);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
-}
-
-.home-feedback-modal__title {
-  margin: 0 0 12px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--cm-text);
-}
-
-.home-feedback-modal__kind-row {
+.feedback-page__kind-row {
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
 }
 
-.home-feedback-modal__kind-btn {
+.feedback-page__kind-btn {
   flex: 1 1 0;
   min-height: 38px;
   padding: 8px 12px;
   border: 0.5px solid var(--cm-border);
-  border-radius: 12px;
+  border-radius: 20px;
   background: transparent;
   color: var(--cm-text-muted);
-  font: inherit;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
 }
 
-.home-feedback-modal__kind-btn--active {
+.feedback-page__kind-btn--active {
   background: var(--cm-tab-active-bg);
   color: var(--cm-tab-active-fg);
   border-color: var(--cm-tab-active-border);
 }
 
-.home-feedback-modal__hint {
+.feedback-page__hint {
   margin: 0 0 10px;
   font-size: 12px;
   line-height: 1.45;
   color: var(--cm-text-dim);
 }
 
-.home-feedback-modal__textarea {
+.feedback-page__textarea {
   width: 100%;
-  min-height: 120px;
+  min-height: 180px;
   padding: 12px;
   border: 0.5px solid var(--cm-border);
   border-radius: 12px;
   background: transparent;
   color: var(--cm-text);
-  font: inherit;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   line-height: 1.45;
   resize: vertical;
   box-sizing: border-box;
 }
 
-.home-feedback-modal__textarea:focus {
+.feedback-page__textarea:focus {
   outline: none;
   border-color: var(--cm-accent);
 }
 
-.home-feedback-modal__actions {
+.feedback-page__actions {
   display: flex;
   gap: 8px;
   margin-top: 12px;
 }
 
-.home-feedback-modal__btn {
+.feedback-page__btn {
   flex: 1 1 0;
-  min-height: 40px;
+  min-height: 44px;
   border: none;
   border-radius: 12px;
-  font: inherit;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
 
-.home-feedback-modal__btn--ghost {
+.feedback-page__btn--ghost {
   background: color-mix(in srgb, var(--cm-surface) 70%, var(--cm-border));
   color: var(--cm-text);
 }
 
-.home-feedback-modal__btn--primary {
+.feedback-page__btn--primary {
   background: var(--cm-accent);
   color: #fff;
 }
 
-.home-feedback-modal__btn:disabled {
+.feedback-page__btn:disabled {
   opacity: 0.6;
   cursor: default;
 }
@@ -879,27 +856,14 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
   margin: 0 auto 6px;
 }
 
-.home-social-card__ico--tiktok,
-.home-social-card__ico--instagram {
-  padding: 0;
-  overflow: hidden;
-  background: transparent;
-}
-
 .home-social-card__ico--tiktok {
-  border-radius: 9px;
+  background: #000;
+  color: #fff;
 }
 
 .home-social-card__ico--instagram {
-  border-radius: 9px;
-}
-
-.home-social-card__img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  border-radius: inherit;
+  background: linear-gradient(135deg, #f58529 0%, #dd2a7b 45%, #8134af 100%);
+  color: #fff;
 }
 
 .home-social-card__ico--telegram {
@@ -4390,7 +4354,7 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
 
 .history-concept__filters {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 10px;
   overflow-x: auto;
   scrollbar-width: none;
