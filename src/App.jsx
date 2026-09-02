@@ -29,7 +29,6 @@ import {
     Menu,
     MessageSquare,
     Mic,
-    Moon,
     MoreHorizontal,
     Paperclip,
     Plus,
@@ -39,7 +38,7 @@ import {
     Square,
     Trash2,
     Download,
-    SunMedium,
+    Unlock,
     User,
     Users,
     Video,
@@ -64,7 +63,6 @@ import {
     generateVideo,
     generateAudio,
     generate3D,
-    patchUserTheme,
     registerTelegramUser,
     savePromptHistory,
     startBillingCheckout,
@@ -608,6 +606,7 @@ const translations = {
         catalogTabVoice: 'Голос',
         catalogTab3d: '3D',
         catalogTabCode: 'Код',
+        catalogAvailableOnlyLabel: 'Доступные',
         catalogSectionChat: 'Чат и текст',
         catalogSectionPhoto: 'Генерация изображений',
         catalogEmptyCategory: 'В этой категории пока нет моделей.',
@@ -886,7 +885,7 @@ const translations = {
         settingsLanguageRu: 'Русский',
         settingsLanguageEn: 'English',
         settingsSupportSub: 'Написать в Telegram',
-        settingsLegalSection: 'Документы',
+        settingsLegalSection: 'Поддержка и документы',
         settingsOfferLabel: 'Публичная оферта',
         settingsPrivacyLabel: 'Политика конфиденциальности',
         paymentConsentPrefix: 'Оплачивая, вы принимаете условия',
@@ -1215,6 +1214,7 @@ const translations = {
         catalogTabVoice: 'Voice',
         catalogTab3d: '3D',
         catalogTabCode: 'Code',
+        catalogAvailableOnlyLabel: 'Available',
         catalogSectionChat: 'Chat & text',
         catalogSectionPhoto: 'Image generation',
         catalogEmptyCategory: 'No models in this category yet.',
@@ -1493,7 +1493,7 @@ const translations = {
         settingsLanguageRu: 'Русский',
         settingsLanguageEn: 'English',
         settingsSupportSub: 'Message on Telegram',
-        settingsLegalSection: 'Documents',
+        settingsLegalSection: 'Support & Documents',
         settingsOfferLabel: 'Public offer',
         settingsPrivacyLabel: 'Privacy policy',
         paymentConsentPrefix: 'By paying, you accept the terms of the',
@@ -1703,6 +1703,32 @@ function getInitialTextModelId() {
     return getStoredTextModelId() ?? 'yandexgpt';
 }
 
+// Desktop mouse wheels only emit vertical deltas by default, so horizontally
+// scrollable chip rows (catalog tabs, history filters, plan cards) are
+// otherwise unreachable without a trackpad or manual drag. Convert vertical
+// wheel intent into horizontal scrolling whenever the row can actually
+// overflow horizontally.
+function attachHorizontalWheelScroll(el) {
+    if (!el) {
+        return () => {};
+    }
+
+    const onWheel = (event) => {
+        if (el.scrollWidth <= el.clientWidth) {
+            return;
+        }
+        if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+            return;
+        }
+
+        event.preventDefault();
+        el.scrollBy({ left: event.deltaY, behavior: 'smooth' });
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+}
+
 function App() {
     const [currentPage, setCurrentPage] = useState('home');
     const [walletReturnPage, setWalletReturnPage] = useState('profile');
@@ -1711,6 +1737,7 @@ function App() {
     const [billingCatalog, setBillingCatalog] = useState(() => getFallbackBillingCatalog());
     const [checkoutPendingId, setCheckoutPendingId] = useState(null);
     const [feedbackReturnPage, setFeedbackReturnPage] = useState('home');
+    const [settingsReturnPage, setSettingsReturnPage] = useState('profile');
     const [feedbackKind, setFeedbackKind] = useState('suggestion');
     const [feedbackDraft, setFeedbackDraft] = useState('');
     const [feedbackPending, setFeedbackPending] = useState(false);
@@ -1853,12 +1880,15 @@ function App() {
     const [isGeneratingThreeD, setIsGeneratingThreeD] = useState(false);
     const [mediaDownloadBusy, setMediaDownloadBusy] = useState(null);
     const [catalogTab, setCatalogTab] = useState('all');
+    const [catalogAvailableOnly, setCatalogAvailableOnly] = useState(false);
     const [catalogSearch, setCatalogSearch] = useState('');
     const [catalogToolsRendered, setCatalogToolsRendered] = useState(0);
     const [historyFilter, setHistoryFilter] = useState('all');
     const [historySelectMode, setHistorySelectMode] = useState(false);
     const [selectedHistoryTopicIds, setSelectedHistoryTopicIds] = useState([]);
     const subscriptionPlansScrollRef = useRef(null);
+    const catalogTabsScrollRef = useRef(null);
+    const historyFiltersScrollRef = useRef(null);
 
     const effectiveTextModels = useMemo(
         () => resolveEffectiveTextModels(textModels),
@@ -2384,19 +2414,6 @@ function App() {
             setTheme(applyTheme(nextTheme, tg, { persist: false }));
         });
     }, [telegramUser?.id]);
-
-    const toggleTheme = useCallback(() => {
-        const nextTheme = theme === 'dark' ? 'light' : 'dark';
-        const appliedTheme = applyTheme(nextTheme, getTelegramWebApp());
-
-        setTheme(appliedTheme);
-
-        patchUserTheme(appliedTheme).catch((error) => {
-            if (import.meta.env.DEV) {
-                console.warn('[CyberMate] Theme saved locally; API sync failed:', error);
-            }
-        });
-    }, [theme]);
 
     useEffect(() => {
         if (typeof document !== 'undefined') {
@@ -3228,13 +3245,15 @@ function App() {
                 const matchesSearch = !catalogSearchQuery
                     || toolLabel.includes(catalogSearchQuery)
                     || toolSub.includes(catalogSearchQuery);
-                return matchesTab && matchesSearch;
+                const matchesAvailability = !catalogAvailableOnly || !tool.locked;
+                return matchesTab && matchesSearch && matchesAvailability;
             }),
         }))
         .filter((section) => section.tools.length > 0), [
         catalogSections,
         catalogTab,
         catalogSearchQuery,
+        catalogAvailableOnly,
         language,
         text,
         effectiveTextModels,
@@ -3433,6 +3452,20 @@ function App() {
 
         scrollEl.addEventListener('wheel', onWheel, { passive: false });
         return () => scrollEl.removeEventListener('wheel', onWheel);
+    }, [currentPage]);
+
+    useEffect(() => {
+        if (currentPage !== 'catalog') {
+            return undefined;
+        }
+        return attachHorizontalWheelScroll(catalogTabsScrollRef.current);
+    }, [currentPage]);
+
+    useEffect(() => {
+        if (currentPage !== 'history') {
+            return undefined;
+        }
+        return attachHorizontalWheelScroll(historyFiltersScrollRef.current);
     }, [currentPage]);
 
     useEffect(() => {
@@ -5799,7 +5832,10 @@ function App() {
                         type="button"
                         className="home-concept__icon-btn"
                         aria-label={text.settingsTitle}
-                        onClick={() => setCurrentPage('settings')}
+                        onClick={() => {
+                            setSettingsReturnPage('home');
+                            setCurrentPage('settings');
+                        }}
                     >
                         <Settings size={22} />
                     </button>
@@ -5992,7 +6028,17 @@ function App() {
                 />
             </label>
 
-            <div className="catalog-concept__tabs" role="tablist" aria-label={text.catalogTitle}>
+            <button
+                type="button"
+                className={`catalog-concept__available-toggle ${catalogAvailableOnly ? 'catalog-concept__available-toggle--active' : ''}`}
+                aria-pressed={catalogAvailableOnly}
+                onClick={() => setCatalogAvailableOnly((prev) => !prev)}
+            >
+                <Unlock size={13} aria-hidden="true" />
+                {text.catalogAvailableOnlyLabel}
+            </button>
+
+            <div className="catalog-concept__tabs" role="tablist" aria-label={text.catalogTitle} ref={catalogTabsScrollRef}>
                 {catalogTabs.map(({ id, labelKey }) => (
                     <button
                         key={id}
@@ -6045,7 +6091,7 @@ function App() {
                                     onClick={() => handleCatalogToolClick(tool)}
                                 >
                                     {tool.locked ? (
-                                        <Lock className="catalog-concept__lock" size={12} aria-hidden="true" />
+                                        <Lock className="catalog-concept__lock" size={13} aria-hidden="true" />
                                     ) : badgeLabel ? (
                                         <span className={`catalog-concept__badge catalog-concept__badge--${badgeTier}`}>
                                             {badgeLabel}
@@ -7246,7 +7292,10 @@ function App() {
                         type="button"
                             className="app-page-header__action"
                         aria-label={text.settingsTitle}
-                        onClick={() => setCurrentPage('settings')}
+                        onClick={() => {
+                            setSettingsReturnPage('profile');
+                            setCurrentPage('settings');
+                        }}
                     >
                         <MoreHorizontal size={18} aria-hidden="true" />
                     </button>
@@ -7367,22 +7416,16 @@ function App() {
 
                 <p className="profile-concept__section-lbl">{text.profileSettingsSection}</p>
                 <div className="profile-concept__menu-list profile-concept__menu-list--settings">
-                    <button type="button" className="profile-concept__menu-item" onClick={() => setCurrentPage('settings')}>
+                    <button type="button" className="profile-concept__menu-item" onClick={() => {
+                        setSettingsReturnPage('profile');
+                        setCurrentPage('settings');
+                    }}>
                         <span className="profile-concept__menu-ico profile-concept__menu-ico--muted"><Languages size={16} /></span>
                         <span className="profile-concept__menu-text">
                             <span className="profile-concept__menu-title">{text.profileMenuLanguage}</span>
                             <span className="profile-concept__menu-sub">{text.languageNames[language]}</span>
                         </span>
                         <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
-                    </button>
-                    <button type="button" className="profile-concept__menu-item" onClick={toggleTheme}>
-                        <span className="profile-concept__menu-ico profile-concept__menu-ico--muted"><Moon size={16} /></span>
-                        <span className="profile-concept__menu-text">
-                            <span className="profile-concept__menu-title">{text.profileMenuDarkTheme}</span>
-                        </span>
-                        <span className={`profile-concept__toggle ${theme === 'dark' ? 'profile-concept__toggle--on' : ''}`} aria-hidden="true">
-                            <span className="profile-concept__toggle-knob" />
-                        </span>
                     </button>
                 </div>
 
@@ -7648,7 +7691,7 @@ function App() {
                 )}
             />
 
-            <div className="catalog-concept__tabs history-concept__filters" role="tablist" aria-label={text.historyTitle}>
+            <div className="catalog-concept__tabs history-concept__filters" role="tablist" aria-label={text.historyTitle} ref={historyFiltersScrollRef}>
                 {historyFilterTabs.map(({ id, labelKey }) => (
                     <button
                         key={id}
@@ -7814,7 +7857,7 @@ function App() {
 
         return (
             <section className="settings-screen settings-screen--concept">
-                {renderConceptPageHeader(text.settingsTitle, () => setCurrentPage('profile'))}
+                {renderConceptPageHeader(text.settingsTitle, () => setCurrentPage(settingsReturnPage))}
 
                 <p className="profile-concept__section-lbl">{text.settingsLanguageSection}</p>
                 <div className="settings-concept__lang-grid">
@@ -7837,20 +7880,8 @@ function App() {
                     })}
                 </div>
 
-                <p className="profile-concept__section-lbl">{text.settingsAppearanceSection}</p>
+                <p className="profile-concept__section-lbl">{text.settingsLegalSection}</p>
                 <div className="profile-concept__menu-list">
-                    <button type="button" className="profile-concept__menu-item" onClick={toggleTheme}>
-                        <span className="profile-concept__menu-ico profile-concept__menu-ico--muted">
-                            {theme === 'dark' ? <Moon size={16} /> : <SunMedium size={16} />}
-                        </span>
-                        <span className="profile-concept__menu-text">
-                            <span className="profile-concept__menu-title">{text.themeLabel.replace(':', '')}</span>
-                            <span className="profile-concept__menu-sub">{text.themeNames[theme]}</span>
-                        </span>
-                        <span className={`profile-concept__toggle ${theme === 'dark' ? 'profile-concept__toggle--on' : ''}`} aria-hidden="true">
-                            <span className="profile-concept__toggle-knob" />
-                        </span>
-                    </button>
                     <button type="button" className="profile-concept__menu-item" onClick={handleSupportClick}>
                         <span className="profile-concept__menu-ico profile-concept__menu-ico--green">
                             <MessageSquare size={16} />
@@ -7861,10 +7892,6 @@ function App() {
                         </span>
                         <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
                     </button>
-                </div>
-
-                <p className="profile-concept__section-lbl">{text.settingsLegalSection}</p>
-                <div className="profile-concept__menu-list">
                     <button
                         type="button"
                         className="profile-concept__menu-item"

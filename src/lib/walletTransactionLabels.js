@@ -21,7 +21,10 @@ export function formatWalletTransactionReason(reason, {
         return language === 'ru' ? 'Бонус за регистрацию' : 'Registration bonus';
     }
     if (raw === 'referral_bonus') {
-        return language === 'ru' ? 'Реферальный бонус' : 'Referral bonus';
+        return language === 'ru' ? 'Бонус за приглашённого друга' : 'Referral bonus';
+    }
+    if (raw === 'referral_signup_bonus') {
+        return language === 'ru' ? 'Бонус за переход по приглашению' : 'Referral signup bonus';
     }
 
     let match;

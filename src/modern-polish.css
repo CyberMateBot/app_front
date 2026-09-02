@@ -141,8 +141,6 @@
   .profile-concept__menu-item,
   .subscription-concept__coin-pack,
   .home-social-card {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 280px;
     animation: mp-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
@@ -152,9 +150,16 @@
     animation: mp-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  /* `content-visibility: auto` intentionally omitted here: newer WebKit
+     builds re-run the intersection/style check for every content-visibility
+     element that is also mid-animation on each full page remount (this app
+     remounts the page via `key={currentPage}`), which showed up as a
+     multi-second main-thread hang right after navigating on iOS builds
+     newer than 18. The catalog grid already lazy-reveals its cards in
+     batches from JS (`catalogToolsRendered`), so this CSS-level lazy
+     rendering was redundant anyway — dropping it removes the freeze
+     without changing what's visible. */
   .catalog-concept__grid > .catalog-concept__card--reveal {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 120px;
     animation: mp-catalog-card-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
