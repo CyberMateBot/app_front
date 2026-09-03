@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Lock } from 'lucide-react';
+import { ChevronDown, Crown } from 'lucide-react';
 import CoinIcon from './CoinIcon.jsx';
 
 export default function AiVariantSelect({
@@ -93,7 +93,7 @@ export default function AiVariantSelect({
                                             <span className="media-options__chip-label">{option.label}</span>
                                             {option.locked ? (
                                                 <span className="media-options__chip-lock">
-                                                    <Lock size={11} />
+                                                    <Crown size={9} aria-hidden="true" />
                                                     {text[option.requiredPlanLabelKey] ?? option.requiredPlan}
                                                 </span>
                                             ) : option.priceCoins ? (

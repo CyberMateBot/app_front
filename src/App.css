@@ -4226,17 +4226,12 @@
 
 .catalog-concept__lock {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: color-mix(in srgb, #f59e0b 22%, var(--cm-surface));
-  border: 0.5px solid color-mix(in srgb, #f59e0b 45%, transparent);
-  color: #f59e0b;
+  top: 9px;
+  right: 9px;
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--cm-accent) 70%, var(--cm-text-muted));
+  opacity: 0.88;
+  pointer-events: none;
 }
 
 .catalog-concept__badge {
@@ -7698,7 +7693,8 @@ html[data-theme='light'][data-tg-desktop-embedded='1'] .plan-detail-modal__panel
 .media-options__chip-lock {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   font-size: 10px;
-  color: var(--cm-accent, #8b7cff);
+  font-weight: 500;
+  color: color-mix(in srgb, var(--cm-accent) 65%, var(--cm-text-muted));
 }

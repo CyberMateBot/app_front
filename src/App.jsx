@@ -6154,7 +6154,7 @@ function App() {
                                     onClick={() => handleCatalogToolClick(tool)}
                                 >
                                     {tool.locked ? (
-                                        <Lock className="catalog-concept__lock" size={13} aria-hidden="true" />
+                                        <Crown className="catalog-concept__lock" size={11} aria-hidden="true" />
                                     ) : badgeLabel ? (
                                         <span className={`catalog-concept__badge catalog-concept__badge--${badgeTier}`}>
                                             {badgeLabel}
