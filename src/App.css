@@ -533,6 +533,17 @@
   line-height: 1.3;
 }
 
+.home2__hero-wave {
+  /* Isolates the emoji's own (often much taller) font metrics into its own
+     atomic inline-block so it can't inflate the surrounding line box and
+     push the text down inside the card. */
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 15px;
+  line-height: 1;
+  vertical-align: -1px;
+}
+
 .home2__hero-sub {
   margin: 4px 0 0;
   font-size: 12px;
@@ -7003,10 +7014,6 @@ html[data-tg-layout='desktop-full'] .app-main {
   max-width: var(--layout-max-width, 100%);
 }
 
-html[data-tg-layout='desktop-full'] .app-shell[data-page='subscription'] .app-main {
-  max-width: 100%;
-}
-
 html[data-tg-layout='desktop-full'] .subscription-page__plans-carousel {
   gap: 12px;
   margin: 0;
@@ -7015,17 +7022,13 @@ html[data-tg-layout='desktop-full'] .subscription-page__plans-carousel {
 
 html[data-tg-layout='desktop-full'] .subscription-page__plans-scroll {
   margin: 0;
-  overflow: visible;
-  border: none;
-  box-shadow: none;
-}
-
-html[data-tg-layout='desktop-full'] .subscription-page__plans {
-  padding: 4px 0 14px;
 }
 
 html[data-tg-layout='desktop-full'] .subscription-page__plans .subscription-plan-card {
-  flex: 0 0 300px;
+  /* Always exactly one card, edge-to-edge — a wide "show every plan at
+     once" row used to let a sliver of the next card (with its own
+     tier-colored glow) show at the container edge, which read as a
+     stray colored line. */
   min-height: 420px;
 }
 

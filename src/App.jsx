@@ -429,7 +429,7 @@ const translations = {
         releaseBadge: 'Релиз 0.1',
         homeDescription: 'CyberMate — все нейросети в одном месте, под твоим контролем.',
         promptHistory: 'История Промтов',
-        homeGreeting: 'Привет, {name} 👋',
+        homeGreeting: 'Привет, {name}',
         homeGreetingSub: 'Что будем создавать сегодня?',
         homeSearchPlaceholder: 'Поиск инструментов...',
         homeCategoriesLabel: 'Категории',
@@ -1039,7 +1039,7 @@ const translations = {
         releaseBadge: 'Release 0.1',
         homeDescription: 'CyberMate — all AI tools in one place, under your control.',
         promptHistory: 'Prompt History',
-        homeGreeting: 'Hi, {name} 👋',
+        homeGreeting: 'Hi, {name}',
         homeGreetingSub: 'What shall we create today?',
         homeSearchPlaceholder: 'Search tools...',
         homeCategoriesLabel: 'Categories',
@@ -5861,7 +5861,15 @@ function App() {
                 <span className="home2__hero-glow" aria-hidden="true" />
                 <div className="home2__hero-row">
                     <div className="home2__hero-greeting">
-                        <p className="home2__hero-hello">{homeGreetingText}</p>
+                        <p className="home2__hero-hello">
+                            {homeGreetingText}
+                            {/* Isolated from the text node on purpose: mixed with Latin
+                                text inline, this emoji's own font metrics can inflate the
+                                whole line's height in some renderers (e.g. Telegram Desktop
+                                on Windows), pushing the visible glyphs toward the bottom of
+                                an oversized line box. */}
+                            <span className="home2__hero-wave" aria-hidden="true">👋</span>
+                        </p>
                         <p className="home2__hero-sub">{text.homeGreetingSub}</p>
                     </div>
                     <button type="button" className="home2__hero-balance" onClick={openCoinTopUp}>

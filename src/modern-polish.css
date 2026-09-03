@@ -551,17 +551,3 @@ html[data-tg-layout='desktop-full'] .app-shell[data-page='home'] .app-main {
   contain: none;
 }
 
-html[data-tg-layout='desktop-full'] .subscription-page__plans {
-  padding: 4px 0 14px;
-  scroll-padding-inline: 0;
-  scroll-snap-type: none;
-}
-
-html[data-tg-layout='desktop-full'] .subscription-page__plans-scroll {
-  overflow: visible;
-}
-
-html[data-tg-layout='desktop-full'] .subscription-page__plans .subscription-plan-card {
-  flex: 0 0 300px;
-  scroll-snap-align: none;
-}
