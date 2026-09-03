@@ -699,6 +699,10 @@
   flex-shrink: 0;
 }
 
+.home-quick-block {
+  margin-bottom: 16px;
+}
+
 .home-social-block {
   margin-top: 14px;
 }
@@ -2265,19 +2269,16 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
   flex-direction: row;
   align-items: stretch;
   gap: 12px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  scroll-padding-inline: var(--page-pad-x, 16px);
+  /* Card position is fully controlled from JS (center-on-load + the
+     prev/next buttons) — hidden overflow keeps wheel/touch/trackpad
+     scrolling from ever moving the row, while scrollTo()/scrollLeft still
+     work programmatically. */
+  overflow: hidden;
   padding: 4px var(--page-pad-x, 16px) 14px;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
 }
 
 .subscription-page__plans-nav {
-  display: none;
+  display: inline-flex;
   flex-shrink: 0;
   align-self: center;
   align-items: center;
@@ -2312,20 +2313,10 @@ html[data-tg-fullscreen='1'] .home-screen--widgets .home-social-block {
   .subscription-page__plans-scroll {
     margin: 0;
   }
-
-  .subscription-page__plans-nav {
-    display: inline-flex;
-  }
-}
-
-.subscription-page__plans::-webkit-scrollbar {
-  display: none;
 }
 
 .subscription-page__plans .subscription-plan-card {
   flex: 0 0 clamp(280px, 84vw, 320px);
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
   min-height: clamp(400px, 105vw, 460px);
   align-self: stretch;
 }
@@ -6988,13 +6979,10 @@ html[data-tg-layout='desktop-full'] .subscription-page__plans-scroll {
 
 html[data-tg-layout='desktop-full'] .subscription-page__plans {
   padding: 4px 0 14px;
-  scroll-padding-inline: 0;
-  scroll-snap-type: none;
 }
 
 html[data-tg-layout='desktop-full'] .subscription-page__plans .subscription-plan-card {
   flex: 0 0 300px;
-  scroll-snap-align: none;
   min-height: 420px;
 }
 

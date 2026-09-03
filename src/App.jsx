@@ -30,6 +30,7 @@ import {
     MessageSquare,
     Mic,
     MoreHorizontal,
+    Music,
     Paperclip,
     Plus,
     Search,
@@ -158,7 +159,6 @@ import {
 import AppNotice from './Components/AppNotice.jsx';
 import AppNotifications from './Components/AppNotifications.jsx';
 import PlanDetailModal from './Components/PlanDetailModal.jsx';
-import SubscriptionTimeBadge from './Components/SubscriptionTimeBadge.jsx';
 import TelegramDesktopExpand from './Components/TelegramDesktopExpand.jsx';
 import AppPageHeader from './Components/AppPageHeader.jsx';
 import CoinBalanceWidget from './Components/CoinBalanceWidget.jsx';
@@ -284,6 +284,15 @@ const navigationItems = [
     { key: 'catalog', labelKey: 'navCatalog', icon: LayoutGrid },
     { key: 'history', labelKey: 'navHistory', icon: History },
     { key: 'profile', labelKey: 'navProfile', icon: User },
+];
+
+const homeQuickAccessItems = [
+    { tab: 'chat', icon: MessageSquare, colorClass: 'c1', titleKey: 'toolChatTitle', subKey: 'toolChatSub' },
+    { tab: 'photo', icon: ImageIcon, colorClass: 'c2', titleKey: 'toolImagesTitle', subKey: 'toolImagesSub' },
+    { tab: 'video', icon: Video, colorClass: 'c3', titleKey: 'toolVideoTitle', subKey: 'toolVideoSub', badge: 'new' },
+    { tab: 'music', icon: Music, colorClass: 'c4', titleKey: 'toolMusicTitle', subKey: 'toolMusicSub' },
+    { tab: 'voice', icon: Mic, colorClass: 'c5', titleKey: 'toolVoiceTitle', subKey: 'toolVoiceSub' },
+    { tab: '3d', icon: Box, colorClass: 'c6', titleKey: 'tool3dTitle', subKey: 'tool3dSub' },
 ];
 
 const historyFilterTabs = [
@@ -425,6 +434,7 @@ const translations = {
         homeSearchPlaceholder: 'Поиск инструментов...',
         homeCategoriesLabel: 'Категории',
         homeToolsLabel: 'Инструменты',
+        homeQuickAccessLabel: 'Быстрый доступ',
         homeBrandName: 'CyberMate',
         homeSocialLabel: 'Мы в соцсетях',
         homeFeedbackTitle: 'Обратная связь',
@@ -1033,6 +1043,7 @@ const translations = {
         homeSearchPlaceholder: 'Search tools...',
         homeCategoriesLabel: 'Categories',
         homeToolsLabel: 'Tools',
+        homeQuickAccessLabel: 'Quick access',
         homeBrandName: 'CyberMate',
         homeSocialLabel: 'Follow us',
         homeFeedbackTitle: 'Feedback',
@@ -3436,25 +3447,6 @@ function App() {
     }, [currentPage]);
 
     useEffect(() => {
-        const scrollEl = subscriptionPlansScrollRef.current;
-        if (!scrollEl || currentPage !== 'subscription') {
-            return undefined;
-        }
-
-        const onWheel = (event) => {
-            if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
-                return;
-            }
-
-            event.preventDefault();
-            scrollEl.scrollBy({ left: event.deltaY, behavior: 'smooth' });
-        };
-
-        scrollEl.addEventListener('wheel', onWheel, { passive: false });
-        return () => scrollEl.removeEventListener('wheel', onWheel);
-    }, [currentPage]);
-
-    useEffect(() => {
         if (currentPage !== 'catalog') {
             return undefined;
         }
@@ -3468,8 +3460,12 @@ function App() {
         return attachHorizontalWheelScroll(historyFiltersScrollRef.current);
     }, [currentPage]);
 
+    // The row itself is not user-scrollable anymore (only the prev/next
+    // buttons move it), so on entering the page — or whenever the active
+    // plan changes — snap the current plan's card to the horizontal center
+    // instead of leaving it wherever it happened to land.
     useEffect(() => {
-        if (currentPage !== 'subscription' || tgLayoutMode !== 'desktop-full') {
+        if (currentPage !== 'subscription') {
             return undefined;
         }
 
@@ -3478,9 +3474,25 @@ function App() {
             return undefined;
         }
 
-        el.scrollLeft = 0;
-        return undefined;
-    }, [currentPage, tgLayoutMode, billingCatalog?.plans?.length]);
+        const centerCurrentPlan = () => {
+            const cards = Array.from(el.querySelectorAll('.subscription-plan-card'));
+            if (cards.length === 0) {
+                return;
+            }
+
+            const activeCard = cards.find((card) => card.classList.contains('subscription-plan-card--current')) || cards[0];
+            const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+            const target = Math.max(0, Math.min(
+                maxScrollLeft,
+                activeCard.offsetLeft + activeCard.offsetWidth / 2 - el.clientWidth / 2,
+            ));
+
+            el.scrollTo({ left: target, behavior: 'instant' });
+        };
+
+        const rafId = window.requestAnimationFrame(centerCurrentPlan);
+        return () => window.cancelAnimationFrame(rafId);
+    }, [currentPage, tgLayoutMode, userData.subscriptionPlanId, billingCatalog?.plans?.length]);
 
     const scrollSubscriptionPlan = useCallback((direction) => {
         const el = subscriptionPlansScrollRef.current;
@@ -3493,22 +3505,28 @@ function App() {
             return;
         }
 
-        // Cards snap flush to the container's left inset (same as the hero
-        // card above), so the active card is simply the one closest to the
-        // current scroll position's left edge.
-        const containerInset = parseFloat(getComputedStyle(el).paddingLeft) || 0;
-        const viewportLeft = el.scrollLeft + containerInset;
+        // The active card is whichever one currently sits closest to the
+        // viewport's center (matches how it gets centered on load/switch).
+        const viewportCenter = el.scrollLeft + el.clientWidth / 2;
         let activeIndex = 0;
+        let closestDistance = Infinity;
 
         cards.forEach((card, index) => {
-            if (card.offsetLeft <= viewportLeft + 4) {
+            const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+            const distance = Math.abs(cardCenter - viewportCenter);
+            if (distance < closestDistance) {
+                closestDistance = distance;
                 activeIndex = index;
             }
         });
 
         const nextIndex = Math.min(cards.length - 1, Math.max(0, activeIndex + direction));
         const target = cards[nextIndex];
-        const targetLeft = Math.max(0, target.offsetLeft - containerInset);
+        const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+        const targetLeft = Math.max(0, Math.min(
+            maxScrollLeft,
+            target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2,
+        ));
 
         el.scrollTo({ left: targetLeft, behavior: 'smooth' });
     }, []);
@@ -5362,15 +5380,6 @@ function App() {
                                 <span className="subscription-plan-card__coin-label">{text.subscriptionCoinsPerMonth}</span>
                             </div>
                         ) : null}
-                        {isCurrent && userData.subscriptionTimeLeft ? (
-                            <SubscriptionTimeBadge
-                                timeLeftLabel={userData.subscriptionTimeLeft}
-                                expiryDateLabel={userData.subscriptionExpiryDate}
-                                expiringSoon={userData.subscriptionExpiringSoon}
-                                language={language}
-                                compact
-                            />
-                        ) : null}
                         <ul className="subscription-plan-card__features">
                             {displayFeatures.map((feature) => (
                                 <li key={feature} className="subscription-plan-card__feat">
@@ -5801,6 +5810,11 @@ function App() {
         openSupport(url);
     };
 
+    const handleHomeQuickAccessClick = (tab) => {
+        setCatalogTab(tab);
+        setCurrentPage('catalog');
+    };
+
     const renderHomeScreen = () => (
         <section className="home-screen home-screen--concept home-screen--widgets" aria-label={text.navHome}>
             <div className="home-concept__orb" aria-hidden="true" />
@@ -5841,6 +5855,31 @@ function App() {
                     </button>
                 </div>
             </header>
+
+            <div className="home-quick-block">
+                <p className="home-concept__section-label home-concept__section-label--widgets">{text.homeQuickAccessLabel}</p>
+                <div className="home-concept__grid">
+                    {homeQuickAccessItems.map(({ tab, icon: Icon, colorClass, titleKey, subKey, badge }) => (
+                        <button
+                            key={tab}
+                            type="button"
+                            className={`home-concept__card home-concept__card--${colorClass}`}
+                            onClick={() => handleHomeQuickAccessClick(tab)}
+                        >
+                            {badge ? (
+                                <span className={`home-concept__badge home-concept__badge--${badge}`}>
+                                    {badge === 'new' ? text.badgeNew : text.badgeHot}
+                                </span>
+                            ) : null}
+                            <span className="home-concept__card-icon" aria-hidden="true">
+                                <Icon size={18} />
+                            </span>
+                            <span className="home-concept__card-title">{text[titleKey]}</span>
+                            <span className="home-concept__card-sub">{text[subKey]}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
 
             <HomeNewsWidget slides={homeNewsSlides} />
 
