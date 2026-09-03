@@ -81,6 +81,85 @@ function triggerBlobDownload(blob, filename) {
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
 }
 
+function replaceFilenameExtension(filename, ext) {
+    const base = String(filename || 'cybermate-image').replace(/\.[a-z0-9]{2,5}$/i, '');
+    return `${base || 'cybermate-image'}${ext}`;
+}
+
+async function canvasToBlob(canvas, mime, quality) {
+    if (typeof canvas.toBlob === 'function') {
+        const blob = await new Promise((resolve) => {
+            canvas.toBlob(resolve, mime, quality);
+        });
+        if (blob && blob.size > 0) {
+            return blob;
+        }
+    }
+
+    const dataUrl = canvas.toDataURL(mime, quality);
+    return dataUrlToBlob(dataUrl);
+}
+
+async function decodeImageBlob(blob) {
+    if (typeof createImageBitmap === 'function') {
+        try {
+            return await createImageBitmap(blob, { colorSpaceConversion: 'default' });
+        } catch {
+            // Fall through to HTMLImageElement.
+        }
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+        const image = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error('Image decode failed.'));
+            img.src = objectUrl;
+        });
+        return image;
+    } finally {
+        URL.revokeObjectURL(objectUrl);
+    }
+}
+
+// Nano Banana / WaveSpeed files often use wide-gamut PNG or progressive
+// JPEG. Chrome shows them in <img>, but Telegram.downloadFile and some
+// OS viewers save/open them as a solid black (PNG) or gray (JPEG) frame.
+// Re-rasterize to 8-bit sRGB JPEG so the file matches what the user saw.
+async function rasterizeImageBlob(blob, filename) {
+    const safeName = replaceFilenameExtension(filename, '.jpg');
+    const image = await decodeImageBlob(blob);
+    const width = image.width || image.naturalWidth || 0;
+    const height = image.height || image.naturalHeight || 0;
+
+    try {
+        if (!width || !height) {
+            throw new Error('Image has no pixels.');
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        if (!ctx) {
+            throw new Error('Canvas is not available.');
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(image, 0, 0);
+
+        const out = await canvasToBlob(canvas, 'image/jpeg', 0.92);
+        if (!out || out.size < 512) {
+            throw new Error('Failed to encode image.');
+        }
+        return { blob: out, filename: safeName };
+    } finally {
+        image.close?.();
+    }
+}
+
 function dataUrlToBlob(dataUrl) {
     const trimmed = String(dataUrl || '').trim();
     const commaIndex = trimmed.indexOf(',');
@@ -316,10 +395,48 @@ async function downloadGalleryBlob(blob, filename, kind) {
 }
 
 async function downloadBlobOnDevice(blob, filename, kind) {
+    let file = blob;
+    let name = filename;
+
+    if (kind === 'image') {
+        try {
+            const rasterized = await rasterizeImageBlob(blob, filename);
+            file = rasterized.blob;
+            name = rasterized.filename;
+        } catch {
+            // Keep the original bytes if the browser cannot decode them.
+        }
+
+        // Never use Telegram.downloadFile for the original provider file:
+        // it re-encodes wide-gamut PNG/JPEG into a solid black or gray
+        // frame. After canvas rasterize, desktop saves via <a download>.
+        // On phones, share-to-gallery first; Telegram download is last.
+        if (isMobileDevice()) {
+            try {
+                return await downloadGalleryBlob(file, name, kind);
+            } catch {
+                // fall through
+            }
+
+            if (supportsTelegramDownload()) {
+                try {
+                    const preparedUrl = await prepareDataDownloadUrl(file, name);
+                    await tryTelegramDownload(preparedUrl, name);
+                    return { method: 'telegram' };
+                } catch {
+                    // fall through
+                }
+            }
+        }
+
+        triggerBlobDownload(file, name);
+        return { method: 'blob' };
+    }
+
     if (supportsTelegramDownload()) {
         try {
-            const preparedUrl = await prepareDataDownloadUrl(blob, filename);
-            await tryTelegramDownload(preparedUrl, filename);
+            const preparedUrl = await prepareDataDownloadUrl(file, name);
+            await tryTelegramDownload(preparedUrl, name);
             return { method: 'telegram' };
         } catch {
             // fall through to gallery / share / blob download
@@ -327,27 +444,22 @@ async function downloadBlobOnDevice(blob, filename, kind) {
     }
 
     if (shouldSaveToGallery(kind)) {
-        return downloadGalleryBlob(blob, filename, kind);
+        return downloadGalleryBlob(file, name, kind);
     }
 
     if (isMobileDevice()) {
-        const shared = await tryShareToGallery(blob, filename, kind);
+        const shared = await tryShareToGallery(file, name, kind);
 
         if (shared) {
             return { method: 'gallery' };
         }
     }
 
-    triggerBlobDownload(blob, filename);
+    triggerBlobDownload(file, name);
     return { method: 'blob' };
 }
 
 async function downloadRemoteUrl(trimmed, safeFilename, kind) {
-    // Always pull the real bytes through our proxy first. Handing Telegram
-    // `downloadFile` the long `/v1/media/download?url=…` link used to
-    // "succeed" and save a solid-black JPEG: Telegram's downloader truncates
-    // or fails the signed WaveSpeed URL and writes an empty placeholder,
-    // while the in-app <img> preview (loaded by the browser) looks fine.
     const blob = await fetchViaProxy(trimmed, safeFilename);
     if (blob.size < 512) {
         throw new Error('Downloaded file is empty.');
