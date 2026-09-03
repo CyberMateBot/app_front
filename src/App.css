@@ -2345,23 +2345,26 @@
 }
 
 .subscription-page__plans-scroll {
+  /* Card width and the matching side padding are fractions of THIS
+     element — never 100vw. In Telegram the mini-app column is much
+     narrower than the window, so a 100vw / max-width:360px card filled
+     the whole column and left no room for neighbors; the last card
+     ("Бизнес") also couldn't optically center. JS writes --sub-card-w
+     and --sub-side-pad in px on resize; cqi is the no-JS fallback. */
+  --sub-card-ratio: 0.68;
+  --sub-card-w: calc(var(--sub-card-ratio) * 100cqi);
+  --sub-side-pad: calc((1 - var(--sub-card-ratio)) * 50cqi);
+  container-type: inline-size;
+  position: relative;
   flex: 1;
   min-width: 0;
-  /* Bleed to the app's edges so the peek of the neighboring card on
-     each side stays symmetric even inside the padded page shell. Padding
-     below leaves enough room for the "outer" card sliver to be visible
-     but softened, and — crucially — lets the first/last card still snap
-     to the horizontal center of the viewport (which native scroll-snap
-     can't otherwise do without side padding = half the peek). */
   margin: 0 calc(-1 * var(--page-pad-x, 16px));
-  padding: 4px 0 22px;
+  padding: 18px 0 28px;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
   overscroll-behavior-x: contain;
-  /* Chrome/Edge/Safari hide the horizontal scrollbar; we manage
-     scrolling from JS + touch, no need to reserve space for a bar. */
   scrollbar-width: none;
   -ms-overflow-style: none;
   touch-action: pan-x pan-y;
@@ -2376,18 +2379,15 @@
 .subscription-page__plans-scroll[data-dragging='true'] {
   cursor: grabbing;
   scroll-behavior: auto;
+  scroll-snap-type: none;
 }
 
 .subscription-page__plans {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 12px;
-  /* Symmetric horizontal padding acts as scroll-padding so first/last
-     card can snap-center. `calc(50% - ...)` isn't reliable across mobile
-     Safari + snap; a fixed side inset is close enough given the card
-     width below. */
-  padding: 0 calc(var(--page-pad-x, 16px) + var(--sub-plan-peek, 22px));
+  gap: 10px;
+  padding: 0 var(--sub-side-pad);
 }
 
 @media (min-width: 768px) {
@@ -2398,24 +2398,24 @@
   .subscription-page__plans-scroll {
     margin: 0;
   }
+
+  .subscription-page__plans {
+    gap: 12px;
+  }
 }
 
 .subscription-page__plans .subscription-plan-card {
-  /* Peek layout: the active card takes most of the viewport, with a
-     visible sliver of each neighbor on the sides. `--sub-plan-peek`
-     controls how much of the neighbor peeks in — matched by the row's
-     side padding so first/last card can still snap to center. */
-  flex: 0 0 calc(100vw - 2 * (var(--page-pad-x, 16px) + var(--sub-plan-peek, 22px)));
-  max-width: 360px;
-  min-height: clamp(400px, 105vw, 460px);
+  flex: 0 0 var(--sub-card-w);
+  width: var(--sub-card-w);
+  max-width: none;
+  min-height: clamp(380px, 98vw, 440px);
   align-self: stretch;
   scroll-snap-align: center;
   scroll-snap-stop: always;
-  /* Independent from `transform` (which the intro animation uses) so the
-     mp-card-in keyframes and the peek scale-down cooperate instead of
-     fighting for the same property. */
-  scale: 0.9;
-  opacity: 0.55;
+  /* `scale` (not `transform`) so the intro animation's transform
+     keyframes don't overwrite the peek scale-down. */
+  scale: 0.82;
+  opacity: 0.58;
   transition: scale 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease, box-shadow 0.35s ease;
   will-change: scale, opacity;
 }
@@ -2424,13 +2424,6 @@
   scale: 1;
   opacity: 1;
   z-index: 1;
-}
-
-@media (min-width: 640px) {
-  .subscription-page__plans .subscription-plan-card {
-    flex-basis: min(360px, 68vw);
-    max-width: 360px;
-  }
 }
 
 @keyframes subscription-page-hero-in {
@@ -2709,6 +2702,10 @@
   .subscription-page__hero--animate,
   .subscription-plan-card {
     animation: none;
+  }
+
+  .subscription-page__plans .subscription-plan-card {
+    transition: none;
   }
 }
 
@@ -7069,12 +7066,6 @@ html[data-tg-layout='desktop-full'] .subscription-page__plans-scroll {
 }
 
 html[data-tg-layout='desktop-full'] .subscription-page__plans .subscription-plan-card {
-  /* Fixed target width on desktop-full so the peek layout renders with
-     an obvious "hero card + slivers" silhouette instead of stretching
-     one card across the whole viewport (would leave the neighbors far
-     off-screen and defeat the peek). */
-  flex-basis: min(380px, 60%);
-  max-width: 380px;
   min-height: 420px;
 }
 

@@ -3491,12 +3491,11 @@ function App() {
         return attachHorizontalWheelScroll(historyFiltersScrollRef.current);
     }, [currentPage]);
 
-    // Peek carousel: user drives the scroll natively (touch swipe on
-    // mobile, mouse drag + wheel + trackpad on desktop). This effect
-    //   - centers the current plan on entry / plan-switch,
-    //   - keeps the `--active` class in sync with whichever card is
-    //     closest to the viewport center (so CSS can enlarge/highlight it),
-    //   - and installs the desktop drag + wheel handlers.
+    // Peek carousel: cards are ~68% of the scroll viewport so both
+    // neighbors stay visible. Touch swipe on mobile; mouse drag on
+    // desktop (wheel / trackpad scrolling is blocked). The `--active`
+    // class follows whichever card is closest to center so CSS can
+    // enlarge it relative to its neighbors.
     useEffect(() => {
         if (currentPage !== 'subscription') {
             return undefined;
@@ -3507,15 +3506,33 @@ function App() {
             return undefined;
         }
 
+        const CARD_RATIO = 0.68;
         let rafId = 0;
+        let centerRafId = 0;
 
         const getCards = () => Array.from(el.querySelectorAll('.subscription-plan-card'));
+
+        // Layout offsets only — getBoundingClientRect includes CSS `scale`
+        // and the intro `transform` animation, which threw the previous
+        // center math off (visual left + layout width/2). Walk offsetParent
+        // up to the scroll container (it is `position: relative`).
+        const layoutLeftWithin = (container, child) => {
+            let left = 0;
+            let node = child;
+            while (node && node !== container) {
+                left += node.offsetLeft;
+                node = node.offsetParent;
+            }
+            return left;
+        };
+
+        const cardLayoutCenter = (card) => layoutLeftWithin(el, card) + card.offsetWidth / 2;
 
         const scrollTargetForCard = (card) => {
             const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
             return Math.max(0, Math.min(
                 maxScrollLeft,
-                getOffsetLeftWithin(el, card) + card.offsetWidth / 2 - el.clientWidth / 2,
+                cardLayoutCenter(card) - el.clientWidth / 2,
             ));
         };
 
@@ -3528,8 +3545,7 @@ function App() {
             let closest = cards[0];
             let closestDist = Infinity;
             cards.forEach((card) => {
-                const cardCenter = getOffsetLeftWithin(el, card) + card.offsetWidth / 2;
-                const dist = Math.abs(cardCenter - viewportCenter);
+                const dist = Math.abs(cardLayoutCenter(card) - viewportCenter);
                 if (dist < closestDist) {
                     closestDist = dist;
                     closest = card;
@@ -3545,12 +3561,34 @@ function App() {
             }
             const active = findClosestCard();
             cards.forEach((card) => {
-                if (card === active) {
-                    card.classList.add('subscription-plan-card--active');
-                } else {
-                    card.classList.remove('subscription-plan-card--active');
-                }
+                card.classList.toggle('subscription-plan-card--active', card === active);
             });
+        };
+
+        const syncMetrics = () => {
+            const width = el.clientWidth;
+            if (width <= 0) {
+                return;
+            }
+            el.style.setProperty('--sub-card-w', `${(width * CARD_RATIO).toFixed(1)}px`);
+            el.style.setProperty('--sub-side-pad', `${((1 - CARD_RATIO) * width / 2).toFixed(1)}px`);
+        };
+
+        const centerCurrentPlan = () => {
+            syncMetrics();
+            const cards = getCards();
+            if (cards.length === 0) {
+                return;
+            }
+            const currentCard = cards.find((c) => c.classList.contains('subscription-plan-card--current')) || cards[0];
+            const prevSnap = el.style.scrollSnapType;
+            const prevBehavior = el.style.scrollBehavior;
+            el.style.scrollSnapType = 'none';
+            el.style.scrollBehavior = 'auto';
+            el.scrollTo({ left: scrollTargetForCard(currentCard) });
+            el.style.scrollSnapType = prevSnap;
+            el.style.scrollBehavior = prevBehavior;
+            updateActive();
         };
 
         const onScroll = () => {
@@ -3563,54 +3601,37 @@ function App() {
             });
         };
 
-        // Center the user's current plan on entry. `instant` so the initial
-        // paint doesn't animate a distracting swoop from left→center.
-        const centerCurrentPlan = () => {
-            const cards = getCards();
-            if (cards.length === 0) {
-                return;
-            }
-            const currentCard = cards.find((c) => c.classList.contains('subscription-plan-card--current')) || cards[0];
-            const target = scrollTargetForCard(currentCard);
-            const prevBehavior = el.style.scrollBehavior;
-            el.style.scrollBehavior = 'auto';
-            el.scrollTo({ left: target });
-            el.style.scrollBehavior = prevBehavior;
-            updateActive();
-        };
-
-        const centerRafId = window.requestAnimationFrame(centerCurrentPlan);
+        // Two rAFs: first applies the px metrics, second centers after
+        // the flex row has laid out at the new card width. ResizeObserver
+        // covers Telegram webview size changes after that.
+        centerRafId = window.requestAnimationFrame(() => {
+            syncMetrics();
+            centerRafId = window.requestAnimationFrame(centerCurrentPlan);
+        });
         el.addEventListener('scroll', onScroll, { passive: true });
 
-        // Desktop: click-and-drag to swipe with the mouse. Mirrors the
-        // touch swipe UX so PC users don't need the removed arrows.
-        // Right-click and shift-click are left alone so users can still
-        // use the browser's context menu / other interactions.
+        const resizeObserver = typeof ResizeObserver === 'function'
+            ? new ResizeObserver(() => {
+                syncMetrics();
+                updateActive();
+            })
+            : null;
+        resizeObserver?.observe(el);
+
+        // Desktop: click-and-drag. Wheel / trackpad must NOT flip cards —
+        // the previous attachHorizontalWheelScroll made a regular scroll
+        // look like paging. Touch keeps native swipe.
         let dragActive = false;
         let dragStartX = 0;
         let dragStartScrollLeft = 0;
         let dragMoved = false;
         const dragThreshold = 4;
 
-        const isFromInteractiveTarget = (event) => {
-            const target = event.target;
-            if (!(target instanceof Element)) {
-                return false;
-            }
-            return Boolean(target.closest(
-                'button, a, input, textarea, select, [role="button"], [contenteditable="true"]',
-            ));
-        };
-
         const onPointerDown = (event) => {
             if (event.pointerType === 'touch') {
-                // Native touch swipe handles this — don't fight it.
                 return;
             }
             if (event.button !== 0 || event.shiftKey || event.metaKey || event.ctrlKey) {
-                return;
-            }
-            if (isFromInteractiveTarget(event)) {
                 return;
             }
             dragActive = true;
@@ -3618,6 +3639,11 @@ function App() {
             dragStartX = event.clientX;
             dragStartScrollLeft = el.scrollLeft;
             el.dataset.dragging = 'true';
+            try {
+                el.setPointerCapture(event.pointerId);
+            } catch {
+                // Some WebViews reject capture on a child-originated event.
+            }
         };
 
         const onPointerMove = (event) => {
@@ -3640,23 +3666,21 @@ function App() {
             el.scrollTo({ left: scrollTargetForCard(closest), behavior: 'smooth' });
         };
 
-        const onPointerUp = () => {
+        const onPointerUp = (event) => {
             if (!dragActive) {
                 return;
             }
             dragActive = false;
             delete el.dataset.dragging;
+            if (el.hasPointerCapture?.(event.pointerId)) {
+                el.releasePointerCapture(event.pointerId);
+            }
             if (dragMoved) {
-                // Native `scroll-snap` will normally snap us on release, but
-                // programmatic scrollLeft writes bypass that on some browsers
-                // — force a snap so we always land dead-center on a card.
                 snapToClosest();
             }
         };
 
         const onClickCapture = (event) => {
-            // A short drag ending on a button used to fire the button's
-            // onClick — swallow the click that follows a real drag.
             if (dragMoved) {
                 event.stopPropagation();
                 event.preventDefault();
@@ -3664,30 +3688,40 @@ function App() {
             }
         };
 
-        el.addEventListener('pointerdown', onPointerDown);
-        window.addEventListener('pointermove', onPointerMove);
-        window.addEventListener('pointerup', onPointerUp);
-        window.addEventListener('pointercancel', onPointerUp);
-        el.addEventListener('click', onClickCapture, true);
+        // Swallow wheel / trackpad so PC users have to drag. Touch
+        // swipe is unaffected (it isn't a wheel event).
+        const onWheel = (event) => {
+            if (el.scrollWidth <= el.clientWidth) {
+                return;
+            }
+            event.preventDefault();
+        };
 
-        // Redirect a plain vertical wheel to horizontal scroll on desktop
-        // so the same "flick" gesture users are used to on the trackpad
-        // works with a regular mouse wheel too.
-        const detachWheel = attachHorizontalWheelScroll(el);
+        el.addEventListener('pointerdown', onPointerDown);
+        el.addEventListener('pointermove', onPointerMove);
+        el.addEventListener('pointerup', onPointerUp);
+        el.addEventListener('pointercancel', onPointerUp);
+        el.addEventListener('click', onClickCapture, true);
+        el.addEventListener('wheel', onWheel, { passive: false });
 
         return () => {
             if (rafId) {
                 window.cancelAnimationFrame(rafId);
             }
-            window.cancelAnimationFrame(centerRafId);
+            if (centerRafId) {
+                window.cancelAnimationFrame(centerRafId);
+            }
+            resizeObserver?.disconnect();
             el.removeEventListener('scroll', onScroll);
             el.removeEventListener('pointerdown', onPointerDown);
-            window.removeEventListener('pointermove', onPointerMove);
-            window.removeEventListener('pointerup', onPointerUp);
-            window.removeEventListener('pointercancel', onPointerUp);
+            el.removeEventListener('pointermove', onPointerMove);
+            el.removeEventListener('pointerup', onPointerUp);
+            el.removeEventListener('pointercancel', onPointerUp);
             el.removeEventListener('click', onClickCapture, true);
+            el.removeEventListener('wheel', onWheel);
             delete el.dataset.dragging;
-            detachWheel();
+            el.style.removeProperty('--sub-card-w');
+            el.style.removeProperty('--sub-side-pad');
         };
     }, [currentPage, tgLayoutMode, userData.subscriptionPlanId, billingCatalog?.plans?.length]);
 
