@@ -23,6 +23,7 @@ import {
     History,
     House,
     Languages,
+    LifeBuoy,
     Lock,
     Image as ImageIcon,
     LayoutGrid,
@@ -940,7 +941,8 @@ const translations = {
         referralHowTitle: 'Как это работает',
         referralHowStep1: 'Поделитесь ссылкой',
         referralHowStep2: 'Друг регистрируется',
-        referralHowStep3: 'Вы получаете бонус',
+        referralHowStep3: 'Друг что-то генерирует или оформляет подписку',
+        referralHowStep4: 'Вы получаете бонус',
         referralLinkTitle: 'Ваша ссылка',
         referralCopyButton: 'Копировать',
         referralCopied: 'Ссылка скопирована',
@@ -1007,6 +1009,8 @@ const translations = {
         profileMenuReferrals: 'Рефералы',
         profileMenuReferralsSub: '{count} друга · +{bonus} монет',
         profileReferralBonusTag: '+бонус',
+        profileMenuSupport: 'Поддержка',
+        profileMenuSupportSub: 'Напишите нам в Telegram',
         profileMenuLanguage: 'Язык',
         profileMenuDarkTheme: 'Тёмная тема',
         profilePlansTitle: 'Планы подписки',
@@ -1550,7 +1554,8 @@ const translations = {
         referralHowTitle: 'How it works',
         referralHowStep1: 'Share your link',
         referralHowStep2: 'Friend signs up',
-        referralHowStep3: 'You get a bonus',
+        referralHowStep3: 'Friend generates something or gets a subscription',
+        referralHowStep4: 'You get a bonus',
         referralLinkTitle: 'Your link',
         referralCopyButton: 'Copy',
         referralCopied: 'Link copied',
@@ -1617,6 +1622,8 @@ const translations = {
         profileMenuReferrals: 'Referrals',
         profileMenuReferralsSub: '{count} friends · +{bonus} coins',
         profileReferralBonusTag: '+bonus',
+        profileMenuSupport: 'Support',
+        profileMenuSupportSub: 'Message us on Telegram',
         profileMenuLanguage: 'Language',
         profileMenuDarkTheme: 'Dark theme',
         profilePlansTitle: 'Subscription plans',
@@ -7468,6 +7475,18 @@ function App() {
                         <span className="profile-concept__menu-tag">{text.profileReferralBonusTag}</span>
                         <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
                     </button>
+                    <button
+                        type="button"
+                        className="profile-concept__menu-item"
+                        onClick={() => openSupport('https://t.me/cybermatesupp')}
+                    >
+                        <span className="profile-concept__menu-ico profile-concept__menu-ico--blue"><LifeBuoy size={16} /></span>
+                        <span className="profile-concept__menu-text">
+                            <span className="profile-concept__menu-title">{text.profileMenuSupport}</span>
+                            <span className="profile-concept__menu-sub">{text.profileMenuSupportSub}</span>
+                        </span>
+                        <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
+                    </button>
                 </div>
 
                 <p className="profile-concept__section-lbl">{text.profileSettingsSection}</p>
@@ -7525,6 +7544,10 @@ function App() {
                     <div className="referral-concept__step">
                         <span className="referral-concept__step-num">3</span>
                         <span>{text.referralHowStep3}</span>
+                    </div>
+                    <div className="referral-concept__step">
+                        <span className="referral-concept__step-num">4</span>
+                        <span>{text.referralHowStep4}</span>
                     </div>
                 </div>
 

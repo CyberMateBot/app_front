@@ -1848,6 +1848,12 @@
   border: 0.5px solid transparent;
 }
 
+.profile-concept__menu-ico--blue {
+  background: var(--cm-icon-blue-bg);
+  color: var(--cm-icon-blue-fg);
+  border: 0.5px solid transparent;
+}
+
 .profile-concept__menu-ico--muted {
   background: var(--cm-menu-muted-bg);
   color: var(--cm-menu-muted-fg);
@@ -1913,6 +1919,7 @@
 :root[data-theme='light'] .profile-concept__menu-ico--violet,
 :root[data-theme='light'] .profile-concept__menu-ico--pink,
 :root[data-theme='light'] .profile-concept__menu-ico--green,
+:root[data-theme='light'] .profile-concept__menu-ico--blue,
 :root[data-theme='light'] .profile-concept__menu-ico--danger {
   border: 0.5px solid var(--cm-border);
 }
@@ -7331,6 +7338,43 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   position: fixed;
   top: auto;
   right: auto;
+  transform-origin: top right;
+  animation: app-notifications-panel-reveal 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes app-notifications-panel-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Small "ring" wiggle on the bell icon itself the moment the panel opens,
+   so the notifications reveal reads as one connected gesture rather than
+   the panel just appearing out of nowhere. */
+@keyframes app-notifications-bell-ring {
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(14deg); }
+  30% { transform: rotate(-12deg); }
+  45% { transform: rotate(8deg); }
+  60% { transform: rotate(-6deg); }
+  75% { transform: rotate(3deg); }
+}
+
+.app-notifications__bell--ring {
+  transform-origin: 50% 0%;
+  animation: app-notifications-bell-ring 0.5s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-notifications__panel--portal,
+  .app-notifications__bell--ring {
+    animation: none;
+  }
 }
 
 .app-notifications__panel-head {

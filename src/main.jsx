@@ -49,13 +49,16 @@ void initTelegramMiniAppAsync({ timeoutMs: 12000 }).then((tg) => {
 initAppUpdateWatcher();
 
 if (import.meta.env.DEV) {
+    // Only log the actual backend host locally. Printing it in the shipped
+    // production build handed the exact API host/path to anyone who opened
+    // devtools — an easy first step for scripting requests straight at the
+    // backend (e.g. POST /register) instead of going through the app.
     console.info('[CyberMate] API_BASE_URL:', API_BASE_URL || '(proxy → localhost:8090)');
     console.info('[CyberMate] Telegram mock:', ENABLE_TELEGRAM_MOCK);
-} else {
-    console.info('[CyberMate] API_BASE_URL:', API_BASE_URL || '(not set — set VITE_API_BASE_URL and redeploy)');
-    if (API_BASE_URL_MISCONFIGURED || API_BASE_URL_MISSING_IN_PROD) {
-        console.error('[CyberMate] API URL misconfigured. Fix VITE_API_BASE_URL on Railway frontend service.');
-    }
+} else if (API_BASE_URL_MISCONFIGURED || API_BASE_URL_MISSING_IN_PROD) {
+    // Deployment misconfiguration still needs to be loud so it gets fixed,
+    // but without echoing the (broken) URL value itself.
+    console.error('[CyberMate] API URL is misconfigured. Check the API base URL build setting and redeploy.');
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

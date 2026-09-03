@@ -167,7 +167,7 @@ export default function AppNotifications({
                 aria-expanded={open}
                 onClick={() => setOpen((prev) => !prev)}
             >
-                <Bell size={22} />
+                <Bell size={22} className={open ? 'app-notifications__bell--ring' : undefined} />
                 {unreadCount ? (
                     <span className="app-notifications__badge" aria-hidden="true">
                         {unreadCount > 9 ? '9+' : unreadCount}

@@ -95,16 +95,22 @@ function formatFetchError(error, url, method, wasUserAborted = false) {
     }
 
     if (lower === 'load failed' || lower.includes('failed to fetch') || lower.includes('networkerror')) {
-        const devHint = import.meta.env.DEV
-            ? ' Локально: запустите Postgres (docker compose up -d), затем бэкенд (go run ./cmd/service/main.go) и фронт (npm run dev). В .env фронта VITE_API_BASE_URL лучше оставить пустым — тогда работает proxy.'
-            : '';
+        // This message can surface to any regular end user on a transient
+        // network hiccup, not just a developer — so only the dev build
+        // spells out the actual backend URL/ports/CORS setting; production
+        // gets a generic "try again" instead of a free hint about the API
+        // host to anyone watching this happen.
+        if (!import.meta.env.DEV) {
+            return 'Не удалось связаться с сервером. Проверьте подключение к интернету и попробуйте ещё раз.';
+        }
+
         return [
             'Не удалось связаться с API (Load failed).',
             API_BASE_URL
                 ? `Проверьте VITE_API_BASE_URL (${API_BASE_URL}) и CORS_ALLOWED_ORIGINS на бэкенде.`
                 : 'Проверьте, что бэкенд слушает :8090 (curl http://127.0.0.1:8090/health → ok).',
             'На Railway: CORS_ALLOWED_ORIGINS=* или URL фронта.',
-            devHint,
+            ' Локально: запустите Postgres (docker compose up -d), затем бэкенд (go run ./cmd/service/main.go) и фронт (npm run dev). В .env фронта VITE_API_BASE_URL лучше оставить пустым — тогда работает proxy.',
         ].filter(Boolean).join(' ');
     }
 

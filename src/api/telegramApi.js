@@ -121,10 +121,11 @@ function getCurrentTelegramId() {
     return telegramId;
 }
 
-async function fetchTelegramResource(pathname, fallbackMessage) {
+async function fetchTelegramResource(pathname, fallbackMessage, extraHeaders = {}) {
     const res = await apiFetch(pathname, {
         headers: {
             Accept: 'application/json',
+            ...extraHeaders,
         },
     });
 
@@ -167,9 +168,13 @@ export async function patchUserTheme(theme) {
 
 export async function getMyWallet() {
     const telegramId = getCurrentTelegramId();
+
+    // The wallet endpoint now verifies the caller actually owns telegramId via
+    // this header (see backend walletapi auth fix), so it must be sent here.
     const payload = await fetchTelegramResource(
         `/v1/wallet/telegram/${telegramId}`,
         'Failed to load wallet data.',
+        getTelegramInitDataHeaders(),
     );
 
     if (!payload) {
