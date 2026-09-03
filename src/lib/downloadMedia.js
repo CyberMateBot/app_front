@@ -1,4 +1,4 @@
-import { apiFetch, resolveApiUrl } from '../api/httpClient.js';
+import { apiFetch } from '../api/httpClient.js';
 import { getTelegramWebApp } from './telegramWebApp.js';
 
 const GALLERY_MIME_BY_EXT = {
@@ -66,16 +66,6 @@ function shouldSaveToGallery(kind) {
 function supportsTelegramDownload() {
     const tg = getTelegramWebApp();
     return typeof tg?.downloadFile === 'function';
-}
-
-function buildProxyDownloadUrl(mediaUrl, filename) {
-    const query = new URLSearchParams({
-        url: mediaUrl,
-        filename,
-    });
-    const absolute = resolveApiUrl(`/v1/media/download?${query.toString()}`);
-
-    return /^https?:\/\//i.test(absolute) ? absolute : null;
 }
 
 function triggerBlobDownload(blob, filename) {
@@ -352,43 +342,17 @@ async function downloadBlobOnDevice(blob, filename, kind) {
     return { method: 'blob' };
 }
 
-async function tryTelegramProxyDownload(url, filename) {
-    const proxyUrl = buildProxyDownloadUrl(url, filename);
-
-    if (!supportsTelegramDownload() || !proxyUrl) {
-        return false;
-    }
-
-    try {
-        await tryTelegramDownload(proxyUrl, filename);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 async function downloadRemoteUrl(trimmed, safeFilename, kind) {
-    if (await tryTelegramProxyDownload(trimmed, safeFilename)) {
-        return { method: 'telegram' };
-    }
-
-    if (shouldSaveToGallery(kind)) {
-        const blob = await fetchViaProxy(trimmed, safeFilename);
-        return downloadGalleryBlob(blob, safeFilename, kind);
-    }
-
+    // Always pull the real bytes through our proxy first. Handing Telegram
+    // `downloadFile` the long `/v1/media/download?url=…` link used to
+    // "succeed" and save a solid-black JPEG: Telegram's downloader truncates
+    // or fails the signed WaveSpeed URL and writes an empty placeholder,
+    // while the in-app <img> preview (loaded by the browser) looks fine.
     const blob = await fetchViaProxy(trimmed, safeFilename);
-
-    if (isMobileDevice()) {
-        const shared = await tryShareToGallery(blob, safeFilename, kind);
-
-        if (shared) {
-            return { method: 'gallery' };
-        }
+    if (blob.size < 512) {
+        throw new Error('Downloaded file is empty.');
     }
-
-    triggerBlobDownload(blob, safeFilename);
-    return { method: 'blob' };
+    return downloadBlobOnDevice(blob, safeFilename, kind);
 }
 
 export async function downloadMediaUrl(url, filename = 'cybermate-media', options = {}) {
