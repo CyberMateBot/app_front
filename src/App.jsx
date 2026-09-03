@@ -3618,9 +3618,10 @@ function App() {
             : null;
         resizeObserver?.observe(el);
 
-        // Desktop: click-and-drag. Wheel / trackpad must NOT flip cards —
-        // the previous attachHorizontalWheelScroll made a regular scroll
-        // look like paging. Touch keeps native swipe.
+        // Desktop: drag from anywhere on the strip — including the card
+        // body and its buttons. Capture-phase + window move/up so a
+        // pointer that starts on a child (button, link) still drives the
+        // carousel. Touch keeps native swipe.
         let dragActive = false;
         let dragStartX = 0;
         let dragStartScrollLeft = 0;
@@ -3642,7 +3643,8 @@ function App() {
             try {
                 el.setPointerCapture(event.pointerId);
             } catch {
-                // Some WebViews reject capture on a child-originated event.
+                // Some WebViews reject capture on a child-originated event;
+                // window-level move/up below still keeps the drag alive.
             }
         };
 
@@ -3655,6 +3657,7 @@ function App() {
                 return;
             }
             dragMoved = true;
+            event.preventDefault();
             el.scrollLeft = dragStartScrollLeft - dx;
         };
 
@@ -3688,19 +3691,22 @@ function App() {
             }
         };
 
-        // Swallow wheel / trackpad so PC users have to drag. Touch
-        // swipe is unaffected (it isn't a wheel event).
+        // Vertical wheel / trackpad over the cards must still scroll the
+        // page. Only a clearly-horizontal gesture is swallowed so the
+        // carousel stays drag-only on desktop.
         const onWheel = (event) => {
             if (el.scrollWidth <= el.clientWidth) {
                 return;
             }
-            event.preventDefault();
+            if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+                event.preventDefault();
+            }
         };
 
-        el.addEventListener('pointerdown', onPointerDown);
-        el.addEventListener('pointermove', onPointerMove);
-        el.addEventListener('pointerup', onPointerUp);
-        el.addEventListener('pointercancel', onPointerUp);
+        el.addEventListener('pointerdown', onPointerDown, true);
+        window.addEventListener('pointermove', onPointerMove, { passive: false });
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
         el.addEventListener('click', onClickCapture, true);
         el.addEventListener('wheel', onWheel, { passive: false });
 
@@ -3713,10 +3719,10 @@ function App() {
             }
             resizeObserver?.disconnect();
             el.removeEventListener('scroll', onScroll);
-            el.removeEventListener('pointerdown', onPointerDown);
-            el.removeEventListener('pointermove', onPointerMove);
-            el.removeEventListener('pointerup', onPointerUp);
-            el.removeEventListener('pointercancel', onPointerUp);
+            el.removeEventListener('pointerdown', onPointerDown, true);
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+            window.removeEventListener('pointercancel', onPointerUp);
             el.removeEventListener('click', onClickCapture, true);
             el.removeEventListener('wheel', onWheel);
             delete el.dataset.dragging;

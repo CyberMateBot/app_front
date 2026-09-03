@@ -2370,6 +2370,7 @@
   touch-action: pan-x pan-y;
   cursor: grab;
   user-select: none;
+  -webkit-user-drag: none;
 }
 
 .subscription-page__plans-scroll::-webkit-scrollbar {
@@ -2382,12 +2383,31 @@
   scroll-snap-type: none;
 }
 
+.subscription-page__plans-scroll[data-dragging='true'] .subscription-plan-card,
+.subscription-page__plans-scroll[data-dragging='true'] .subscription-plan-card * {
+  cursor: grabbing;
+}
+
 .subscription-page__plans {
+  /* Shrink-wrap the card strip. A block-level flex row with width:auto
+     stretches to the scrollport; its padding-right then sits at the
+     *first* viewport's right edge instead of after the last card, so
+     the last plan ("Бизнес") can never scroll to optical center.
+     max-content + end spacers put real scrollable space on both sides. */
   display: flex;
   flex-direction: row;
   align-items: stretch;
+  width: max-content;
   gap: 10px;
-  padding: 0 var(--sub-side-pad);
+  padding: 0;
+}
+
+.subscription-page__plans::before,
+.subscription-page__plans::after {
+  content: '';
+  flex: 0 0 var(--sub-side-pad);
+  width: var(--sub-side-pad);
+  pointer-events: none;
 }
 
 @media (min-width: 768px) {
@@ -2416,6 +2436,7 @@
      keyframes don't overwrite the peek scale-down. */
   scale: 0.82;
   opacity: 0.58;
+  cursor: grab;
   transition: scale 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease, box-shadow 0.35s ease;
   will-change: scale, opacity;
 }
