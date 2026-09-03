@@ -2319,6 +2319,13 @@
   flex: 1;
   min-width: 0;
   margin: 0 calc(-1 * var(--page-pad-x, 16px));
+  /* The side inset lives here (not on .subscription-page__plans below) so
+     that element's clientWidth exactly matches each card's flex-basis:100%
+     width. Splitting the inset from the flex container used to leave a
+     ~16px mismatch between what JS measured and what a card actually
+     rendered at, which showed up as a sliver of the neighboring card (with
+     its own tier-colored border) peeking in past the edge. */
+  padding: 0 var(--page-pad-x, 16px);
   overflow: hidden;
 }
 
@@ -2330,9 +2337,10 @@
   /* Card position is fully controlled from JS (center-on-load + the
      prev/next buttons) — hidden overflow keeps wheel/touch/trackpad
      scrolling from ever moving the row, while scrollTo()/scrollLeft still
-     work programmatically. */
+     work programmatically. No horizontal padding here on purpose — see
+     .subscription-page__plans-scroll above. */
   overflow: hidden;
-  padding: 4px var(--page-pad-x, 16px) 14px;
+  padding: 4px 0 14px;
 }
 
 .subscription-page__plans-nav {
