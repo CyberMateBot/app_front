@@ -5,7 +5,7 @@ import {
 } from '../config/env.js';
 
 /** Должен быть ≥ SERVER_WRITE_TIMEOUT на бэкенде и Vite proxy timeout. */
-const API_FETCH_TIMEOUT_MS = 400_000;
+const API_FETCH_TIMEOUT_MS = 420_000;
 
 export function resolveApiUrl(pathname) {
     const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;

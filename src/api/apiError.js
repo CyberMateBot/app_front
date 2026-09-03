@@ -149,5 +149,13 @@ export function formatUserFacingError(error, language = 'ru') {
             : 'Insufficient coins.';
     }
 
-    return error instanceof Error ? error.message : String(error);
+    const raw = error instanceof Error ? error.message : String(error);
+    const lower = raw.toLowerCase();
+    if (lower.includes('timed out') || lower.includes('taking too long') || lower.includes('timeout')) {
+        return language === 'ru'
+            ? 'Модель сейчас отвечает дольше обычного. Попробуйте ещё раз или снизьте разрешение.'
+            : 'The model is taking longer than usual. Try again, or pick a lower resolution.';
+    }
+
+    return raw;
 }
