@@ -2342,21 +2342,40 @@
   position: relative;
   display: flex;
   align-items: stretch;
-  gap: 8px;
 }
 
 .subscription-page__plans-scroll {
   flex: 1;
   min-width: 0;
+  /* Bleed to the app's edges so the peek of the neighboring card on
+     each side stays symmetric even inside the padded page shell. Padding
+     below leaves enough room for the "outer" card sliver to be visible
+     but softened, and — crucially — lets the first/last card still snap
+     to the horizontal center of the viewport (which native scroll-snap
+     can't otherwise do without side padding = half the peek). */
   margin: 0 calc(-1 * var(--page-pad-x, 16px));
-  /* The side inset lives here (not on .subscription-page__plans below) so
-     that element's clientWidth exactly matches each card's flex-basis:100%
-     width. Splitting the inset from the flex container used to leave a
-     ~16px mismatch between what JS measured and what a card actually
-     rendered at, which showed up as a sliver of the neighboring card (with
-     its own tier-colored border) peeking in past the edge. */
-  padding: 0 var(--page-pad-x, 16px);
-  overflow: hidden;
+  padding: 4px 0 22px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  /* Chrome/Edge/Safari hide the horizontal scrollbar; we manage
+     scrolling from JS + touch, no need to reserve space for a bar. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-x pan-y;
+  cursor: grab;
+  user-select: none;
+}
+
+.subscription-page__plans-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.subscription-page__plans-scroll[data-dragging='true'] {
+  cursor: grabbing;
+  scroll-behavior: auto;
 }
 
 .subscription-page__plans {
@@ -2364,45 +2383,15 @@
   flex-direction: row;
   align-items: stretch;
   gap: 12px;
-  /* Card position is fully controlled from JS (center-on-load + the
-     prev/next buttons) — hidden overflow keeps wheel/touch/trackpad
-     scrolling from ever moving the row, while scrollTo()/scrollLeft still
-     work programmatically. No horizontal padding here on purpose — see
-     .subscription-page__plans-scroll above. */
-  overflow: hidden;
-  padding: 4px 0 14px;
-}
-
-.subscription-page__plans-nav {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-self: center;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  margin-top: 24px;
-  padding: 0;
-  border: 0.5px solid var(--cm-border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--cm-surface) 88%, transparent);
-  color: var(--cm-text-secondary);
-  cursor: pointer;
-  transition: color 0.2s ease, background 0.2s ease, transform 0.15s ease;
-}
-
-.subscription-page__plans-nav:hover {
-  color: var(--cm-text);
-  background: var(--cm-surface);
-}
-
-.subscription-page__plans-nav:active {
-  transform: scale(0.94);
+  /* Symmetric horizontal padding acts as scroll-padding so first/last
+     card can snap-center. `calc(50% - ...)` isn't reliable across mobile
+     Safari + snap; a fixed side inset is close enough given the card
+     width below. */
+  padding: 0 calc(var(--page-pad-x, 16px) + var(--sub-plan-peek, 22px));
 }
 
 @media (min-width: 768px) {
   .subscription-page__plans-carousel {
-    gap: 12px;
     margin: 0;
   }
 
@@ -2412,13 +2401,36 @@
 }
 
 .subscription-page__plans .subscription-plan-card {
-  /* Exactly one full-width card at a time — a partial neighbor peeking in
-     at the edge would have its own tier-colored glow (see
-     --cm-plan-*-glow) clipped by the row's overflow:hidden, which showed
-     up as stray colored slivers along the screen edges. */
-  flex: 0 0 100%;
+  /* Peek layout: the active card takes most of the viewport, with a
+     visible sliver of each neighbor on the sides. `--sub-plan-peek`
+     controls how much of the neighbor peeks in — matched by the row's
+     side padding so first/last card can still snap to center. */
+  flex: 0 0 calc(100vw - 2 * (var(--page-pad-x, 16px) + var(--sub-plan-peek, 22px)));
+  max-width: 360px;
   min-height: clamp(400px, 105vw, 460px);
   align-self: stretch;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  /* Independent from `transform` (which the intro animation uses) so the
+     mp-card-in keyframes and the peek scale-down cooperate instead of
+     fighting for the same property. */
+  scale: 0.9;
+  opacity: 0.55;
+  transition: scale 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease, box-shadow 0.35s ease;
+  will-change: scale, opacity;
+}
+
+.subscription-page__plans .subscription-plan-card--active {
+  scale: 1;
+  opacity: 1;
+  z-index: 1;
+}
+
+@media (min-width: 640px) {
+  .subscription-page__plans .subscription-plan-card {
+    flex-basis: min(360px, 68vw);
+    max-width: 360px;
+  }
 }
 
 @keyframes subscription-page-hero-in {
@@ -7048,7 +7060,6 @@ html[data-tg-layout='desktop-full'] .app-main {
 }
 
 html[data-tg-layout='desktop-full'] .subscription-page__plans-carousel {
-  gap: 12px;
   margin: 0;
   width: 100%;
 }
@@ -7058,10 +7069,12 @@ html[data-tg-layout='desktop-full'] .subscription-page__plans-scroll {
 }
 
 html[data-tg-layout='desktop-full'] .subscription-page__plans .subscription-plan-card {
-  /* Always exactly one card, edge-to-edge — a wide "show every plan at
-     once" row used to let a sliver of the next card (with its own
-     tier-colored glow) show at the container edge, which read as a
-     stray colored line. */
+  /* Fixed target width on desktop-full so the peek layout renders with
+     an obvious "hero card + slivers" silhouette instead of stretching
+     one card across the whole viewport (would leave the neighbors far
+     off-screen and defeat the peek). */
+  flex-basis: min(380px, 60%);
+  max-width: 380px;
   min-height: 420px;
 }
 
