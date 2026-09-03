@@ -354,6 +354,21 @@ function formatTemplate(template, values) {
     );
 }
 
+// `child.offsetLeft` is relative to `child.offsetParent` — the nearest
+// positioned ancestor, which is *not* necessarily `container` (containers
+// here are plain `position: static` flex rows). Using it directly to compute
+// a scroll target silently breaks as soon as some other ancestor becomes
+// positioned (e.g. a wrapper Telegram's desktop-full layout adds for
+// centering), producing a scrollLeft that no longer lines up with the
+// card's real position — the card renders a stray sliver of its neighbor
+// at each edge instead of filling the viewport. Comparing
+// getBoundingClientRect() of both elements is always relative to the
+// viewport, so the difference is correct regardless of any positioned
+// ancestors in between.
+function getOffsetLeftWithin(container, child) {
+    return child.getBoundingClientRect().left - container.getBoundingClientRect().left + container.scrollLeft;
+}
+
 function formatNumber(value) {
     const numeric = Number(value);
 
@@ -3494,7 +3509,7 @@ function App() {
             const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
             const target = Math.max(0, Math.min(
                 maxScrollLeft,
-                activeCard.offsetLeft + activeCard.offsetWidth / 2 - el.clientWidth / 2,
+                getOffsetLeftWithin(el, activeCard) + activeCard.offsetWidth / 2 - el.clientWidth / 2,
             ));
 
             el.scrollTo({ left: target, behavior: 'instant' });
@@ -3522,7 +3537,7 @@ function App() {
         let closestDistance = Infinity;
 
         cards.forEach((card, index) => {
-            const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+            const cardCenter = getOffsetLeftWithin(el, card) + card.offsetWidth / 2;
             const distance = Math.abs(cardCenter - viewportCenter);
             if (distance < closestDistance) {
                 closestDistance = distance;
@@ -3535,7 +3550,7 @@ function App() {
         const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
         const targetLeft = Math.max(0, Math.min(
             maxScrollLeft,
-            target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2,
+            getOffsetLeftWithin(el, target) + target.offsetWidth / 2 - el.clientWidth / 2,
         ));
 
         el.scrollTo({ left: targetLeft, behavior: 'smooth' });
