@@ -139,8 +139,7 @@
   .history-concept__item,
   .profile-concept__balance-card,
   .profile-concept__menu-item,
-  .subscription-concept__coin-pack,
-  .home-social-card {
+  .subscription-concept__coin-pack {
     animation: mp-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
@@ -369,19 +368,6 @@
    5. Headings, inputs & chips
    ============================================================ */
 
-/* Animated gradient shimmer on the greeting heading. */
-@media (prefers-reduced-motion: no-preference) {
-  .home-concept__greeting-text {
-    background-size: 220% 100%;
-    animation: mp-heading-shimmer 12s ease-in-out infinite;
-  }
-}
-
-@keyframes mp-heading-shimmer {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
 /* Focus glow ring on text fields. */
 .home-concept__search,
 .ai-chat__input,
@@ -453,7 +439,6 @@
   .app-shell__orbs::before,
   .app-shell__orbs::after,
   .app-shell__orb--4,
-  .home-concept__greeting-text,
   :root:not([data-theme='light']) .bottom-nav__indicator {
     animation: none;
     will-change: auto;
@@ -511,21 +496,17 @@ html[data-tg-layout='desktop-full'] .app-shell__orb--4 {
   display: none;
 }
 
-html[data-tg-layout='desktop-full'] .home-concept__orb {
-  display: none;
-}
-
 html[data-tg-layout='desktop-full']:not([data-theme='light']) .bottom-nav__indicator {
   animation: none;
 }
 
-html[data-tg-layout='desktop-full'] .home-screen--widgets {
+html[data-tg-layout='desktop-full'] .home2 {
   max-width: min(760px, 100%);
   margin-inline: auto;
 }
 
-html[data-tg-layout='desktop-full'][data-tg-fullscreen='1'] .home-screen--widgets,
-html[data-tg-fullscreen='1'] .home-screen--widgets {
+html[data-tg-layout='desktop-full'][data-tg-fullscreen='1'] .home2,
+html[data-tg-fullscreen='1'] .home2 {
   max-width: 100%;
   margin-inline: 0;
 }
@@ -552,12 +533,6 @@ html[data-tg-layout='desktop-full'] .home-news-widget__slide-image {
 html[data-tg-layout='desktop-full'] .home-news-widget__slide-bg {
   background-size: cover;
   background-position: center center;
-}
-
-html[data-tg-layout='desktop-full'] .home-continue-card,
-html[data-tg-layout='desktop-full'] .home-subscription-widget,
-html[data-tg-layout='desktop-full'] .home-social-block {
-  width: 100%;
 }
 
 html[data-tg-layout='desktop-full'] .home-news-widget__title {

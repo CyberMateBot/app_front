@@ -72,26 +72,9 @@ body {
   padding: 4px 0 16px;
 }
 
-.home-concept__logo-image {
-  width: 44px;
-  height: 44px;
-}
-
-.home-concept__logo-name {
-  font-size: 13px;
-}
-
 .home-concept__icon-btn {
   width: 30px;
   height: 30px;
-}
-
-.home-concept__greeting h2 {
-  font-size: 17px;
-}
-
-.home-concept__greeting p {
-  font-size: 11px;
 }
 
 .home-concept__search {

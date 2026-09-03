@@ -287,12 +287,12 @@ const navigationItems = [
 ];
 
 const homeQuickAccessItems = [
-    { tab: 'chat', icon: MessageSquare, colorClass: 'c1', titleKey: 'toolChatTitle', subKey: 'toolChatSub' },
-    { tab: 'photo', icon: ImageIcon, colorClass: 'c2', titleKey: 'toolImagesTitle', subKey: 'toolImagesSub' },
-    { tab: 'video', icon: Video, colorClass: 'c3', titleKey: 'toolVideoTitle', subKey: 'toolVideoSub', badge: 'new' },
-    { tab: 'music', icon: Music, colorClass: 'c4', titleKey: 'toolMusicTitle', subKey: 'toolMusicSub' },
-    { tab: 'voice', icon: Mic, colorClass: 'c5', titleKey: 'toolVoiceTitle', subKey: 'toolVoiceSub' },
-    { tab: '3d', icon: Box, colorClass: 'c6', titleKey: 'tool3dTitle', subKey: 'tool3dSub' },
+    { tab: 'chat', icon: MessageSquare, colorVar: 'violet', labelKey: 'catalogTabChat' },
+    { tab: 'photo', icon: ImageIcon, colorVar: 'pink', labelKey: 'catalogTabPhoto' },
+    { tab: 'video', icon: Video, colorVar: 'blue', labelKey: 'catalogTabVideo' },
+    { tab: 'music', icon: Music, colorVar: 'gold', labelKey: 'catalogTabMusic' },
+    { tab: 'voice', icon: Mic, colorVar: 'teal', labelKey: 'catalogTabVoice' },
+    { tab: '3d', icon: Box, colorVar: 'green', labelKey: 'catalogTab3d' },
 ];
 
 const historyFilterTabs = [
@@ -435,6 +435,7 @@ const translations = {
         homeCategoriesLabel: 'Категории',
         homeToolsLabel: 'Инструменты',
         homeQuickAccessLabel: 'Быстрый доступ',
+        homeMoreLabel: 'Ещё',
         homeBrandName: 'CyberMate',
         homeSocialLabel: 'Мы в соцсетях',
         homeFeedbackTitle: 'Обратная связь',
@@ -1044,6 +1045,7 @@ const translations = {
         homeCategoriesLabel: 'Categories',
         homeToolsLabel: 'Tools',
         homeQuickAccessLabel: 'Quick access',
+        homeMoreLabel: 'More',
         homeBrandName: 'CyberMate',
         homeSocialLabel: 'Follow us',
         homeFeedbackTitle: 'Feedback',
@@ -1900,6 +1902,7 @@ function App() {
     const subscriptionPlansScrollRef = useRef(null);
     const catalogTabsScrollRef = useRef(null);
     const historyFiltersScrollRef = useRef(null);
+    const homeQuickRowScrollRef = useRef(null);
 
     const effectiveTextModels = useMemo(
         () => resolveEffectiveTextModels(textModels),
@@ -3451,6 +3454,13 @@ function App() {
             return undefined;
         }
         return attachHorizontalWheelScroll(catalogTabsScrollRef.current);
+    }, [currentPage]);
+
+    useEffect(() => {
+        if (currentPage !== 'home') {
+            return undefined;
+        }
+        return attachHorizontalWheelScroll(homeQuickRowScrollRef.current);
     }, [currentPage]);
 
     useEffect(() => {
@@ -5816,22 +5826,13 @@ function App() {
     };
 
     const renderHomeScreen = () => (
-        <section className="home-screen home-screen--concept home-screen--widgets" aria-label={text.navHome}>
-            <div className="home-concept__orb" aria-hidden="true" />
-
-            <header className="home-concept__header">
-                <div className="home-concept__header-left">
-                    <div className="home-concept__hdr-logo">
-                    <img
-                            className="home-concept__logo-image home-concept__logo-image--header"
-                            src="/logo-cm.png"
-                        alt=""
-                    />
-                        <span className="home-concept__logo-name">{text.homeBrandName}</span>
-                    </div>
-                    <p className="home-concept__greeting-text">{homeGreetingText}</p>
+        <section className="home-screen home-screen--concept home2" aria-label={text.navHome}>
+            <header className="home2__header">
+                <div className="home2__brand">
+                    <img className="home2__brand-logo" src="/logo-cm.png" alt="" />
+                    <span className="home2__brand-name">{text.homeBrandName}</span>
                 </div>
-                <div className="home-concept__header-actions">
+                <div className="home2__header-actions">
                     <AppNotifications
                         notifications={appNotifications}
                         language={language}
@@ -5856,130 +5857,123 @@ function App() {
                 </div>
             </header>
 
-            <div className="home-quick-block">
-                <p className="home-concept__section-label home-concept__section-label--widgets">{text.homeQuickAccessLabel}</p>
-                <div className="home-concept__grid">
-                    {homeQuickAccessItems.map(({ tab, icon: Icon, colorClass, titleKey, subKey, badge }) => (
-                        <button
-                            key={tab}
-                            type="button"
-                            className={`home-concept__card home-concept__card--${colorClass}`}
-                            onClick={() => handleHomeQuickAccessClick(tab)}
-                        >
-                            {badge ? (
-                                <span className={`home-concept__badge home-concept__badge--${badge}`}>
-                                    {badge === 'new' ? text.badgeNew : text.badgeHot}
-                                </span>
-                            ) : null}
-                            <span className="home-concept__card-icon" aria-hidden="true">
-                                <Icon size={18} />
-                            </span>
-                            <span className="home-concept__card-title">{text[titleKey]}</span>
-                            <span className="home-concept__card-sub">{text[subKey]}</span>
-                        </button>
-                    ))}
+            <section className="home2__hero">
+                <span className="home2__hero-glow" aria-hidden="true" />
+                <div className="home2__hero-row">
+                    <div className="home2__hero-greeting">
+                        <p className="home2__hero-hello">{homeGreetingText}</p>
+                        <p className="home2__hero-sub">{text.homeGreetingSub}</p>
+                    </div>
+                    <button type="button" className="home2__hero-balance" onClick={openCoinTopUp}>
+                        <CoinIcon size={15} />
+                        <span>{formatNumber(tokenBalance)}</span>
+                        <Plus size={13} aria-hidden="true" />
+                    </button>
                 </div>
-            </div>
+
+                <button type="button" className="home2__hero-cta" onClick={handleHomeContinueClick}>
+                    <span className="home2__hero-cta-ico" aria-hidden="true">
+                        <Play size={16} />
+                    </span>
+                    <span className="home2__hero-cta-text">
+                        <span className="home2__hero-cta-title">{homeContinueTitle}</span>
+                        <span className="home2__hero-cta-sub">{homeContinueSubtitle}</span>
+                    </span>
+                    <ChevronRight size={16} className="home2__hero-cta-arrow" aria-hidden="true" />
+                </button>
+            </section>
 
             <HomeNewsWidget slides={homeNewsSlides} />
 
-            <button
-                type="button"
-                className="home-continue-card"
-                onClick={handleHomeContinueClick}
-            >
-                <span className="home-continue-card__ico" aria-hidden="true">
-                    <Play size={18} />
-                </span>
-                <span className="home-continue-card__text">
-                    <span className="home-continue-card__title">{homeContinueTitle}</span>
-                    <span className="home-continue-card__sub">{homeContinueSubtitle}</span>
-                </span>
-                <ChevronRight size={18} className="home-continue-card__arrow" aria-hidden="true" />
-            </button>
+            <section className="home2__section">
+                <p className="home2__section-label">{text.homeQuickAccessLabel}</p>
+                <div className="home2__quick-row" ref={homeQuickRowScrollRef}>
+                    {homeQuickAccessItems.map(({ tab, icon: Icon, colorVar, labelKey }) => (
+                        <button
+                            key={tab}
+                            type="button"
+                            className="home2__quick-item"
+                            onClick={() => handleHomeQuickAccessClick(tab)}
+                        >
+                            <span className={`home2__quick-ico home2__quick-ico--${colorVar}`} aria-hidden="true">
+                                <Icon size={19} />
+                            </span>
+                            <span className="home2__quick-label">{text[labelKey]}</span>
+                        </button>
+                    ))}
+                </div>
+            </section>
 
             {userData.subscriptionIsPaid ? (
                 <button
                     type="button"
-                    className="subscription-page__hero home-subscription-widget"
+                    className="home2__plan-strip"
                     onClick={() => setCurrentPage('subscription')}
                 >
-                    <p className="subscription-page__hero-label">{text.subscriptionCurrentPlan}</p>
-                    <div className="subscription-page__hero-plan">
-                        <Crown size={18} aria-hidden="true" />
-                        <span className="subscription-page__hero-plan-name">
+                    <span className="home2__plan-strip-ico" aria-hidden="true">
+                        <Crown size={16} />
+                    </span>
+                    <span className="home2__plan-strip-text">
+                        <strong>
                             {getSubscriptionPlanDisplayName(userData.subscriptionPlanId, {
                                 language,
                                 text,
                                 fallbackName: userData.subscriptionPlanName,
                                 catalogPlans: billingCatalog?.plans ?? [],
                             })}
-                        </span>
+                        </strong>
                         {userData.subscriptionTimeLeft ? (
-                            <span className={`subscription-page__hero-time${userData.subscriptionExpiringSoon ? ' subscription-page__hero-time--warn' : ''}`}>
+                            <span className={`home2__plan-strip-time${userData.subscriptionExpiringSoon ? ' home2__plan-strip-time--warn' : ''}`}>
                                 {userData.subscriptionTimeLeft}
-                                {userData.subscriptionExpiryDate ? (
-                                    <span className="subscription-page__hero-time-sub">
-                                        {language === 'ru'
-                                            ? ` · до ${userData.subscriptionExpiryDate}`
-                                            : ` · until ${userData.subscriptionExpiryDate}`}
-                                    </span>
-                                ) : null}
                             </span>
                         ) : null}
-                    </div>
+                    </span>
+                    <ChevronRight size={16} className="home2__plan-strip-arrow" aria-hidden="true" />
                 </button>
             ) : null}
 
-            <div className="home-social-block">
-            <p className="home-concept__section-label home-concept__section-label--widgets">{text.homeSocialLabel}</p>
-            <div className="home-social-row">
+            <section className="home2__section">
+                <p className="home2__section-label">{text.homeMoreLabel}</p>
+                <div className="home2__more-card">
+                    <div className="home2__more-social">
                         <button
                             type="button"
-                    className="home-social-card"
-                    onClick={() => openExternalLink(HOME_SOCIAL_LINKS.tiktok)}
+                            className="home2__social-btn"
+                            aria-label={text.homeSocialTiktok}
+                            onClick={() => openExternalLink(HOME_SOCIAL_LINKS.tiktok)}
                         >
-                    <span className="home-social-card__ico home-social-card__ico--tiktok" aria-hidden="true">
-                        <FaTiktok size={16} />
-                    </span>
-                    <span className="home-social-card__label">{text.homeSocialTiktok}</span>
-                </button>
-                <button
-                    type="button"
-                    className="home-social-card"
-                    onClick={() => openExternalLink(HOME_SOCIAL_LINKS.instagram)}
-                >
-                    <span className="home-social-card__ico home-social-card__ico--instagram" aria-hidden="true">
-                        <FaInstagram size={16} />
-                    </span>
-                    <span className="home-social-card__label">{text.homeSocialInstagram}</span>
+                            <FaTiktok size={16} />
                         </button>
-                <button
-                    type="button"
-                    className="home-social-card"
-                    onClick={handleHomeSocialTelegram}
-                >
-                    <span className="home-social-card__ico home-social-card__ico--telegram" aria-hidden="true">
-                        <FaTelegram size={16} />
-                    </span>
-                    <span className="home-social-card__label">{text.homeSocialTelegram}</span>
-                </button>
-            </div>
-            </div>
-
-            <div className="home-feedback-block">
-                <p className="home-concept__section-label home-concept__section-label--widgets">{text.homeFeedbackTitle}</p>
-                <button
-                    type="button"
-                    className="home-feedback-open-btn"
-                    onClick={() => {
-                        setFeedbackReturnPage('home');
-                        setCurrentPage('feedback');
-                    }}
-                >
-                    {text.homeFeedbackOpenButton}
-                </button>
-            </div>
+                        <button
+                            type="button"
+                            className="home2__social-btn"
+                            aria-label={text.homeSocialInstagram}
+                            onClick={() => openExternalLink(HOME_SOCIAL_LINKS.instagram)}
+                        >
+                            <FaInstagram size={16} />
+                        </button>
+                        <button
+                            type="button"
+                            className="home2__social-btn"
+                            aria-label={text.homeSocialTelegram}
+                            onClick={handleHomeSocialTelegram}
+                        >
+                            <FaTelegram size={16} />
+                        </button>
+                    </div>
+                    <button
+                        type="button"
+                        className="home2__more-feedback"
+                        onClick={() => {
+                            setFeedbackReturnPage('home');
+                            setCurrentPage('feedback');
+                        }}
+                    >
+                        <span>{text.homeFeedbackOpenButton}</span>
+                        <ChevronRight size={15} aria-hidden="true" />
+                    </button>
+                </div>
+            </section>
         </section>
     );
 
