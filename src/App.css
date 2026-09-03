@@ -490,7 +490,14 @@
 
 .home2__hero {
   position: relative;
-  overflow: hidden;
+  /* No `overflow: hidden` here on purpose. The card's height is
+     content-driven (greeting + subtitle + CTA button, all variable-length
+     text), and clipping would silently hide real content — the greeting
+     row and balance pill, subtitle and "continue" button — the instant any
+     renderer computes even a few px less height than this box actually
+     needs. The only thing that ever needed clipping was the decorative
+     glow blob below, which now clips itself via clip-path instead so the
+     real content can never be eaten. */
   margin-bottom: 16px;
   padding: 18px;
   border: 0.5px solid color-mix(in srgb, var(--cm-accent) 22%, var(--cm-border));
@@ -499,6 +506,24 @@
 }
 
 .home2__hero-glow {
+  /* This element is now just a clipping frame matching the card's own
+     rounded rect exactly (inset: 0 + same border-radius); the actual blurred
+     glow circle lives on its ::before below, offset/bled the same way it
+     used to be when the parent itself clipped it with overflow:hidden. That
+     keeps the glow visually contained to the card's corners without ever
+     letting overflow:hidden sit on `.home2__hero` itself, where it risked
+     silently clipping real content (subtitle/CTA) if this box's computed
+     height ever came out a little short in some renderer. */
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.home2__hero-glow::before {
+  content: '';
   position: absolute;
   top: -70px;
   right: -50px;
@@ -507,8 +532,6 @@
   border-radius: 50%;
   background: radial-gradient(circle, color-mix(in srgb, var(--cm-accent) 40%, transparent) 0%, transparent 70%);
   filter: blur(30px);
-  pointer-events: none;
-  z-index: 0;
 }
 
 .home2__hero-row {
