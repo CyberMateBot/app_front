@@ -27,7 +27,7 @@ const MODEL_MIN_PLAN_RANK = {
     'qwen3.6-35b': 2, 'deepseek-v4': 2, 'deepseek-r1': 2, 'deepseek-v3.2-exp': 2,
     'gpt-4.1': 2, 'gpt-5.4': 2, 'claude-sonnet-4.5': 2, 'o3-mini': 2,
     'gpt-4o': 3, 'gemini-2.5-pro': 3, 'claude-opus-4.7': 3, o3: 3,
-    'claude-opus-4.8': 4, o1: 4, 'gpt-5.5': 4,
+    'claude-opus-4.8': 4, 'claude-fable-5': 4, o1: 4, 'gpt-5.5': 4,
     'flux-dev': 0,
     'alice-ai-art': 1,
     'nano-banana': 1,

@@ -1923,8 +1923,6 @@ function App() {
     const subscriptionPlansScrollRef = useRef(null);
     const catalogTabsScrollRef = useRef(null);
     const historyFiltersScrollRef = useRef(null);
-    const homeQuickRowScrollRef = useRef(null);
-
     const effectiveTextModels = useMemo(
         () => resolveEffectiveTextModels(textModels),
         [textModels],
@@ -3478,13 +3476,6 @@ function App() {
     }, [currentPage]);
 
     useEffect(() => {
-        if (currentPage !== 'home') {
-            return undefined;
-        }
-        return attachHorizontalWheelScroll(homeQuickRowScrollRef.current);
-    }, [currentPage]);
-
-    useEffect(() => {
         if (currentPage !== 'history') {
             return undefined;
         }
@@ -3635,17 +3626,16 @@ function App() {
             if (event.button !== 0 || event.shiftKey || event.metaKey || event.ctrlKey) {
                 return;
             }
+            // Buttons (plan details / buy) must keep a normal click.
+            // Starting a drag from them — and capturing the pointer on
+            // the strip — ate the click after the mouse-drag carousel.
+            if (event.target.closest?.('button, a, [role="button"], input, textarea, select')) {
+                return;
+            }
             dragActive = true;
             dragMoved = false;
             dragStartX = event.clientX;
             dragStartScrollLeft = el.scrollLeft;
-            el.dataset.dragging = 'true';
-            try {
-                el.setPointerCapture(event.pointerId);
-            } catch {
-                // Some WebViews reject capture on a child-originated event;
-                // window-level move/up below still keeps the drag alive.
-            }
         };
 
         const onPointerMove = (event) => {
@@ -3656,7 +3646,15 @@ function App() {
             if (!dragMoved && Math.abs(dx) < dragThreshold) {
                 return;
             }
-            dragMoved = true;
+            if (!dragMoved) {
+                dragMoved = true;
+                el.dataset.dragging = 'true';
+                try {
+                    el.setPointerCapture(event.pointerId);
+                } catch {
+                    // Window-level move/up still keeps the drag alive.
+                }
+            }
             event.preventDefault();
             el.scrollLeft = dragStartScrollLeft - dx;
         };
@@ -3680,6 +3678,12 @@ function App() {
             }
             if (dragMoved) {
                 snapToClosest();
+                // Swallow only the click that follows this drag. If no
+                // click is synthesized, drop the flag so the next tap
+                // on "plan details" still works.
+                window.setTimeout(() => {
+                    dragMoved = false;
+                }, 350);
             }
         };
 
@@ -6081,26 +6085,28 @@ function App() {
                 </button>
             </section>
 
-            <HomeNewsWidget slides={homeNewsSlides} />
+            <div className="home2__mid">
+                <HomeNewsWidget slides={homeNewsSlides} />
 
-            <section className="home2__section">
-                <p className="home2__section-label">{text.homeQuickAccessLabel}</p>
-                <div className="home2__quick-row" ref={homeQuickRowScrollRef}>
-                    {homeQuickAccessItems.map(({ tab, icon: Icon, colorVar, labelKey }) => (
-                        <button
-                            key={tab}
-                            type="button"
-                            className="home2__quick-item"
-                            onClick={() => handleHomeQuickAccessClick(tab)}
-                        >
-                            <span className={`home2__quick-ico home2__quick-ico--${colorVar}`} aria-hidden="true">
-                                <Icon size={19} />
-                            </span>
-                            <span className="home2__quick-label">{text[labelKey]}</span>
-                        </button>
-                    ))}
-                </div>
-            </section>
+                <section className="home2__quick" aria-label={text.homeQuickAccessLabel}>
+                    <p className="home2__section-label">{text.homeQuickAccessLabel}</p>
+                    <div className="home2__quick-grid">
+                        {homeQuickAccessItems.map(({ tab, icon: Icon, colorVar, labelKey }) => (
+                            <button
+                                key={tab}
+                                type="button"
+                                className="home2__quick-item"
+                                onClick={() => handleHomeQuickAccessClick(tab)}
+                            >
+                                <span className={`home2__quick-ico home2__quick-ico--${colorVar}`} aria-hidden="true">
+                                    <Icon size={18} />
+                                </span>
+                                <span className="home2__quick-label">{text[labelKey]}</span>
+                            </button>
+                        ))}
+                    </div>
+                </section>
+            </div>
 
             {userData.subscriptionIsPaid ? (
                 <button

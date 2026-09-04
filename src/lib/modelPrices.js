@@ -31,6 +31,7 @@ const MODEL_PRICES = {
     'o1': 15,
     'claude-opus-4.7': 8,
     'claude-opus-4.8': 8,
+    'claude-fable-5': 16,
     'gpt-5.5': 10,
     'flux-dev': 5,
     'nano-banana': 10,
