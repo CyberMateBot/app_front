@@ -879,6 +879,9 @@ const translations = {
         chatGenerating: 'Generating',
         chatCopy: 'Скопировать ответ',
         chatCopied: 'Ответ скопирован',
+        chatDownloadHtml: 'Скачать HTML',
+        chatHtmlDownloaded: 'HTML сохранён',
+        chatHtmlDownloadFailed: 'Не удалось скачать HTML.',
         historyDeleteConfirm: 'Удалить всю историю промтов? Это действие нельзя отменить.',
         historyTopicDeleteConfirm: 'Удалить этот диалог из истории?',
         historyTopicDeleted: 'Диалог удалён.',
@@ -1492,6 +1495,9 @@ const translations = {
         chatGenerating: 'Generating',
         chatCopy: 'Copy response',
         chatCopied: 'Response copied',
+        chatDownloadHtml: 'Download HTML',
+        chatHtmlDownloaded: 'HTML saved',
+        chatHtmlDownloadFailed: 'Could not download HTML.',
         historyDeleteConfirm: 'Delete all prompt history? This cannot be undone.',
         historyTopicDeleteConfirm: 'Delete this conversation from history?',
         historyTopicDeleted: 'Conversation deleted.',
@@ -6404,6 +6410,9 @@ function App() {
                             generatingLabel={text.chatGenerating}
                             copyLabel={text.chatCopy}
                             copiedLabel={text.chatCopied}
+                            downloadHtmlLabel={text.chatDownloadHtml}
+                            htmlDownloadedLabel={text.chatHtmlDownloaded}
+                            htmlDownloadFailedLabel={text.chatHtmlDownloadFailed}
                         />
                     ))}
                 </div>

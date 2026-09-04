@@ -5301,11 +5301,17 @@
   -webkit-touch-callout: default;
 }
 
-.ai-chat__bubble-copy {
+.ai-chat__bubble-actions {
   position: absolute;
   top: 6px;
   right: 6px;
   z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-chat__bubble-copy {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5322,6 +5328,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.ai-chat__bubble-copy:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .ai-chat__bubble-copy:active {
   transform: scale(0.96);
 }
@@ -5331,7 +5342,12 @@
   background: rgba(134, 239, 172, 0.12);
 }
 
-.ai-chat__bubble--assistant:has(.ai-chat__bubble-copy) {
+.ai-chat__bubble-copy--error {
+  color: #fca5a5;
+  background: rgba(252, 165, 165, 0.12);
+}
+
+.ai-chat__bubble--assistant:has(.ai-chat__bubble-actions) {
   padding-top: 34px;
 }
 

@@ -538,3 +538,14 @@ export function guessMediaFilename(url, fallbackBase = 'cybermate') {
     // photo/video viewers can't open.
     return `${baseName}.${fallbackExt || 'bin'}`;
 }
+
+export async function downloadGeneratedFile(content, filename, mimeType = 'text/html') {
+    const text = String(content || '');
+    if (!text.trim()) {
+        throw new Error('File is empty.');
+    }
+
+    const blob = new Blob([text], { type: `${mimeType};charset=utf-8` });
+    const safeName = String(filename || 'cybermate.html').trim() || 'cybermate.html';
+    return downloadBlobOnDevice(blob, safeName, 'file');
+}
