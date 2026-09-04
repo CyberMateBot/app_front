@@ -6271,16 +6271,6 @@ function App() {
                 />
             </label>
 
-            <button
-                type="button"
-                className={`catalog-concept__available-toggle ${catalogAvailableOnly ? 'catalog-concept__available-toggle--active' : ''}`}
-                aria-pressed={catalogAvailableOnly}
-                onClick={() => setCatalogAvailableOnly((prev) => !prev)}
-            >
-                <Unlock size={13} aria-hidden="true" />
-                {text.catalogAvailableOnlyLabel}
-            </button>
-
             <div className="catalog-concept__tabs" role="tablist" aria-label={text.catalogTitle} ref={catalogTabsScrollRef}>
                 {catalogTabs.map(({ id, labelKey }) => (
                     <button
@@ -6295,6 +6285,16 @@ function App() {
                     </button>
                 ))}
             </div>
+
+            <button
+                type="button"
+                className={`catalog-concept__available-toggle ${catalogAvailableOnly ? 'catalog-concept__available-toggle--active' : ''}`}
+                aria-pressed={catalogAvailableOnly}
+                onClick={() => setCatalogAvailableOnly((prev) => !prev)}
+            >
+                <Unlock size={13} aria-hidden="true" />
+                {text.catalogAvailableOnlyLabel}
+            </button>
             </div>
 
             <div className="catalog-concept__scroll">
