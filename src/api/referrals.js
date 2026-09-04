@@ -2,6 +2,7 @@ import { errorFromResponse } from './apiError.js';
 import { ENABLE_TELEGRAM_MOCK } from '../config/env.js';
 import { apiFetch } from './httpClient.js';
 import { buildMockReferralLink, buildMockReferralsResponse } from './referrals.mock.js';
+import { getTelegramInitDataHeaders } from '../lib/telegramInitData.js';
 
 /**
  * @typedef {Object} ReferralItem
@@ -98,7 +99,7 @@ export async function fetchReferralLink(telegramId) {
     if (ENABLE_TELEGRAM_MOCK) {
         try {
             const res = await apiFetch(`/v1/users/telegram/${id}/referral-link`, {
-                headers: { Accept: 'application/json' },
+                headers: getTelegramInitDataHeaders({ Accept: 'application/json' }),
             });
 
             if (res.ok) {
@@ -117,7 +118,7 @@ export async function fetchReferralLink(telegramId) {
     }
 
     const res = await apiFetch(`/v1/users/telegram/${id}/referral-link`, {
-        headers: { Accept: 'application/json' },
+        headers: getTelegramInitDataHeaders({ Accept: 'application/json' }),
     });
 
     if (res.status === 404) {
@@ -152,7 +153,7 @@ export async function fetchReferrals(telegramId) {
     if (ENABLE_TELEGRAM_MOCK) {
         try {
             const res = await apiFetch(`/v1/users/telegram/${id}/referrals`, {
-                headers: { Accept: 'application/json' },
+                headers: getTelegramInitDataHeaders({ Accept: 'application/json' }),
             });
 
             if (res.ok) {
@@ -171,7 +172,7 @@ export async function fetchReferrals(telegramId) {
     }
 
     const res = await apiFetch(`/v1/users/telegram/${id}/referrals`, {
-        headers: { Accept: 'application/json' },
+        headers: getTelegramInitDataHeaders({ Accept: 'application/json' }),
     });
 
     if (res.status === 404) {

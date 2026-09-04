@@ -143,7 +143,13 @@ async function fetchTelegramResource(pathname, fallbackMessage, extraHeaders = {
 export async function getMyProfile() {
     const telegramId = getCurrentTelegramId();
 
-    return fetchTelegramResource(`/v1/users/telegram/${telegramId}`, 'Failed to load Telegram profile.');
+    // The backend now verifies the caller actually owns telegramId via this
+    // header (profile used to be readable for any telegram id).
+    return fetchTelegramResource(
+        `/v1/users/telegram/${telegramId}`,
+        'Failed to load Telegram profile.',
+        getTelegramInitDataHeaders(),
+    );
 }
 
 export async function patchUserTheme(theme) {
@@ -153,6 +159,7 @@ export async function patchUserTheme(theme) {
     const res = await apiFetch(`/v1/users/telegram/${telegramId}/theme`, {
         method: 'PATCH',
         headers: {
+            ...getTelegramInitDataHeaders(),
             'Content-Type': 'application/json',
             Accept: 'application/json',
         },

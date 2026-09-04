@@ -1,4 +1,5 @@
 import { resolveApiUrl } from '../api/httpClient.js';
+import { isSafeExternalUrl } from './safeUrl.js';
 
 export const HOME_SOCIAL_LINKS = {
     tiktok: 'https://www.tiktok.com/@cybermate',
@@ -90,7 +91,10 @@ export function formatRelativeTime(value, language = 'ru') {
 }
 
 export function openExternalLink(url) {
-    if (!url) {
+    // Some callers pass URLs straight from API responses (e.g. payment
+    // confirmationUrl) or other dynamic sources; reject javascript:/data:
+    // and similar schemes rather than handing them to openLink/window.open.
+    if (!isSafeExternalUrl(url)) {
         return;
     }
 

@@ -1,4 +1,5 @@
 import { API_BASE_URL, SUPPORT_TELEGRAM_INVITE_URL } from '../config/env.js';
+import { isSafeExternalUrl } from './safeUrl.js';
 
 let cachedSupportUrl = SUPPORT_TELEGRAM_INVITE_URL;
 
@@ -12,7 +13,7 @@ export async function resolveSupportUrl() {
         const response = await fetch(`${API_BASE_URL}/v1/app/links`);
         if (response.ok) {
             const data = await response.json();
-            if (data?.support_chat_url) {
+            if (data?.support_chat_url && isSafeExternalUrl(data.support_chat_url)) {
                 cachedSupportUrl = data.support_chat_url;
             }
         }
@@ -26,6 +27,10 @@ export async function resolveSupportUrl() {
 /** Opens CyberMate community chat (invite link), not the bot DM. */
 export function openSupport(url) {
     const target = url || cachedSupportUrl;
+    if (!isSafeExternalUrl(target)) {
+        return;
+    }
+
     const tg = window.Telegram?.WebApp;
 
     if (tg?.openTelegramLink) {
