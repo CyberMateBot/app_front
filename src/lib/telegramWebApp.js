@@ -1,5 +1,6 @@
 import { ENABLE_TELEGRAM_MOCK, BOT_USERNAME } from '../config/env.js';
 import { applyUiScale } from './uiScale.js';
+import { isSafeExternalUrl } from './safeUrl.js';
 
 const DESKTOP_PLATFORMS = new Set(['tdesktop', 'macos', 'web', 'weba', 'unigram']);
 const EMBEDDED_CHAT_MAX_WIDTH = 560;
@@ -213,7 +214,7 @@ export function openMainMiniAppFullscreen(urlOrUsername) {
         target = buildMainMiniAppFullscreenLink(BOT_USERNAME, startParam);
     }
 
-    if (!target) {
+    if (!target || !isSafeExternalUrl(target)) {
         return false;
     }
 
