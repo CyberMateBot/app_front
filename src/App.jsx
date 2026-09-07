@@ -28,7 +28,6 @@ import {
     Menu,
     MessageSquare,
     Mic,
-    MoreHorizontal,
     Music,
     Paperclip,
     Plus,
@@ -7585,7 +7584,7 @@ function App() {
                             setCurrentPage('settings');
                         }}
                     >
-                        <MoreHorizontal size={18} aria-hidden="true" />
+                        <Settings size={18} aria-hidden="true" />
                     </button>
                     )}
                 />
@@ -7661,7 +7660,6 @@ function App() {
                     ) : null}
                 </article>
 
-                <p className="profile-hub__section-lbl">{text.profileAccountSection}</p>
                 <div className="profile-hub__grid">
                     <button type="button" className="profile-hub__tile" onClick={() => setCurrentPage('subscription')}>
                         <span className="profile-hub__tile-ico profile-hub__tile-ico--violet"><Crown size={18} /></span>
@@ -7845,11 +7843,6 @@ function App() {
                             </span>
                         ) : null}
                     </div>
-                    <p className="subscription-page__hero-sub">
-                        {formatTemplate(text.subscriptionPageSub, {
-                            rate: String(billingCatalog?.coinRateRub ?? 1),
-                        })}
-                    </p>
                 </div>
 
                 <div className="subscription-page__plans-carousel">

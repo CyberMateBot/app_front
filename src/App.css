@@ -2208,7 +2208,7 @@
 .profile-hub__wallet {
   position: relative;
   overflow: hidden;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   padding: 16px;
   border-radius: 18px;
   border: 0.5px solid var(--cm-coin-border);
@@ -2752,6 +2752,14 @@
   line-height: 1.5;
   color: var(--cm-text-dim);
   text-align: center;
+}
+
+/* The plans carousel already has generous internal bottom padding
+   (room for the peek/scale effect), so cancel this note's own top
+   margin + the page's flex gap here to match the tighter spacing used
+   on other pages (e.g. the coin-packs list on the wallet screen). */
+.subscription-page__plans-carousel + .payment-consent-note {
+  margin-top: -14px;
 }
 
 .payment-consent-note__link {
