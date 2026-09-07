@@ -7528,7 +7528,7 @@ function App() {
         const subscriptionUntil = userData.subscriptionUntil;
 
         return (
-            <section className="profile-screen profile-screen--concept" aria-label={text.profileTitle}>
+            <section className="profile-screen profile-screen--concept profile-hub" aria-label={text.profileTitle}>
                 <AppPageHeader
                     title={text.profileTitle}
                     onBack={() => setCurrentPage('home')}
@@ -7548,142 +7548,139 @@ function App() {
                     )}
                 />
 
-                <div className="profile-concept__avatar-section">
-                    <div className="profile-concept__avatar-outer">
-                        <div className="profile-concept__avatar-inner">
-                        {userData.avatarUrl ? (
-                            <img src={userData.avatarUrl} alt={userData.displayName} />
-                        ) : (
-                            <span>{profileInitials}</span>
-                        )}
-                        {userData.subscriptionIsPaid ? (
-                            <span className="profile-concept__avatar-crown" aria-hidden="true">👑</span>
-                        ) : null}
-                        </div>
-                    </div>
-                    <h3 className="profile-concept__user-name">{userData.displayName}</h3>
-                    {userData.handle ? (
-                        <p className="profile-concept__user-handle">{userData.handle}</p>
-                    ) : null}
-                    <p className="profile-concept__user-id">{text.profileAppUserId}: {userData.appUserId}</p>
-                    <div className={`profile-concept__plan-badge ${subscriptionPlanId === 'free' ? 'profile-concept__plan-badge--free' : ''}`}>
-                        <Zap size={12} aria-hidden="true" />
-                        {subscriptionPlanId === 'free'
-                            ? text.profilePlanBadgeFree
-                            : formatTemplate(text.profilePlanBadge, { plan: subscriptionPlanName })}
-                    </div>
-                </div>
+                <div className="profile-hub__hero">
+                    <div className="profile-hub__hero-glow" aria-hidden="true" />
 
-                <div className="profile-concept__stats">
-                    <div className="profile-concept__stat">
-                        <div className="profile-concept__stat-val">{formatNumber(requestsCount)}</div>
-                        <div className="profile-concept__stat-label">{text.profileStatRequests}</div>
-                    </div>
-                    <div className="profile-concept__stat">
-                        <div className="profile-concept__stat-val">{formatNumber(referralsCount)}</div>
-                        <div className="profile-concept__stat-label">{text.profileStatReferrals}</div>
-                    </div>
-                    <div className="profile-concept__stat">
-                        <div className="profile-concept__stat-val">{formatNumber(tokenBalance)}</div>
-                        <div className="profile-concept__stat-label">{text.profileStatCoins}</div>
-                    </div>
-                </div>
-
-                <article className="profile-concept__balance-card">
-                    <div className="profile-concept__balance-top">
-                        <div>
-                            <div className="profile-concept__balance-label">{text.profileBalanceLabel}</div>
-                            <div className="profile-concept__balance-amount">
-                                <CoinIcon size={30} className="profile-concept__coin-icon" />
-                                <span className="profile-concept__balance-num">{formatNumber(tokenBalance)}</span>
+                    <div className="profile-concept__avatar-section profile-hub__hero-top">
+                        <div className="profile-concept__avatar-outer">
+                            <div className="profile-concept__avatar-inner">
+                            {userData.avatarUrl ? (
+                                <img src={userData.avatarUrl} alt={userData.displayName} />
+                            ) : (
+                                <span>{profileInitials}</span>
+                            )}
+                            {userData.subscriptionIsPaid ? (
+                                <span className="profile-concept__avatar-crown" aria-hidden="true">👑</span>
+                            ) : null}
                             </div>
                         </div>
-                        <button type="button" className="profile-concept__topup-btn" onClick={openCoinTopUp}>
+                        <h3 className="profile-concept__user-name">{userData.displayName}</h3>
+                        {userData.handle ? (
+                            <p className="profile-concept__user-handle">{userData.handle}</p>
+                        ) : null}
+                        <p className="profile-concept__user-id">{text.profileAppUserId}: {userData.appUserId}</p>
+                        <div className={`profile-hub__badge ${subscriptionPlanId === 'free' ? 'profile-hub__badge--free' : ''}`}>
+                            <Zap size={12} aria-hidden="true" />
+                            {subscriptionPlanId === 'free'
+                                ? text.profilePlanBadgeFree
+                                : formatTemplate(text.profilePlanBadge, { plan: subscriptionPlanName })}
+                        </div>
+                    </div>
+
+                    <div className="profile-hub__stats">
+                        <div className="profile-hub__stat">
+                            <div className="profile-hub__stat-val">{formatNumber(requestsCount)}</div>
+                            <div className="profile-hub__stat-label">{text.profileStatRequests}</div>
+                        </div>
+                        <div className="profile-hub__stat">
+                            <div className="profile-hub__stat-val">{formatNumber(referralsCount)}</div>
+                            <div className="profile-hub__stat-label">{text.profileStatReferrals}</div>
+                        </div>
+                        <div className="profile-hub__stat">
+                            <div className="profile-hub__stat-val">{formatNumber(tokenBalance)}</div>
+                            <div className="profile-hub__stat-label">{text.profileStatCoins}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <article className="profile-hub__wallet">
+                    <div className="profile-hub__wallet-top">
+                        <div className="profile-hub__wallet-left">
+                            <span className="profile-hub__wallet-ico">
+                                <CoinIcon size={22} className="profile-hub__wallet-coin" />
+                            </span>
+                            <div>
+                                <div className="profile-hub__wallet-label">{text.profileBalanceLabel}</div>
+                                <div className="profile-hub__wallet-amount">{formatNumber(tokenBalance)}</div>
+                            </div>
+                        </div>
+                        <button type="button" className="profile-hub__wallet-topup" onClick={openCoinTopUp}>
                             <Plus size={12} aria-hidden="true" />
                             {text.profileTopUp}
                         </button>
                     </div>
                     {hasUsageQuota ? (
-                        <div className="profile-concept__usage">
-                            <div className="profile-concept__usage-row">
+                        <div className="profile-hub__usage">
+                            <div className="profile-hub__usage-row">
                                 <span>{text.profileUsageLabel}</span>
                                 <span>{formatNumber(usageUsed)} / {formatNumber(usageLimit)}</span>
                             </div>
-                            <div className="profile-concept__bar-track">
-                                <div className="profile-concept__bar-fill" style={{ width: `${usagePercent}%` }} />
+                            <div className="profile-hub__usage-track">
+                                <div className="profile-hub__usage-fill" style={{ width: `${usagePercent}%` }} />
                             </div>
                         </div>
                     ) : null}
                 </article>
 
-                <p className="profile-concept__section-lbl">{text.profileAccountSection}</p>
-                <div className="profile-concept__menu-list">
-                    <button type="button" className="profile-concept__menu-item" onClick={() => setCurrentPage('subscription')}>
-                        <span className="profile-concept__menu-ico profile-concept__menu-ico--violet"><Crown size={16} /></span>
-                        <span className="profile-concept__menu-text">
-                            <span className="profile-concept__menu-title">{text.profileMenuSubscription}</span>
-                            <span className="profile-concept__menu-sub">
-                                {subscriptionPlanId === 'free'
-                                    ? subscriptionPlanName
-                                    : formatTemplate(text.profileMenuSubscriptionSub, { plan: subscriptionPlanName, date: subscriptionUntil })}
-                            </span>
+                <p className="profile-hub__section-lbl">{text.profileAccountSection}</p>
+                <div className="profile-hub__grid">
+                    <button type="button" className="profile-hub__tile" onClick={() => setCurrentPage('subscription')}>
+                        <span className="profile-hub__tile-ico profile-hub__tile-ico--violet"><Crown size={18} /></span>
+                        <span className="profile-hub__tile-title">{text.profileMenuSubscription}</span>
+                        <span className="profile-hub__tile-sub">
+                            {subscriptionPlanId === 'free'
+                                ? subscriptionPlanName
+                                : formatTemplate(text.profileMenuSubscriptionSub, { plan: subscriptionPlanName, date: subscriptionUntil })}
                         </span>
-                        <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
+                        <ChevronRight className="profile-hub__tile-arrow" size={14} aria-hidden="true" />
                     </button>
                     <button
                         type="button"
-                        className="profile-concept__menu-item"
+                        className="profile-hub__tile"
                         onClick={() => {
                             setHistoryReturnPage('profile');
                             setCurrentPage('history');
                         }}
                     >
-                        <span className="profile-concept__menu-ico profile-concept__menu-ico--pink"><History size={16} /></span>
-                        <span className="profile-concept__menu-text">
-                            <span className="profile-concept__menu-title">{text.profileMenuHistory}</span>
-                            <span className="profile-concept__menu-sub">
-                                {formatTemplate(text.profileMenuHistorySub, { count: requestsCount })}
-                            </span>
+                        <span className="profile-hub__tile-ico profile-hub__tile-ico--pink"><History size={18} /></span>
+                        <span className="profile-hub__tile-title">{text.profileMenuHistory}</span>
+                        <span className="profile-hub__tile-sub">
+                            {formatTemplate(text.profileMenuHistorySub, { count: requestsCount })}
                         </span>
-                        <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
+                        <ChevronRight className="profile-hub__tile-arrow" size={14} aria-hidden="true" />
                     </button>
-                    <button type="button" className="profile-concept__menu-item" onClick={() => setCurrentPage('referrals')}>
-                        <span className="profile-concept__menu-ico profile-concept__menu-ico--green"><Users size={16} /></span>
-                        <span className="profile-concept__menu-text">
-                            <span className="profile-concept__menu-title">{text.profileMenuReferrals}</span>
-                            <span className="profile-concept__menu-sub">
-                                {formatTemplate(text.profileMenuReferralsSub, { count: referralsCount, bonus: referralBonus || 300 })}
-                            </span>
+                    <button type="button" className="profile-hub__tile" onClick={() => setCurrentPage('referrals')}>
+                        <span className="profile-hub__tile-ico profile-hub__tile-ico--green"><Users size={18} /></span>
+                        <span className="profile-hub__tile-title">{text.profileMenuReferrals}</span>
+                        <span className="profile-hub__tile-sub">
+                            {formatTemplate(text.profileMenuReferralsSub, { count: referralsCount, bonus: referralBonus || 300 })}
                         </span>
-                        <span className="profile-concept__menu-tag">{text.profileReferralBonusTag}</span>
-                        <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
+                        <span className="profile-hub__tile-tag">{text.profileReferralBonusTag}</span>
                     </button>
                     <button
                         type="button"
-                        className="profile-concept__menu-item"
+                        className="profile-hub__tile"
                         onClick={() => openSupport('https://t.me/cybermatesupp')}
                     >
-                        <span className="profile-concept__menu-ico profile-concept__menu-ico--blue"><LifeBuoy size={16} /></span>
-                        <span className="profile-concept__menu-text">
-                            <span className="profile-concept__menu-title">{text.profileMenuSupport}</span>
-                            <span className="profile-concept__menu-sub">{text.profileMenuSupportSub}</span>
-                        </span>
-                        <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
+                        <span className="profile-hub__tile-ico profile-hub__tile-ico--blue"><LifeBuoy size={18} /></span>
+                        <span className="profile-hub__tile-title">{text.profileMenuSupport}</span>
+                        <span className="profile-hub__tile-sub">{text.profileMenuSupportSub}</span>
+                        <ChevronRight className="profile-hub__tile-arrow" size={14} aria-hidden="true" />
                     </button>
                 </div>
 
-                <p className="profile-concept__section-lbl">{text.profileSettingsSection}</p>
-                <div className="profile-concept__menu-list profile-concept__menu-list--settings">
-                    <button type="button" className="profile-concept__menu-item" onClick={() => {
+                <p className="profile-hub__section-lbl">{text.profileSettingsSection}</p>
+                <div className="profile-hub__list">
+                    <button type="button" className="profile-hub__list-item" onClick={() => {
                         setSettingsReturnPage('profile');
                         setCurrentPage('settings');
                     }}>
-                        <span className="profile-concept__menu-ico profile-concept__menu-ico--muted"><Languages size={16} /></span>
-                        <span className="profile-concept__menu-text">
-                            <span className="profile-concept__menu-title">{text.profileMenuLanguage}</span>
-                            <span className="profile-concept__menu-sub">{text.languageNames[language]}</span>
+                        <span className="profile-hub__list-ico"><Languages size={16} /></span>
+                        <span className="profile-hub__list-text">
+                            <span className="profile-hub__list-title">{text.profileMenuLanguage}</span>
+                            <span className="profile-hub__list-sub">{text.languageNames[language]}</span>
                         </span>
-                        <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
+                        <ChevronRight className="profile-hub__tile-arrow" size={16} aria-hidden="true" />
                     </button>
                 </div>
 

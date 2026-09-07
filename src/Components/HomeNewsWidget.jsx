@@ -112,14 +112,20 @@ export default function HomeNewsWidget({ slides }) {
                     )}
                     <div className="home-news-widget__slide-overlay" />
                     <div className="home-news-widget__slide-content">
-                        <span
-                            className="home-news-widget__tag"
-                            style={{ background: slide.tagBg, color: slide.tagColor }}
-                        >
-                            {slide.tag}
-                        </span>
-                        <h3 className="home-news-widget__title">{slide.title}</h3>
-                        <p className="home-news-widget__desc">{slide.description}</p>
+                        {slide.tag ? (
+                            <span
+                                className="home-news-widget__tag"
+                                style={{ background: slide.tagBg, color: slide.tagColor }}
+                            >
+                                {slide.tag}
+                            </span>
+                        ) : null}
+                        {slide.title ? (
+                            <h3 className="home-news-widget__title">{slide.title}</h3>
+                        ) : null}
+                        {slide.description ? (
+                            <p className="home-news-widget__desc">{slide.description}</p>
+                        ) : null}
                     </div>
                 </article>
             ))}

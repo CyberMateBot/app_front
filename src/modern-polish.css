@@ -139,6 +139,9 @@
   .history-concept__item,
   .profile-concept__balance-card,
   .profile-concept__menu-item,
+  .profile-hub__wallet,
+  .profile-hub__tile,
+  .profile-hub__list-item,
   .subscription-concept__coin-pack {
     animation: mp-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
