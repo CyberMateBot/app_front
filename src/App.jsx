@@ -21,7 +21,6 @@ import {
     FileText,
     History,
     House,
-    Languages,
     LifeBuoy,
     Lock,
     Image as ImageIcon,
@@ -938,7 +937,7 @@ const translations = {
         modelLockedNotice: 'Модель «{model}» доступна с плана «{plan}»',
         referralProgramTitle: 'Реферальная программа',
         referralIntro: 'Приглашайте друзей в CyberMate и получайте CyberCoins за каждого активного пользователя.',
-        referralStatFriends: 'Друзей',
+        referralStatFriends: 'Рефералы',
         referralStatEarned: 'Заработано',
         referralHowTitle: 'Как это работает',
         referralHowStep1: 'Поделитесь ссылкой',
@@ -996,7 +995,7 @@ const translations = {
         profileStatRequests: 'Запросов',
         profileStatProjects: 'Проектов',
         profileStatReferrals: 'Рефералов',
-        profileStatCoins: 'Токены',
+        profileStatEarned: 'Заработано',
         profileBalanceLabel: 'Баланс токенов',
         profileTopUp: 'Пополнить',
         profileUsageLabel: 'Использовано в этом месяце',
@@ -1015,6 +1014,26 @@ const translations = {
         profileMenuSupportSub: 'Напишите нам в Telegram',
         profileMenuLanguage: 'Язык',
         profileMenuDarkTheme: 'Тёмная тема',
+        profileMenuTransactions: 'Транзакции',
+        profileMenuTransactionsSub: 'История покупок и списаний',
+        profileMenuInfo: 'Информация',
+        profileMenuInfoSub: 'FAQ, документы и поддержка',
+        infoTabFaq: 'FAQ',
+        infoTabDocs: 'Документы',
+        infoFaqQ1: 'Что такое CyberMate?',
+        infoFaqA1: 'CyberMate — платформа для генерации текста, изображений, видео, аудио и 3D-моделей с помощью нейросетей прямо в Telegram, без установки дополнительных приложений.',
+        infoFaqQ2: 'Как начать пользоваться?',
+        infoFaqA2: 'Выберите нужный инструмент в разделе «Каталог» или на главной, опишите задачу и запустите генерацию — результат появится в чате.',
+        infoFaqQ3: 'Как получить монеты бесплатно?',
+        infoFaqA3: 'За регистрацию начисляется стартовый бонус, а за каждого друга, который присоединится по вашей ссылке из раздела «Рефералы», вы получаете дополнительные CyberCoins.',
+        infoFaqQ4: 'Как купить монеты и на что они тратятся?',
+        infoFaqA4: 'Монеты можно докупить пакетами в разделе пополнения. Каждая генерация списывает определённое количество CyberCoins в зависимости от выбранной модели.',
+        infoFaqQ5: 'Нужна ли подписка, чтобы пользоваться приложением?',
+        infoFaqA5: 'Нет, часть моделей доступна на бесплатном плане. Платная подписка открывает доступ к более мощным моделям и снижает стоимость генераций в CyberCoins.',
+        infoFaqQ6: 'Как отменить подписку?',
+        infoFaqA6: 'Подписка не продлевается автоматически — она просто истекает по окончании оплаченного периода, новую можно оформить в любой момент в разделе «Подписки».',
+        infoFaqQ7: 'Что делать, если генерация не удалась?',
+        infoFaqA7: 'Если результат не пришёл из-за ошибки, монеты за эту генерацию не списываются. Если списание всё же произошло — напишите в поддержку, мы всё проверим и вернём монеты.',
         profilePlansTitle: 'Планы подписки',
         profilePlansSub: '5 уровней · 1 CyberCoin = {rate} ₽',
         planFreeName: 'Старт',
@@ -1554,7 +1573,7 @@ const translations = {
         modelLockedNotice: 'Model "{model}" requires the "{plan}" plan',
         referralProgramTitle: 'Referral program',
         referralIntro: 'Invite friends to CyberMate and earn CyberCoins for every active user.',
-        referralStatFriends: 'Friends',
+        referralStatFriends: 'Referrals',
         referralStatEarned: 'Earned',
         referralHowTitle: 'How it works',
         referralHowStep1: 'Share your link',
@@ -1612,7 +1631,7 @@ const translations = {
         profileStatRequests: 'Requests',
         profileStatProjects: 'Projects',
         profileStatReferrals: 'Referrals',
-        profileStatCoins: 'Tokens',
+        profileStatEarned: 'Earned',
         profileBalanceLabel: 'Token balance',
         profileTopUp: 'Top up',
         profileUsageLabel: 'Used this month',
@@ -1631,6 +1650,26 @@ const translations = {
         profileMenuSupportSub: 'Message us on Telegram',
         profileMenuLanguage: 'Language',
         profileMenuDarkTheme: 'Dark theme',
+        profileMenuTransactions: 'Transactions',
+        profileMenuTransactionsSub: 'Purchases & charges history',
+        profileMenuInfo: 'Information',
+        profileMenuInfoSub: 'FAQ, documents & support',
+        infoTabFaq: 'FAQ',
+        infoTabDocs: 'Documents',
+        infoFaqQ1: 'What is CyberMate?',
+        infoFaqA1: 'CyberMate is a platform for generating text, images, video, audio and 3D models with AI, right inside Telegram, without installing extra apps.',
+        infoFaqQ2: 'How do I get started?',
+        infoFaqA2: 'Pick a tool in the "Catalog" section or on the home screen, describe your task and run the generation — the result appears right in the chat.',
+        infoFaqQ3: 'How can I get coins for free?',
+        infoFaqA3: 'You get a starter bonus for signing up, plus extra CyberCoins for every friend who joins using your link from the "Referrals" section.',
+        infoFaqQ4: 'How do I buy coins, and what are they spent on?',
+        infoFaqA4: 'You can buy extra coin packs in the top-up section. Every generation spends a certain amount of CyberCoins depending on the model you use.',
+        infoFaqQ5: 'Do I need a subscription to use the app?',
+        infoFaqA5: 'No, some models are available on the free plan. A paid subscription unlocks more powerful models and lowers the CyberCoins cost of generations.',
+        infoFaqQ6: 'How do I cancel my subscription?',
+        infoFaqA6: 'Subscriptions don\'t auto-renew — they simply expire at the end of the paid period, and you can start a new one anytime in the "Plans" section.',
+        infoFaqQ7: 'What if a generation fails?',
+        infoFaqA7: 'If a result didn\'t come back due to an error, coins for that generation aren\'t charged. If they were charged anyway, message support and we\'ll check and refund the coins.',
         profilePlansTitle: 'Subscription plans',
         profilePlansSub: '5 tiers · 1 CyberCoin = {rate} ₽',
         planFreeName: 'Start',
@@ -1778,6 +1817,8 @@ function App() {
     const [checkoutPendingId, setCheckoutPendingId] = useState(null);
     const [feedbackReturnPage, setFeedbackReturnPage] = useState('home');
     const [settingsReturnPage, setSettingsReturnPage] = useState('profile');
+    const [infoActiveTab, setInfoActiveTab] = useState('faq');
+    const [openFaqId, setOpenFaqId] = useState(null);
     const [feedbackKind, setFeedbackKind] = useState('suggestion');
     const [feedbackDraft, setFeedbackDraft] = useState('');
     const [feedbackPending, setFeedbackPending] = useState(false);
@@ -2589,7 +2630,7 @@ function App() {
         let needHistory = false;
 
         const loadPageData = async () => {
-            needWallet = (currentPage === 'wallet' || currentPage === 'profile')
+            needWallet = (currentPage === 'wallet' || currentPage === 'profile' || currentPage === 'transactions')
                 && !pageDataInFlightRef.current.wallet;
             needReferrals = currentPage === 'profile'
                 && !pageDataLoadedRef.current.referrals
@@ -7523,6 +7564,7 @@ function App() {
             : 0;
         const requestsCount = historyItems.length;
         const referralBonus = referralBonusTotal;
+        const totalEarned = Number(walletData?.wallet?.totalEarned ?? 0) || 0;
         const subscriptionPlanName = userData.subscriptionPlanName;
         const subscriptionPlanId = userData.subscriptionPlanId;
         const subscriptionUntil = userData.subscriptionUntil;
@@ -7559,9 +7601,6 @@ function App() {
                             ) : (
                                 <span>{profileInitials}</span>
                             )}
-                            {userData.subscriptionIsPaid ? (
-                                <span className="profile-concept__avatar-crown" aria-hidden="true">👑</span>
-                            ) : null}
                             </div>
                         </div>
                         <h3 className="profile-concept__user-name">{userData.displayName}</h3>
@@ -7587,8 +7626,8 @@ function App() {
                             <div className="profile-hub__stat-label">{text.profileStatReferrals}</div>
                         </div>
                         <div className="profile-hub__stat">
-                            <div className="profile-hub__stat-val">{formatNumber(tokenBalance)}</div>
-                            <div className="profile-hub__stat-label">{text.profileStatCoins}</div>
+                            <div className="profile-hub__stat-val">{formatNumber(totalEarned)}</div>
+                            <div className="profile-hub__stat-label">{text.profileStatEarned}</div>
                         </div>
                     </div>
                 </div>
@@ -7667,20 +7706,17 @@ function App() {
                         <span className="profile-hub__tile-sub">{text.profileMenuSupportSub}</span>
                         <ChevronRight className="profile-hub__tile-arrow" size={14} aria-hidden="true" />
                     </button>
-                </div>
-
-                <p className="profile-hub__section-lbl">{text.profileSettingsSection}</p>
-                <div className="profile-hub__list">
-                    <button type="button" className="profile-hub__list-item" onClick={() => {
-                        setSettingsReturnPage('profile');
-                        setCurrentPage('settings');
-                    }}>
-                        <span className="profile-hub__list-ico"><Languages size={16} /></span>
-                        <span className="profile-hub__list-text">
-                            <span className="profile-hub__list-title">{text.profileMenuLanguage}</span>
-                            <span className="profile-hub__list-sub">{text.languageNames[language]}</span>
-                        </span>
-                        <ChevronRight className="profile-hub__tile-arrow" size={16} aria-hidden="true" />
+                    <button type="button" className="profile-hub__tile" onClick={() => setCurrentPage('transactions')}>
+                        <span className="profile-hub__tile-ico profile-hub__tile-ico--gold"><Wallet size={18} /></span>
+                        <span className="profile-hub__tile-title">{text.profileMenuTransactions}</span>
+                        <span className="profile-hub__tile-sub">{text.profileMenuTransactionsSub}</span>
+                        <ChevronRight className="profile-hub__tile-arrow" size={14} aria-hidden="true" />
+                    </button>
+                    <button type="button" className="profile-hub__tile" onClick={() => setCurrentPage('info')}>
+                        <span className="profile-hub__tile-ico profile-hub__tile-ico--teal"><FileText size={18} /></span>
+                        <span className="profile-hub__tile-title">{text.profileMenuInfo}</span>
+                        <span className="profile-hub__tile-sub">{text.profileMenuInfoSub}</span>
+                        <ChevronRight className="profile-hub__tile-arrow" size={14} aria-hidden="true" />
                     </button>
                 </div>
 
@@ -7838,34 +7874,9 @@ function App() {
     };
 
     const renderWalletScreen = () => {
-        const balanceAvailable = Number(walletData?.wallet?.balanceAvailable ?? tokenBalance) || 0;
-        const totalEarned = Number(walletData?.wallet?.totalEarned ?? 0) || 0;
-
         return (
             <section className="wallet-screen wallet-screen--concept">
                 {renderConceptPageHeader(text.walletPageTitle, () => setCurrentPage(walletReturnPage))}
-
-                <article className="profile-concept__balance-card subscription-concept__balance subscription-page__hero--animate">
-                    <div className="subscription-concept__balance-grid">
-                        <div className="subscription-concept__balance-item">
-                            <span className="subscription-concept__balance-label">{text.walletBalanceTotal}</span>
-                            <span className="subscription-concept__balance-value">
-                                <CoinIcon size={16} className="profile-concept__coin-icon" />
-                                {formatNumber(tokenBalance)}
-                            </span>
-                        </div>
-                        <div className="subscription-concept__balance-item">
-                            <span className="subscription-concept__balance-label">{text.walletBalanceAvailable}</span>
-                            <span className="subscription-concept__balance-value">{formatNumber(balanceAvailable)}</span>
-                        </div>
-                        <div className="subscription-concept__balance-item">
-                            <span className="subscription-concept__balance-label">{text.walletBalanceEarned}</span>
-                            <span className="subscription-concept__balance-value subscription-concept__balance-value--gold">
-                                {formatNumber(totalEarned)}
-                            </span>
-                        </div>
-                    </div>
-                </article>
 
                 <div className="subscription-concept__coin-packs">
                     <h3 className="profile-concept__plans-title">{text.walletCoinPacksTitle}</h3>
@@ -7875,29 +7886,142 @@ function App() {
                     </div>
                     {renderPaymentConsentNote()}
                 </div>
+            </section>
+        );
+    };
 
-                <p className="profile-concept__section-lbl">{text.walletTransactionsTitle}</p>
-                <div className="profile-concept__menu-list">
-                    {pageLoading.wallet ? (
-                        <p className="referral-concept__empty">{text.loading}</p>
-                    ) : null}
-                    {!pageLoading.wallet && walletTransactions.length === 0 ? (
-                        <p className="referral-concept__empty">{text.walletTransactionsEmpty}</p>
-                    ) : null}
-                    {walletTransactions.map((item) => (
-                        <div key={item.id} className="subscription-concept__tx">
-                            <span className="subscription-concept__tx-name">
-                                {formatWalletTransactionReason(item.reason ?? item.description, {
-                                    language,
-                                    ...walletLabelOptions,
-                                })}
-                            </span>
-                            <span className={`subscription-concept__tx-amount ${item.amount < 0 ? 'subscription-concept__tx-amount--minus' : ''}`}>
-                                {`${item.amount > 0 ? '+' : ''}${item.amount}`}
-                            </span>
-                        </div>
-                    ))}
+    const renderTransactionsScreen = () => (
+        <section className="wallet-screen wallet-screen--concept">
+            {renderConceptPageHeader(text.walletTransactionsTitle, () => setCurrentPage('profile'))}
+
+            <div className="profile-concept__menu-list">
+                {pageLoading.wallet ? (
+                    <p className="referral-concept__empty">{text.loading}</p>
+                ) : null}
+                {!pageLoading.wallet && walletTransactions.length === 0 ? (
+                    <p className="referral-concept__empty">{text.walletTransactionsEmpty}</p>
+                ) : null}
+                {walletTransactions.map((item) => (
+                    <div key={item.id} className="subscription-concept__tx">
+                        <span className="subscription-concept__tx-name">
+                            {formatWalletTransactionReason(item.reason ?? item.description, {
+                                language,
+                                ...walletLabelOptions,
+                            })}
+                        </span>
+                        <span className={`subscription-concept__tx-amount ${item.amount < 0 ? 'subscription-concept__tx-amount--minus' : ''}`}>
+                            {`${item.amount > 0 ? '+' : ''}${item.amount}`}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </section>
+    );
+
+    const renderInfoHubScreen = () => {
+        const faqItems = [
+            { id: 'about', icon: Bot, q: text.infoFaqQ1, a: text.infoFaqA1 },
+            { id: 'start', icon: Zap, q: text.infoFaqQ2, a: text.infoFaqA2 },
+            { id: 'free-coins', icon: Users, q: text.infoFaqQ3, a: text.infoFaqA3 },
+            { id: 'buy-coins', icon: CreditCard, q: text.infoFaqQ4, a: text.infoFaqA4 },
+            { id: 'subscription', icon: Crown, q: text.infoFaqQ5, a: text.infoFaqA5 },
+            { id: 'cancel', icon: Unlock, q: text.infoFaqQ6, a: text.infoFaqA6 },
+            { id: 'failed', icon: MessageSquare, q: text.infoFaqQ7, a: text.infoFaqA7 },
+        ];
+
+        const handleInfoSupportClick = async () => {
+            const url = await resolveSupportUrl();
+            openSupport(url);
+        };
+
+        return (
+            <section className="info-hub info-hub--concept">
+                {renderConceptPageHeader(text.profileMenuInfo, () => setCurrentPage('profile'))}
+
+                <div className="catalog-concept__tabs" role="tablist" aria-label={text.profileMenuInfo}>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={infoActiveTab === 'faq'}
+                        className={`catalog-concept__tab ${infoActiveTab === 'faq' ? 'catalog-concept__tab--active' : ''}`}
+                        onClick={() => setInfoActiveTab('faq')}
+                    >
+                        {text.infoTabFaq}
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={infoActiveTab === 'docs'}
+                        className={`catalog-concept__tab ${infoActiveTab === 'docs' ? 'catalog-concept__tab--active' : ''}`}
+                        onClick={() => setInfoActiveTab('docs')}
+                    >
+                        {text.infoTabDocs}
+                    </button>
                 </div>
+
+                {infoActiveTab === 'faq' ? (
+                    <div className="info-hub__faq-list">
+                        {faqItems.map((item) => {
+                            const isOpen = openFaqId === item.id;
+                            const FaqIcon = item.icon;
+
+                            return (
+                                <div key={item.id} className={`info-hub__faq-item ${isOpen ? 'info-hub__faq-item--open' : ''}`}>
+                                    <button
+                                        type="button"
+                                        className="info-hub__faq-question"
+                                        aria-expanded={isOpen}
+                                        onClick={() => setOpenFaqId(isOpen ? null : item.id)}
+                                    >
+                                        <span className="info-hub__faq-ico"><FaqIcon size={16} /></span>
+                                        <span className="info-hub__faq-q-text">{item.q}</span>
+                                        <ChevronDown className="info-hub__faq-chevron" size={16} aria-hidden="true" />
+                                    </button>
+                                    {isOpen ? (
+                                        <p className="info-hub__faq-answer">{item.a}</p>
+                                    ) : null}
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="profile-hub__list">
+                        <button type="button" className="profile-hub__list-item" onClick={handleInfoSupportClick}>
+                            <span className="profile-hub__list-ico"><LifeBuoy size={16} /></span>
+                            <span className="profile-hub__list-text">
+                                <span className="profile-hub__list-title">{text.supportLabel}</span>
+                                <span className="profile-hub__list-sub">{text.settingsSupportSub}</span>
+                            </span>
+                            <ChevronRight className="profile-hub__tile-arrow" size={16} aria-hidden="true" />
+                        </button>
+                        <button
+                            type="button"
+                            className="profile-hub__list-item"
+                            onClick={() => openExternalLink(`${window.location.origin}/legal/offer.html`)}
+                        >
+                            <span className="profile-hub__list-ico"><FileText size={16} /></span>
+                            <span className="profile-hub__list-text">
+                                <span className="profile-hub__list-title">{text.settingsOfferLabel}</span>
+                            </span>
+                            <ChevronRight className="profile-hub__tile-arrow" size={16} aria-hidden="true" />
+                        </button>
+                        <button
+                            type="button"
+                            className="profile-hub__list-item"
+                            onClick={() => openExternalLink(`${window.location.origin}/legal/privacy.html`)}
+                        >
+                            <span className="profile-hub__list-ico"><FileText size={16} /></span>
+                            <span className="profile-hub__list-text">
+                                <span className="profile-hub__list-title">{text.settingsPrivacyLabel}</span>
+                            </span>
+                            <ChevronRight className="profile-hub__tile-arrow" size={16} aria-hidden="true" />
+                        </button>
+                    </div>
+                )}
+
+                <p className="settings-concept__build-id" aria-label={text.versionLabel}>
+                    {text.versionLabel}: {getActiveBuildId() || text.releaseVersion}
+                </p>
             </section>
         );
     };
@@ -8096,11 +8220,6 @@ function App() {
     );
 
     const renderSettingsScreen = () => {
-        const handleSupportClick = async () => {
-            const url = await resolveSupportUrl();
-            openSupport(url);
-        };
-
         const languageOptions = [
             { id: 'ru', label: text.settingsLanguageRu, flag: '🇷🇺' },
             { id: 'en', label: text.settingsLanguageEn, flag: '🇬🇧' },
@@ -8133,16 +8252,6 @@ function App() {
 
                 <p className="profile-concept__section-lbl">{text.settingsLegalSection}</p>
                 <div className="profile-concept__menu-list">
-                    <button type="button" className="profile-concept__menu-item" onClick={handleSupportClick}>
-                        <span className="profile-concept__menu-ico profile-concept__menu-ico--green">
-                            <MessageSquare size={16} />
-                        </span>
-                        <span className="profile-concept__menu-text">
-                            <span className="profile-concept__menu-title">{text.supportLabel}</span>
-                            <span className="profile-concept__menu-sub">{text.settingsSupportSub}</span>
-                        </span>
-                        <ChevronRight className="profile-concept__menu-arrow" size={16} aria-hidden="true" />
-                    </button>
                     <button
                         type="button"
                         className="profile-concept__menu-item"
@@ -8266,9 +8375,13 @@ function App() {
                                     ? renderSettingsScreen()
                                     : currentPage === 'referrals'
                                         ? renderReferralScreen()
-                                        : currentPage === 'wallet'
-                                            ? renderWalletScreen()
-                                            : currentPage === 'history'
+                                    : currentPage === 'wallet'
+                                                            ? renderWalletScreen()
+                                                            : currentPage === 'transactions'
+                                                                ? renderTransactionsScreen()
+                                                                : currentPage === 'info'
+                                                                    ? renderInfoHubScreen()
+                                                                    : currentPage === 'history'
                                                 ? renderHistoryScreen()
                                                 : currentPage === 'feedback'
                                                     ? renderFeedbackScreen()

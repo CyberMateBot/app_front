@@ -12,6 +12,10 @@ function formatBalance(value) {
     return new Intl.NumberFormat('ru-RU').format(numeric);
 }
 
+// Single compact "pill" showing the coin balance and (optionally) a plus
+// icon to top up — mirrors the home screen's balance button so the same
+// widget looks identical everywhere it's used (headers, catalog, etc.)
+// instead of splitting into two separate buttons side by side.
 export default function CoinBalanceWidget({
     balance = 0,
     onClick,
@@ -21,60 +25,37 @@ export default function CoinBalanceWidget({
     className = '',
     topUpLabel = 'Top up coins',
 }) {
-    const topUpHandler = onTopUp ?? onClick;
+    const handler = onClick ?? onTopUp;
     const iconSize = compact ? 16 : 18;
+    const sizeClass = compact ? 'coin-widget--compact' : '';
+    const label = showPlus
+        ? `${formatBalance(balance)} CyberCoins · ${topUpLabel}`
+        : `${formatBalance(balance)} CyberCoins`;
 
-    const balanceControl = typeof onClick === 'function' ? (
-        <button
-            type="button"
-            className={`coin-widget ${compact ? 'coin-widget--compact' : ''}`.trim()}
-            onClick={onClick}
-            aria-label={`${formatBalance(balance)} CyberCoins`}
-        >
+    const content = (
+        <>
             <CoinIcon size={iconSize} className="coin-widget__icon" />
             <span className="coin-widget__value">{formatBalance(balance)}</span>
-        </button>
-    ) : (
-        <span className={`coin-widget coin-widget--static ${compact ? 'coin-widget--compact' : ''}`.trim()}>
-            <CoinIcon size={iconSize} className="coin-widget__icon" />
-            <span className="coin-widget__value">{formatBalance(balance)}</span>
-        </span>
+            {showPlus ? <Plus className="coin-widget__plus" size={12} aria-hidden="true" /> : null}
+        </>
     );
 
-    if (!showPlus || typeof topUpHandler !== 'function') {
-        if (showPlus && typeof onClick === 'function') {
-            return (
-                <button
-                    type="button"
-                    className={`coin-widget ${compact ? 'coin-widget--compact' : ''} ${className}`.trim()}
-                    onClick={onClick}
-                    aria-label={`${formatBalance(balance)} CyberCoins · ${topUpLabel}`}
-                >
-                    <CoinIcon size={iconSize} className="coin-widget__icon" />
-                    <span className="coin-widget__value">{formatBalance(balance)}</span>
-                    <Plus className="coin-widget__plus" size={12} aria-hidden="true" />
-                </button>
-            );
-        }
-
+    if (typeof handler !== 'function') {
         return (
-            <span className={`coin-widget-row ${className}`.trim()}>
-                {balanceControl}
+            <span className={`coin-widget coin-widget--static ${sizeClass} ${className}`.trim()}>
+                {content}
             </span>
         );
     }
 
     return (
-        <div className={`coin-widget-row ${className}`.trim()}>
-            {balanceControl}
-            <button
-                type="button"
-                className="coin-widget-row__plus"
-                onClick={topUpHandler}
-                aria-label={topUpLabel}
-            >
-                <Plus size={14} aria-hidden="true" />
-            </button>
-        </div>
+        <button
+            type="button"
+            className={`coin-widget ${sizeClass} ${className}`.trim()}
+            onClick={handler}
+            aria-label={label}
+        >
+            {content}
+        </button>
     );
 }

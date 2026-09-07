@@ -125,6 +125,7 @@
   .settings-screen--concept,
   .referral-screen--concept,
   .wallet-screen--concept,
+  .info-hub--concept,
   .subscription-page,
   .ai-chat-screen--concept,
   .ai-image-screen--concept,
@@ -142,6 +143,7 @@
   .profile-hub__wallet,
   .profile-hub__tile,
   .profile-hub__list-item,
+  .info-hub__faq-item,
   .subscription-concept__coin-pack {
     animation: mp-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
@@ -454,6 +456,7 @@
   .settings-screen--concept,
   .referral-screen--concept,
   .wallet-screen--concept,
+  .info-hub--concept,
   .home-concept__grid > *,
   .catalog-concept__grid > .catalog-concept__card--reveal,
   .home-concept__promo {

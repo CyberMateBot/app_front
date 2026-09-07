@@ -2362,6 +2362,16 @@
   color: var(--cm-icon-blue-fg);
 }
 
+.profile-hub__tile-ico--gold {
+  background: var(--cm-icon-gold-bg);
+  color: var(--cm-icon-gold-fg);
+}
+
+.profile-hub__tile-ico--teal {
+  background: var(--cm-icon-teal-bg);
+  color: var(--cm-icon-teal-fg);
+}
+
 .profile-hub__tile-title {
   font-size: 13px;
   font-weight: 600;
@@ -2449,6 +2459,86 @@
   .profile-hub__grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Info hub — FAQ accordion + docs (profile "Информация" page) */
+
+.info-hub--concept {
+  width: 100%;
+  margin: 0;
+  padding: 8px 0 calc(var(--nav-bar-height, 80px) + 32px);
+  font-family: 'K2D', 'Inter', sans-serif;
+  color: var(--cm-text);
+}
+
+.info-hub__faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+.info-hub__faq-item {
+  border: 0.5px solid var(--cm-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cm-surface) 88%, transparent);
+  overflow: hidden;
+}
+
+.info-hub__faq-item--open {
+  border-color: color-mix(in srgb, var(--cm-accent) 40%, var(--cm-border));
+}
+
+.info-hub__faq-question {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font-family: inherit;
+}
+
+.info-hub__faq-ico {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--cm-icon-violet-bg);
+  color: var(--cm-icon-violet-fg);
+}
+
+.info-hub__faq-q-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cm-text-input);
+}
+
+.info-hub__faq-chevron {
+  flex-shrink: 0;
+  color: var(--cm-menu-arrow);
+  transition: transform 0.2s ease;
+}
+
+.info-hub__faq-item--open .info-hub__faq-chevron {
+  transform: rotate(180deg);
+  color: var(--cm-accent);
+}
+
+.info-hub__faq-answer {
+  margin: 0;
+  padding: 0 14px 15px 54px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--cm-text-muted);
 }
 
 /* Concept sub-pages (referrals, subscription) */
@@ -2588,36 +2678,6 @@
 .coin-widget--compact .coin-widget__icon {
   width: 16px;
   height: 16px;
-}
-
-.coin-widget-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.coin-widget-row__plus {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0.5px solid var(--cm-border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--cm-accent) 18%, var(--cm-surface));
-  color: var(--cm-accent);
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.2s ease;
-}
-
-.coin-widget-row__plus:active {
-  transform: scale(0.94);
-}
-
-.coin-widget-row--compact .coin-widget-row__plus {
-  width: 24px;
-  height: 24px;
 }
 
 .subscription-page {
