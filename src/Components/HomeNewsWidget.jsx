@@ -4,6 +4,7 @@ const SLIDE_DURATION_MS = 4000
 
 export default function HomeNewsWidget({ slides }) {
     const [current, setCurrent] = useState(0)
+    const [brokenImageIds, setBrokenImageIds] = useState(() => new Set())
     const timerRef = useRef(null)
     const touchStartX = useRef(0)
     const count = slides.length
@@ -98,7 +99,7 @@ export default function HomeNewsWidget({ slides }) {
                     className={`home-news-widget__slide${index === current ? ' home-news-widget__slide--active' : ''}`}
                     aria-hidden={index !== current}
                 >
-                    {slide.imageUrl ? (
+                    {slide.imageUrl && !brokenImageIds.has(slide.id) ? (
                         <img
                             className="home-news-widget__slide-image"
                             src={slide.imageUrl}
@@ -106,6 +107,19 @@ export default function HomeNewsWidget({ slides }) {
                             draggable={false}
                             loading={index === 0 ? 'eager' : 'lazy'}
                             decoding="async"
+                            // If the photo fails to load (broken link, blocked
+                            // request...) fall back to the gradient instead of
+                            // leaving an empty "frame" with a broken-image icon.
+                            onError={() => {
+                                setBrokenImageIds((prev) => {
+                                    if (prev.has(slide.id)) {
+                                        return prev;
+                                    }
+                                    const next = new Set(prev);
+                                    next.add(slide.id);
+                                    return next;
+                                });
+                            }}
                         />
                     ) : (
                         <div className="home-news-widget__slide-bg" style={{ background: slide.background }} />
