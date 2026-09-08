@@ -124,7 +124,9 @@ export default function HomeNewsWidget({ slides }) {
                     ) : (
                         <div className="home-news-widget__slide-bg" style={{ background: slide.background }} />
                     )}
-                    <div className="home-news-widget__slide-overlay" />
+                    {slide.tag || slide.title || slide.description ? (
+                        <div className="home-news-widget__slide-overlay" />
+                    ) : null}
                     <div className="home-news-widget__slide-content">
                         {slide.tag ? (
                             <span

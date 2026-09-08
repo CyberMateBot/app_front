@@ -78,10 +78,16 @@ export function buildPlanModelSections(planId, catalogs, resolveLabel = resolveM
             tools: buildCatalogVideoTools(catalogs.videoDefinitions ?? []),
         },
         {
-            id: 'audio',
+            id: 'audio-voice',
             labelKey: 'catalogSectionVoice',
             category: 'audio',
-            tools: buildCatalogAudioTools(catalogs.audioDefinitions ?? []),
+            tools: buildCatalogAudioTools((catalogs.audioDefinitions ?? []).filter((model) => model.tab !== 'music')),
+        },
+        {
+            id: 'audio-music',
+            labelKey: 'catalogSectionMusic',
+            category: 'audio',
+            tools: buildCatalogAudioTools((catalogs.audioDefinitions ?? []).filter((model) => model.tab === 'music')),
         },
         {
             id: '3d',

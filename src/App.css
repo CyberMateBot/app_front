@@ -20,10 +20,15 @@
   --cm-border-strong: #1e2030;
   --cm-text: #e0e2ec;
   --cm-text-input: #c8cad8;
-  --cm-text-muted: #4a4f68;
+  /* Muted/dim text needs to stay readable against --cm-surface (#12141e) —
+     the original values (#4a4f68 / #5a5f78) computed to ~2.8:1 / ~3.3:1
+     contrast, well under the ~4.5:1 WCAG AA body-text target, which is why
+     secondary copy (widget captions, subtitles, placeholders, icons like
+     the catalog search glass) read as barely-visible gray-on-gray. */
+  --cm-text-muted: #767b9c;
   --cm-text-secondary: #6b7090;
   --cm-text-soft: #8a8da8;
-  --cm-text-dim: #5a5f78;
+  --cm-text-dim: #868bab;
   --cm-accent: #6b6fff;
   --cm-accent-violet: #a78bfa;
   --cm-toggle-track: #2a2d40;
@@ -452,11 +457,15 @@
 }
 
 .home2__header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 4px 4px 14px;
+  padding: 4px 4px 10px;
+  background: var(--cm-bg);
 }
 
 .home2__brand {
@@ -498,40 +507,11 @@
      needs. The only thing that ever needed clipping was the decorative
      glow blob below, which now clips itself via clip-path instead so the
      real content can never be eaten. */
-  margin-bottom: 16px;
-  padding: 18px;
+  margin-bottom: 12px;
+  padding: 16px;
   border: 0.5px solid color-mix(in srgb, var(--cm-accent) 22%, var(--cm-border));
   border-radius: 20px;
   background: linear-gradient(150deg, var(--cm-surface) 0%, color-mix(in srgb, var(--cm-accent) 13%, var(--cm-surface)) 100%);
-}
-
-.home2__hero-glow {
-  /* This element is now just a clipping frame matching the card's own
-     rounded rect exactly (inset: 0 + same border-radius); the actual blurred
-     glow circle lives on its ::before below, offset/bled the same way it
-     used to be when the parent itself clipped it with overflow:hidden. That
-     keeps the glow visually contained to the card's corners without ever
-     letting overflow:hidden sit on `.home2__hero` itself, where it risked
-     silently clipping real content (subtitle/CTA) if this box's computed
-     height ever came out a little short in some renderer. */
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: 20px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.home2__hero-glow::before {
-  content: '';
-  position: absolute;
-  top: -70px;
-  right: -50px;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--cm-accent) 40%, transparent) 0%, transparent 70%);
-  filter: blur(30px);
 }
 
 .home2__hero-row {
@@ -671,17 +651,17 @@
 
 .home2__mid {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(128px, 36%);
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 46%);
   align-items: stretch;
   gap: 10px;
-  min-height: 332px;
-  margin-bottom: 16px;
+  min-height: 300px;
+  margin-bottom: 14px;
 }
 
 .home2__mid .home-news-widget {
   width: 100%;
   height: 100%;
-  min-height: 332px;
+  min-height: 300px;
   margin: 0;
   aspect-ratio: auto;
   max-height: none;
@@ -695,7 +675,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 332px;
+  min-height: 300px;
 }
 
 .home2__quick .home2__section-label {
@@ -728,9 +708,9 @@
 .home2__quick-ico {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 13px;
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
   border: 0.5px solid var(--cm-border-strong);
 }
 
@@ -744,67 +724,17 @@
 .home2__quick-label {
   max-width: 100%;
   overflow: hidden;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--cm-text-muted);
   text-align: center;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.home2__plan-strip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  margin-bottom: 18px;
-  padding: 12px 14px;
-  border: 0.5px solid var(--cm-border);
-  border-radius: 14px;
-  background: linear-gradient(145deg, var(--cm-surface) 0%, color-mix(in srgb, var(--cm-accent) 6%, var(--cm-surface)) 100%);
-  text-align: left;
-  color: inherit;
-  cursor: pointer;
-}
-
-.home2__plan-strip-ico {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--cm-accent) 18%, transparent);
-  color: var(--cm-accent);
-}
-
-.home2__plan-strip-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 13px;
-}
-
-.home2__plan-strip-text strong {
-  font-weight: 600;
-  color: var(--cm-text);
-}
-
-.home2__plan-strip-time {
-  font-size: 11px;
-  color: var(--cm-text-dim);
-}
-
-.home2__plan-strip-time--warn {
-  color: #f59e0b;
-}
-
-.home2__plan-strip-arrow {
-  flex-shrink: 0;
-  color: var(--cm-text-dim);
+.home2__section--more {
+  /* Used to sit below the "current plan" strip (now removed) — pulled up
+     so the whole home page fits one screen without scrolling. */
+  margin-top: -6px;
 }
 
 .home2__more-card {
@@ -814,7 +744,9 @@
   padding: 12px;
   border: 0.5px solid var(--cm-border);
   border-radius: 16px;
-  background: var(--cm-surface);
+  /* Same "elevated" gradient look the removed current-plan strip used to
+     have, so this card still reads as a distinct, styled block. */
+  background: linear-gradient(145deg, var(--cm-surface) 0%, color-mix(in srgb, var(--cm-accent) 6%, var(--cm-surface)) 100%);
 }
 
 .home2__more-social {
@@ -967,7 +899,10 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(to top, rgba(5, 5, 12, 0.94) 0%, rgba(5, 5, 12, 0.55) 42%, rgba(5, 5, 12, 0.12) 72%, rgba(5, 5, 12, 0.04) 100%);
+  /* Softer than before — the old 0.94 peak read as a near-black slab that
+     made the rounded bottom corners look like a separate dark "frame"
+     sitting on top of the photo instead of a gentle text-legibility fade. */
+  background: linear-gradient(to top, rgba(5, 5, 12, 0.78) 0%, rgba(5, 5, 12, 0.42) 45%, rgba(5, 5, 12, 0.1) 75%, rgba(5, 5, 12, 0) 100%);
 }
 
 .home-news-widget__slide-content {
@@ -2560,7 +2495,9 @@
 }
 
 .app-page-header {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2568,7 +2505,7 @@
   min-height: 44px;
   flex-shrink: 0;
   padding: 4px 0 10px;
-  border-bottom: 0.5px solid var(--cm-border-strong);
+  background: var(--cm-bg);
 }
 
 .app-page-header__side {
@@ -4572,6 +4509,11 @@
   color: var(--cm-text-muted);
 }
 
+.catalog-concept__search svg {
+  color: var(--cm-text-soft);
+  flex-shrink: 0;
+}
+
 .catalog-concept__search input {
   flex: 1;
   min-width: 0;
@@ -4591,7 +4533,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 0 0 12px;
+  margin: 10px 0 12px;
   padding: 7px 14px;
   border-radius: 20px;
   border: 0.5px solid var(--cm-border);
@@ -5229,14 +5171,22 @@
 }
 
 .app-shell[data-page='ai-chat'],
-.app-shell[data-page='ai-image'] {
+.app-shell[data-page='ai-image'],
+.app-shell[data-page='ai-video'],
+.app-shell[data-page='ai-voice'],
+.app-shell[data-page='ai-3d'] {
   padding-bottom: 0;
 }
 
 .app-shell[data-page='ai-chat'] .app-main,
 .app-shell[data-page='ai-image'] .app-main,
 .app-shell[data-page='ai-video'] .app-main,
-.app-shell[data-page='ai-voice'] .app-main {
+.app-shell[data-page='ai-voice'] .app-main,
+.app-shell[data-page='ai-3d'] .app-main {
+  /* `ai-3d` was missing from this list: without it, `.app-main` kept its
+     default side padding, so the 3D screen's own dark background sat
+     inset from the viewport edges and the app-shell's own (lighter)
+     background showed through as thin side gutters. */
   padding: 0;
   max-width: none;
 }

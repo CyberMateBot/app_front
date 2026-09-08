@@ -607,12 +607,37 @@ const translations = {
         mediaOptionStability: 'Стабильность',
         mediaOptionSpeakerBoost: 'Speaker Boost',
         mediaOptionNumberOfSongs: 'Кол-во песен',
+        mediaEmotionHappy: 'Радостно',
+        mediaEmotionSad: 'Печально',
+        mediaEmotionAngry: 'Гневно',
+        mediaEmotionFearful: 'Испуганно',
+        mediaEmotionDisgusted: 'С отвращением',
+        mediaEmotionSurprised: 'Удивлённо',
+        mediaEmotionNeutral: 'Нейтрально',
+        mediaVoiceWiseWoman: 'Мудрая женщина',
+        mediaVoiceFriendlyPerson: 'Дружелюбный голос',
+        mediaVoiceInspirationalGirl: 'Вдохновляющая девушка',
+        mediaVoiceDeepVoiceMan: 'Мужчина с глубоким голосом',
+        mediaVoiceCalmWoman: 'Спокойная женщина',
+        mediaVoiceCasualGuy: 'Простой парень',
+        mediaVoiceLivelyGirl: 'Бойкая девушка',
+        mediaVoicePatientMan: 'Терпеливый мужчина',
+        mediaVoiceYoungKnight: 'Юный рыцарь',
+        mediaVoiceDeterminedMan: 'Решительный мужчина',
+        mediaVoiceLovelyGirl: 'Милая девушка',
+        mediaVoiceDecentBoy: 'Порядочный юноша',
+        mediaVoiceImposingManner: 'Внушительная манера',
+        mediaVoiceElegantMan: 'Элегантный мужчина',
+        mediaVoiceAbbess: 'Игуменья',
+        mediaVoiceSweetGirl2: 'Милая девушка 2',
+        mediaVoiceExuberantGirl: 'Энергичная девушка',
         musicGenerateButton: 'Сгенерировать',
         musicGenerating: 'Генерация музыки...',
         mediaOptionReferenceText: 'Текст из образца',
         mediaStyleInstructionPlaceholder: 'Например: спокойно и профессионально',
         mediaReferenceTextPlaceholder: 'Что говорится в прикреплённом аудио',
         catalogSectionVoice: 'Озвучка',
+        catalogSectionMusic: 'Музыка',
         toolTextTitle: 'Текст & Код',
         toolTextSub: 'Рерайт, суммари',
         navHome: 'Главная',
@@ -1243,12 +1268,37 @@ const translations = {
         mediaOptionStability: 'Stability',
         mediaOptionSpeakerBoost: 'Speaker Boost',
         mediaOptionNumberOfSongs: 'Number of songs',
+        mediaEmotionHappy: 'Happy',
+        mediaEmotionSad: 'Sad',
+        mediaEmotionAngry: 'Angry',
+        mediaEmotionFearful: 'Fearful',
+        mediaEmotionDisgusted: 'Disgusted',
+        mediaEmotionSurprised: 'Surprised',
+        mediaEmotionNeutral: 'Neutral',
+        mediaVoiceWiseWoman: 'Wise Woman',
+        mediaVoiceFriendlyPerson: 'Friendly Person',
+        mediaVoiceInspirationalGirl: 'Inspirational Girl',
+        mediaVoiceDeepVoiceMan: 'Deep Voice Man',
+        mediaVoiceCalmWoman: 'Calm Woman',
+        mediaVoiceCasualGuy: 'Casual Guy',
+        mediaVoiceLivelyGirl: 'Lively Girl',
+        mediaVoicePatientMan: 'Patient Man',
+        mediaVoiceYoungKnight: 'Young Knight',
+        mediaVoiceDeterminedMan: 'Determined Man',
+        mediaVoiceLovelyGirl: 'Lovely Girl',
+        mediaVoiceDecentBoy: 'Decent Boy',
+        mediaVoiceImposingManner: 'Imposing Manner',
+        mediaVoiceElegantMan: 'Elegant Man',
+        mediaVoiceAbbess: 'Abbess',
+        mediaVoiceSweetGirl2: 'Sweet Girl 2',
+        mediaVoiceExuberantGirl: 'Exuberant Girl',
         musicGenerateButton: 'Generate',
         musicGenerating: 'Generating music...',
         mediaOptionReferenceText: 'Sample transcript',
         mediaStyleInstructionPlaceholder: 'e.g. calm and professional',
         mediaReferenceTextPlaceholder: 'What is said in the attached audio',
         catalogSectionVoice: 'Voiceover',
+        catalogSectionMusic: 'Music',
         toolTextTitle: 'Text & Code',
         toolTextSub: 'Rewrite, summary',
         navHome: 'Home',
@@ -3275,9 +3325,16 @@ function App() {
             tools: buildCatalogVideoTools(VIDEO_MODEL_DEFINITIONS).map((tool) => annotateCatalogTool(tool, 'video', planId)),
         },
         {
-            id: 'audio-models',
+            id: 'audio-voice-models',
             labelKey: 'catalogSectionVoice',
-            tools: buildCatalogAudioTools(AUDIO_MODEL_DEFINITIONS).map((tool) => annotateCatalogTool(tool, 'audio', planId)),
+            tools: buildCatalogAudioTools(AUDIO_MODEL_DEFINITIONS.filter((model) => model.tab !== 'music'))
+                .map((tool) => annotateCatalogTool(tool, 'audio', planId)),
+        },
+        {
+            id: 'audio-music-models',
+            labelKey: 'catalogSectionMusic',
+            tools: buildCatalogAudioTools(AUDIO_MODEL_DEFINITIONS.filter((model) => model.tab === 'music'))
+                .map((tool) => annotateCatalogTool(tool, 'audio', planId)),
         },
         {
             id: '3d-models',
@@ -6098,7 +6155,6 @@ function App() {
             </header>
 
             <section className="home2__hero">
-                <span className="home2__hero-glow" aria-hidden="true" />
                 <div className="home2__hero-row">
                     <div className="home2__hero-greeting">
                         <p className="home2__hero-hello">
@@ -6145,7 +6201,7 @@ function App() {
                                 onClick={() => handleHomeQuickAccessClick(tab)}
                             >
                                 <span className={`home2__quick-ico home2__quick-ico--${colorVar}`} aria-hidden="true">
-                                    <Icon size={18} />
+                                    <Icon size={22} />
                                 </span>
                                 <span className="home2__quick-label">{text[labelKey]}</span>
                             </button>
@@ -6154,35 +6210,7 @@ function App() {
                 </section>
             </div>
 
-            {userData.subscriptionIsPaid ? (
-                <button
-                    type="button"
-                    className="home2__plan-strip"
-                    onClick={() => setCurrentPage('subscription')}
-                >
-                    <span className="home2__plan-strip-ico" aria-hidden="true">
-                        <Crown size={16} />
-                    </span>
-                    <span className="home2__plan-strip-text">
-                        <strong>
-                            {getSubscriptionPlanDisplayName(userData.subscriptionPlanId, {
-                                language,
-                                text,
-                                fallbackName: userData.subscriptionPlanName,
-                                catalogPlans: billingCatalog?.plans ?? [],
-                            })}
-                        </strong>
-                        {userData.subscriptionTimeLeft ? (
-                            <span className={`home2__plan-strip-time${userData.subscriptionExpiringSoon ? ' home2__plan-strip-time--warn' : ''}`}>
-                                {userData.subscriptionTimeLeft}
-                            </span>
-                        ) : null}
-                    </span>
-                    <ChevronRight size={16} className="home2__plan-strip-arrow" aria-hidden="true" />
-                </button>
-            ) : null}
-
-            <section className="home2__section">
+            <section className="home2__section home2__section--more">
                 <p className="home2__section-label">{text.homeMoreLabel}</p>
                 <div className="home2__more-card">
                     <div className="home2__more-social">
@@ -6289,6 +6317,8 @@ function App() {
             <div className="catalog-concept__sticky">
             <AppPageHeader
                 title={text.catalogTitle}
+                onBack={() => setCurrentPage('home')}
+                backLabel={text.back}
                 trailing={(
                     <CoinBalanceWidget
                         balance={tokenBalance}
@@ -6387,8 +6417,8 @@ function App() {
                                     <span className="catalog-concept__sub">{getCatalogToolSub(tool)}</span>
                                     {!tool.locked ? (
                                         <span className="catalog-concept__price" aria-label={`${priceLabel} coins`}>
-                                            <CoinIcon size={12} />
                                             {priceLabel}
+                                            <CoinIcon size={12} />
                                         </span>
                                     ) : (
                                         <span className="catalog-concept__plan-lock">
@@ -7184,12 +7214,40 @@ function App() {
                             group: text.mediaOptionsGroup,
                             language: text.mediaOptionLanguage,
                             voice: text.mediaOptionVoice,
+                            voiceValues: {
+                                Wise_Woman: text.mediaVoiceWiseWoman,
+                                Friendly_Person: text.mediaVoiceFriendlyPerson,
+                                Inspirational_girl: text.mediaVoiceInspirationalGirl,
+                                Deep_Voice_Man: text.mediaVoiceDeepVoiceMan,
+                                Calm_Woman: text.mediaVoiceCalmWoman,
+                                Casual_Guy: text.mediaVoiceCasualGuy,
+                                Lively_Girl: text.mediaVoiceLivelyGirl,
+                                Patient_Man: text.mediaVoicePatientMan,
+                                Young_Knight: text.mediaVoiceYoungKnight,
+                                Determined_Man: text.mediaVoiceDeterminedMan,
+                                Lovely_Girl: text.mediaVoiceLovelyGirl,
+                                Decent_Boy: text.mediaVoiceDecentBoy,
+                                Imposing_Manner: text.mediaVoiceImposingManner,
+                                Elegant_Man: text.mediaVoiceElegantMan,
+                                Abbess: text.mediaVoiceAbbess,
+                                Sweet_Girl_2: text.mediaVoiceSweetGirl2,
+                                Exuberant_Girl: text.mediaVoiceExuberantGirl,
+                            },
                             styleInstruction: styleInstructionLabel,
                             referenceText: text.mediaOptionReferenceText,
                             styleInstructionPlaceholder,
                             referenceTextPlaceholder: text.mediaReferenceTextPlaceholder,
                             speed: text.mediaOptionSpeed,
                             emotion: text.mediaOptionEmotion,
+                            emotionValues: {
+                                happy: text.mediaEmotionHappy,
+                                sad: text.mediaEmotionSad,
+                                angry: text.mediaEmotionAngry,
+                                fearful: text.mediaEmotionFearful,
+                                disgusted: text.mediaEmotionDisgusted,
+                                surprised: text.mediaEmotionSurprised,
+                                neutral: text.mediaEmotionNeutral,
+                            },
                             similarity: text.mediaOptionSimilarity,
                             stability: text.mediaOptionStability,
                             speakerBoost: text.mediaOptionSpeakerBoost,
@@ -7813,6 +7871,8 @@ function App() {
             <section className="subscription-page" aria-label={text.subscriptionPageTitle}>
                 <AppPageHeader
                     title={text.subscriptionPageTitle}
+                    onBack={() => setCurrentPage('home')}
+                    backLabel={text.back}
                     trailing={(
                         <CoinBalanceWidget
                             balance={tokenBalance}
