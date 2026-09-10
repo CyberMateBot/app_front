@@ -1,0 +1,1404 @@
+/* ==========================================================================
+   aurora-theme.css  —  full-app visual redesign layer ("Aurora Glass").
+   Loaded LAST, after design-refresh.css, so it wins the cascade.
+
+   Goals:
+     • Completely new palette (deep midnight + cyan/violet/magenta aurora).
+     • iOS/visionOS-style glass surfaces on the elevated containers.
+     • Same JSX/DOM — no layout or spacing changes to element boxes that
+       would risk visual regressions in cards, lists, or the home grid
+       (vertical widgets stay vertical).
+     • Motion-safe: uses only transform/opacity/filter/background-position,
+       gated by prefers-reduced-motion, no backdrop-filter on tight grids
+       (catalog cards render as tinted-transparent, not blurred, so scroll
+       stays smooth even on 20+ cards).
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1. Aurora palette — dark (default)
+   Every existing --cm-* token is redefined here so components that read
+   from those variables automatically pick up the new look.
+   ========================================================================== */
+
+:root:not([data-theme='light']) {
+  /* Background: deep midnight navy. */
+  --shell-bg-start: #05061a;
+  --shell-bg-end:   #03040f;
+  --cm-bg: #05061a;
+
+  /* Surfaces: translucent glass. Alpha is high enough that content is
+     readable, low enough that the aurora bg tints through. */
+  --cm-surface:      rgba(24, 28, 60, 0.42);
+  --cm-surface-alt:  rgba(32, 38, 72, 0.55);
+  --cm-surface-solid: #101430;
+
+  /* Hairline borders — cool tinted white, not warm gray. */
+  --cm-border:        rgba(155, 175, 240, 0.14);
+  --cm-border-soft:   rgba(155, 175, 240, 0.09);
+  --cm-border-strong: rgba(155, 175, 240, 0.22);
+
+  /* Typography colour scale (cool grey, high contrast on midnight bg). */
+  --cm-text:           #f4f6ff;
+  --cm-text-input:     #e0e4f4;
+  --cm-text-secondary: #b0b6d4;
+  --cm-text-muted:     #8892b8;
+  --cm-text-soft:      #979db8;
+  --cm-text-dim:       #7f85a8;
+
+  /* Aurora accent trio: cyan / violet / magenta. */
+  --cm-accent:         #7dd3fc;   /* primary — cool sky-cyan */
+  --cm-accent-violet:  #a78bfa;   /* secondary — violet */
+  --cm-accent-pink:    #f0abfc;   /* tertiary — magenta highlight */
+  --cm-accent-teal:    #67e8f9;   /* extra cool cyan */
+  --cm-accent-mint:    #5eead4;   /* success/mint */
+
+  /* Signature aurora gradient reused everywhere for CTAs, borders, etc. */
+  --cm-aurora-gradient: linear-gradient(
+    135deg,
+    #38bdf8 0%,
+    #7c9eff 30%,
+    #a78bfa 60%,
+    #e879f9 100%
+  );
+  --cm-aurora-gradient-soft: linear-gradient(
+    135deg,
+    color-mix(in srgb, #38bdf8 55%, transparent) 0%,
+    color-mix(in srgb, #a78bfa 55%, transparent) 55%,
+    color-mix(in srgb, #e879f9 55%, transparent) 100%
+  );
+
+  /* Overlay & toggle. */
+  --cm-toggle-track: rgba(155, 175, 240, 0.22);
+  --cm-toggle-track-on: color-mix(in srgb, var(--cm-accent) 62%, transparent);
+  --cm-overlay: rgba(3, 5, 20, 0.62);
+
+  /* Tabs / chips — cyan-tinted active. */
+  --cm-tab-active-bg:     rgba(125, 211, 252, 0.14);
+  --cm-tab-active-fg:     #d4f0ff;
+  --cm-tab-active-border: rgba(125, 211, 252, 0.55);
+  --cm-chip-active-bg:     rgba(125, 211, 252, 0.16);
+  --cm-chip-active-fg:     #d4f0ff;
+  --cm-chip-active-border: rgba(125, 211, 252, 0.55);
+  --cm-chip-inactive-fg:   #a0a7c8;
+
+  /* Badges. */
+  --cm-badge-hot-bg:     rgba(251, 146, 60, 0.14);
+  --cm-badge-hot-fg:     #ffb877;
+  --cm-badge-hot-border: rgba(251, 146, 60, 0.4);
+  --cm-badge-new-bg:     rgba(94, 234, 212, 0.14);
+  --cm-badge-new-fg:     #a3f7e5;
+  --cm-badge-new-border: rgba(94, 234, 212, 0.42);
+  --cm-badge-pro-bg:     rgba(167, 139, 250, 0.16);
+  --cm-badge-pro-fg:     #d4c4ff;
+  --cm-badge-pro-border: rgba(167, 139, 250, 0.45);
+  --cm-badge-free-bg:    rgba(94, 234, 212, 0.14);
+  --cm-badge-free-fg:    #a3f7e5;
+
+  /* Icon chip palette — translucent tints, all cool. */
+  --cm-icon-violet-bg: rgba(167, 139, 250, 0.16);
+  --cm-icon-violet-fg: #c4b5fd;
+  --cm-icon-green-bg:  rgba(94, 234, 212, 0.16);
+  --cm-icon-green-fg:  #86efac;
+  --cm-icon-pink-bg:   rgba(240, 171, 252, 0.16);
+  --cm-icon-pink-fg:   #f0abfc;
+  --cm-icon-gold-bg:   rgba(252, 211, 77, 0.16);
+  --cm-icon-gold-fg:   #fcd34d;
+  --cm-icon-blue-bg:   rgba(125, 211, 252, 0.16);
+  --cm-icon-blue-fg:   #7dd3fc;
+  --cm-icon-teal-bg:   rgba(103, 232, 249, 0.16);
+  --cm-icon-teal-fg:   #67e8f9;
+  --cm-icon-red-bg:    rgba(252, 165, 165, 0.16);
+  --cm-icon-red-fg:    #fca5a5;
+
+  /* Lock / disabled / menu. */
+  --cm-lock-fg: rgba(155, 175, 240, 0.4);
+  --cm-menu-muted-bg: rgba(24, 28, 60, 0.5);
+  --cm-menu-muted-fg: #a0a7c8;
+  --cm-menu-danger-bg: rgba(252, 165, 165, 0.12);
+  --cm-menu-danger-fg: #fca5a5;
+  --cm-menu-arrow:    rgba(155, 175, 240, 0.35);
+  --cm-menu-tag-bg:     rgba(94, 234, 212, 0.14);
+  --cm-menu-tag-fg:     #a3f7e5;
+  --cm-menu-tag-border: rgba(94, 234, 212, 0.4);
+  --cm-menu-divider: rgba(155, 175, 240, 0.08);
+
+  /* Language picker. */
+  --cm-lang-active-bg: rgba(125, 211, 252, 0.14);
+  --cm-lang-active-border: rgba(125, 211, 252, 0.5);
+  --cm-lang-check: var(--cm-accent);
+
+  /* Plan cards — each variant uses its own accent hue but stays in aurora. */
+  --cm-plan-badge-bg:     rgba(167, 139, 250, 0.16);
+  --cm-plan-badge-fg:     #d4c4ff;
+  --cm-plan-badge-border: rgba(167, 139, 250, 0.5);
+  --cm-plan-popular-border: rgba(167, 139, 250, 0.7);
+  --cm-plan-current-border: rgba(94, 234, 212, 0.7);
+  --cm-plan-current-glow:   rgba(94, 234, 212, 0.22);
+  --cm-plan-free-border:    rgba(94, 234, 212, 0.7);
+  --cm-plan-free-glow:      rgba(94, 234, 212, 0.2);
+  --cm-plan-basic-border:   rgba(125, 211, 252, 0.7);
+  --cm-plan-basic-glow:     rgba(125, 211, 252, 0.2);
+  --cm-plan-max-border:     rgba(252, 211, 77, 0.7);
+  --cm-plan-max-glow:       rgba(252, 211, 77, 0.2);
+  --cm-plan-biz-border:     rgba(240, 171, 252, 0.75);
+  --cm-plan-biz-glow:       rgba(240, 171, 252, 0.22);
+
+  --cm-feat-icon: var(--cm-accent);
+  --cm-feat-muted-icon: rgba(155, 175, 240, 0.35);
+  --cm-feat-text: #a0a7c8;
+
+  /* Subscription buttons. */
+  --cm-sub-current-bg:   rgba(94, 234, 212, 0.14);
+  --cm-sub-current-fg:   #a3f7e5;
+  --cm-sub-current-icon: #86efac;
+  --cm-sub-btn-bg:       rgba(125, 211, 252, 0.14);
+  --cm-sub-btn-fg:       #d4f0ff;
+  --cm-sub-btn-border:   rgba(125, 211, 252, 0.5);
+  --cm-sub-btn-current-bg:     rgba(94, 234, 212, 0.14);
+  --cm-sub-btn-current-fg:     #a3f7e5;
+  --cm-sub-btn-current-border: rgba(94, 234, 212, 0.45);
+
+  /* Coin (kept gold but tinted cooler to fit aurora). */
+  --cm-coin-bg:     rgba(252, 211, 77, 0.13);
+  --cm-coin-fg:     #fcd34d;
+  --cm-coin-border: rgba(252, 211, 77, 0.4);
+
+  /* Avatar. */
+  --cm-avatar-border: rgba(125, 211, 252, 0.55);
+  --cm-avatar-bg:     rgba(125, 211, 252, 0.12);
+  --cm-avatar-fg:     #7dd3fc;
+
+  /* Top-up chip. */
+  --cm-topup-bg:     rgba(125, 211, 252, 0.16);
+  --cm-topup-fg:     #d4f0ff;
+  --cm-topup-border: rgba(125, 211, 252, 0.55);
+
+  /* Progress bar / rails. */
+  --cm-bar-track: rgba(155, 175, 240, 0.12);
+  --cm-bar-fill:  var(--cm-aurora-gradient);
+
+  /* Headings — signature aurora gradient text. */
+  --cm-heading-gradient: linear-gradient(
+    120deg,
+    #ffffff 0%,
+    #d4f0ff 22%,
+    #c4b5fd 55%,
+    #f0abfc 85%,
+    #ffffff 100%
+  );
+  --cm-heading-subtitle: #a0a7c8;
+  --cm-heading-glow: drop-shadow(0 2px 20px rgba(125, 211, 252, 0.35));
+
+  /* History. */
+  --cm-history-tool-violet: #c4b5fd;
+  --cm-history-time:        rgba(155, 175, 240, 0.35);
+  --cm-history-result-bg:   rgba(24, 28, 60, 0.55);
+  --cm-history-result-fg:   #a0a7c8;
+
+  /* Chat bubbles. */
+  --cm-bubble-user-bg:      rgba(125, 211, 252, 0.14);
+  --cm-bubble-user-border:  rgba(125, 211, 252, 0.5);
+  --cm-bubble-assistant-bg: rgba(24, 28, 60, 0.55);
+  --cm-bubble-assistant-fg: #dde1f4;
+  --cm-bubble-assistant-border: rgba(155, 175, 240, 0.14);
+
+  /* Nav glass. */
+  --nav-glass-blur: blur(28px) saturate(1.6);
+  --nav-glass-bg:   color-mix(in srgb, #0d1030 66%, transparent);
+  --nav-glass-border: rgba(155, 175, 240, 0.16);
+  --nav-glass-shadow:
+    0 -1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 -8px 32px rgba(3, 5, 20, 0.6),
+    0 20px 60px rgba(3, 5, 20, 0.4);
+
+  /* Generic elevated glass panel. */
+  --panel-glass-blur: blur(24px) saturate(1.5);
+  --panel-glass-bg:   color-mix(in srgb, #0d1030 58%, transparent);
+  --panel-glass-border: rgba(155, 175, 240, 0.18);
+  --panel-glass-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 24px 60px rgba(3, 5, 20, 0.6);
+
+  --plan-detail-glass-blur: blur(28px) saturate(1.6);
+  --plan-detail-glass-bg:   color-mix(in srgb, #0d1030 60%, transparent);
+  --plan-detail-glass-border: rgba(155, 175, 240, 0.18);
+  --plan-detail-glass-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 30px 70px rgba(3, 5, 20, 0.68);
+}
+
+
+/* ==========================================================================
+   2. Aurora palette — light theme
+   Soft off-white bg, pastel aurora accents.
+   ========================================================================== */
+
+:root[data-theme='light'] {
+  --shell-bg-start: #f5f7ff;
+  --shell-bg-end:   #eef1fb;
+  --cm-bg: #f5f7ff;
+
+  --cm-surface:      rgba(255, 255, 255, 0.72);
+  --cm-surface-alt:  rgba(255, 255, 255, 0.86);
+  --cm-surface-solid: #ffffff;
+
+  --cm-border:        rgba(90, 110, 180, 0.16);
+  --cm-border-soft:   rgba(90, 110, 180, 0.1);
+  --cm-border-strong: rgba(90, 110, 180, 0.28);
+
+  --cm-text:           #14162e;
+  --cm-text-input:     #2a2e50;
+  --cm-text-secondary: #4a5078;
+  --cm-text-muted:     #6a7098;
+  --cm-text-soft:      #5a608a;
+  --cm-text-dim:       #7a80a0;
+
+  --cm-accent:        #4f8ff8;
+  --cm-accent-violet: #8b5cf6;
+  --cm-accent-pink:   #d946ef;
+  --cm-accent-teal:   #06b6d4;
+  --cm-accent-mint:   #10b981;
+
+  --cm-aurora-gradient: linear-gradient(
+    135deg,
+    #4f8ff8 0%,
+    #8b5cf6 50%,
+    #d946ef 100%
+  );
+  --cm-aurora-gradient-soft: linear-gradient(
+    135deg,
+    color-mix(in srgb, #4f8ff8 55%, transparent) 0%,
+    color-mix(in srgb, #8b5cf6 55%, transparent) 55%,
+    color-mix(in srgb, #d946ef 55%, transparent) 100%
+  );
+
+  --cm-heading-gradient: linear-gradient(
+    120deg,
+    #14162e 0%,
+    #3730a3 40%,
+    #6d28d9 70%,
+    #be185d 100%
+  );
+  --cm-heading-glow: drop-shadow(0 1px 8px rgba(79, 143, 248, 0.18));
+
+  --nav-glass-blur: blur(22px) saturate(1.35);
+  --nav-glass-bg:   color-mix(in srgb, #ffffff 78%, transparent);
+  --nav-glass-border: rgba(90, 110, 180, 0.18);
+  --nav-glass-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 -8px 32px rgba(28, 34, 64, 0.06),
+    0 12px 32px rgba(28, 34, 64, 0.08);
+
+  --panel-glass-bg: color-mix(in srgb, #ffffff 78%, transparent);
+  --panel-glass-border: rgba(90, 110, 180, 0.2);
+  --panel-glass-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 20px 44px rgba(28, 34, 64, 0.1);
+}
+
+
+/* ==========================================================================
+   3. Ambient aurora background — layered radial spots on the shell.
+   Cheap: painted once as a static background-image on a fixed div, plus a
+   very slow drift on the shell orbs (already existing) whose colour tokens
+   are re-mapped by our palette section.
+   ========================================================================== */
+
+:root:not([data-theme='light']) .app-shell {
+  background:
+    radial-gradient(
+      ellipse 90% 60% at 85% 12%,
+      rgba(56, 189, 248, 0.10) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 80% 60% at 15% 88%,
+      rgba(232, 121, 249, 0.10) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 50% 50%,
+      rgba(167, 139, 250, 0.06) 0%,
+      transparent 60%
+    ),
+    linear-gradient(180deg, #05061a 0%, #03040f 100%);
+  background-attachment: fixed, fixed, fixed, fixed;
+  /* experimental-design.css animates background-position across 2 layers;
+     our new 4-layer background would interpolate weirdly, so disable it.
+     The aurora orbs already provide slow ambient motion. */
+  animation: none;
+}
+
+:root[data-theme='light'] .app-shell {
+  background:
+    radial-gradient(
+      ellipse 90% 60% at 85% 12%,
+      rgba(79, 143, 248, 0.08) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 80% 60% at 15% 88%,
+      rgba(217, 70, 239, 0.06) 0%,
+      transparent 55%
+    ),
+    linear-gradient(180deg, #f5f7ff 0%, #eef1fb 100%);
+  background-attachment: fixed, fixed, fixed;
+}
+
+/* Re-map the existing decorative orbs to the aurora palette. */
+:root:not([data-theme='light']) .app-shell__orb--1 {
+  background: rgba(56, 189, 248, 0.22);
+  filter: blur(56px);
+}
+:root:not([data-theme='light']) .app-shell__orb--2 {
+  background: rgba(167, 139, 250, 0.18);
+  filter: blur(52px);
+}
+:root:not([data-theme='light']) .app-shell__orb--3 {
+  background: rgba(232, 121, 249, 0.14);
+  filter: blur(60px);
+}
+:root:not([data-theme='light']) .app-shell__orb--4 {
+  background: rgba(103, 232, 249, 0.14);
+  filter: blur(52px);
+}
+
+
+/* ==========================================================================
+   4. Global typography refinement
+   ========================================================================== */
+
+.app-shell {
+  font-family: 'K2D', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--cm-text);
+  letter-spacing: -0.005em;
+}
+
+/* Bigger, tighter section headings. */
+.home2__section-label,
+.catalog-concept__section-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cm-text-muted);
+  font-weight: 600;
+}
+
+/* Page title uses the new aurora gradient. */
+.app-page-header__title {
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  background-image: var(--cm-heading-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: var(--cm-heading-glow);
+}
+
+
+/* ==========================================================================
+   5. Utility mixin — glass surface base
+   Applied to every "elevated container" we want to look like frosted glass.
+   Uses backdrop-filter, so used sparingly on LARGE containers only (not
+   inside grids of many small cards, to keep scroll perf smooth).
+   ========================================================================== */
+
+.home2__hero,
+.home-news-widget,
+.home2__more-card,
+.profile-hub__wallet,
+.subscription-plan-card,
+.plan-detail-modal__panel,
+.info-hub__faq-item,
+.subscription-concept__coin-pack {
+  background: var(--cm-surface);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
+  border: 0.5px solid var(--cm-border);
+  border-radius: 22px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 20px 44px rgba(3, 5, 20, 0.35);
+}
+
+/* Inner top-highlight sheen — reads as a glass reflection. */
+.home2__hero,
+.home-news-widget,
+.home2__more-card,
+.profile-hub__wallet,
+.subscription-plan-card,
+.info-hub__faq-item,
+.subscription-concept__coin-pack {
+  position: relative;
+}
+
+
+/* ==========================================================================
+   6. Sticky page header — refined glass panel, full-bleed edge-to-edge
+
+   The header sits inside `.app-main` which has horizontal `padding: 0
+   var(--page-pad-x)`. Without negative side margins, the glass background
+   only paints across the content-width area — it looks like a "cut-off
+   dark rectangle" with visible edges on the left and right.
+
+   Fix: negative horizontal margin equal to the page padding pulls the
+   header out to viewport edges, then equal positive padding puts the
+   content back inside the "safe" content area (so buttons/titles still
+   align with the rest of the page).
+   ========================================================================== */
+
+.app-page-header,
+.home2__header {
+  margin-left: calc(-1 * var(--page-pad-x, 16px));
+  margin-right: calc(-1 * var(--page-pad-x, 16px));
+  padding-left: var(--page-pad-x, 16px);
+  padding-right: var(--page-pad-x, 16px);
+  background: color-mix(in srgb, #0d1030 55%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.5);
+  /* Hairline bottom border + soft downward shadow — this is the
+     "затемнение" that makes the header read as a defined surface with
+     a clear edge, not a floating strip. */
+  box-shadow:
+    0 0.5px 0 rgba(155, 175, 240, 0.14),
+    0 8px 20px rgba(3, 5, 20, 0.32);
+}
+
+.app-page-header {
+  padding-top: 8px;
+  padding-bottom: 12px;
+  min-height: 48px;
+}
+
+.home2__header {
+  padding-top: 8px;
+  padding-bottom: 12px;
+}
+
+:root[data-theme='light'] .app-page-header,
+:root[data-theme='light'] .home2__header {
+  background: color-mix(in srgb, #ffffff 72%, transparent);
+  box-shadow:
+    0 0.5px 0 rgba(90, 110, 180, 0.14),
+    0 8px 20px rgba(28, 34, 64, 0.06);
+}
+
+/* On AI screens (ai-chat/ai-image/ai-video/ai-voice/ai-3d) `.app-main`
+   itself has no horizontal padding (see App.css). Pulling the header out
+   with negative margins there would push it 16px past the viewport and
+   get clipped by `overflow-x: hidden`, which looks broken. Zero out the
+   negative margins there — the header still spans the full width of its
+   already-padding-less parent. */
+.app-shell[data-page='ai-chat'] .app-page-header,
+.app-shell[data-page='ai-image'] .app-page-header,
+.app-shell[data-page='ai-video'] .app-page-header,
+.app-shell[data-page='ai-voice'] .app-page-header,
+.app-shell[data-page='ai-3d'] .app-page-header {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+
+/* ==========================================================================
+   7. Home hero — aurora glass hero with signature gradient border
+   ========================================================================== */
+
+.home2__hero {
+  border-radius: 24px;
+  padding: 18px;
+  border: 0.5px solid rgba(155, 175, 240, 0.18);
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 15% 15%,
+      color-mix(in srgb, var(--cm-accent) 12%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 80% 60% at 100% 100%,
+      color-mix(in srgb, var(--cm-accent-violet) 14%, transparent) 0%,
+      transparent 60%
+    ),
+    var(--cm-surface);
+}
+
+/* Overwrite the design-refresh drifting blob so it uses the new aurora hues. */
+.home2__hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 62%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 60% 40%,
+    color-mix(in srgb, var(--cm-accent-pink) 22%, transparent) 0%,
+    color-mix(in srgb, var(--cm-accent-violet) 8%, transparent) 32%,
+    transparent 60%
+  );
+  border-radius: inherit;
+  opacity: 0.9;
+}
+
+.home2__hero-hello {
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--cm-text);
+}
+
+.home2__hero-sub {
+  color: var(--cm-text-muted);
+  font-size: 12px;
+}
+
+.home2__hero-balance {
+  border-color: rgba(125, 211, 252, 0.45);
+  background: color-mix(in srgb, var(--cm-accent) 14%, transparent);
+  color: var(--cm-text);
+  padding: 8px 12px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 6px 18px color-mix(in srgb, var(--cm-accent) 18%, transparent);
+}
+
+.home2__hero-balance svg:first-child,
+.home2__hero-balance svg:last-child {
+  color: var(--cm-accent);
+}
+
+.home2__hero-cta {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 0.5px solid rgba(155, 175, 240, 0.16);
+  background: color-mix(in srgb, #0d1030 42%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 4px 14px rgba(3, 5, 20, 0.28);
+}
+
+.home2__hero-cta-ico {
+  background: color-mix(in srgb, var(--cm-accent) 22%, transparent);
+  color: var(--cm-accent);
+  border-radius: 12px;
+}
+
+.home2__hero-cta-arrow { color: var(--cm-text-soft); }
+
+
+/* ==========================================================================
+   8. Home news widget — refined glass frame
+   ========================================================================== */
+
+.home-news-widget {
+  border-radius: 22px;
+  overflow: hidden;
+  min-height: 300px;
+}
+
+.home-news-widget__slide-overlay {
+  background: linear-gradient(
+    to top,
+    rgba(3, 5, 20, 0.72) 0%,
+    rgba(3, 5, 20, 0.38) 45%,
+    rgba(3, 5, 20, 0.05) 75%,
+    rgba(3, 5, 20, 0) 100%
+  );
+}
+
+.home-news-widget__dot {
+  background: rgba(255, 255, 255, 0.18);
+  height: 3px;
+}
+
+.home-news-widget__dot-fill { background: var(--cm-accent); }
+
+.home-news-widget__title {
+  font-family: 'K2D', 'Inter', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+
+/* ==========================================================================
+   9. Home quick-access — round glass tiles (kept vertical layout as requested)
+   ========================================================================== */
+
+.home2__quick-ico {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  border: 0.5px solid rgba(155, 175, 240, 0.14);
+  background: color-mix(in srgb, #141830 55%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 6px 16px rgba(3, 5, 20, 0.3);
+}
+
+/* Colour-specific inner glow — kept from original palette but replaced by
+   aurora tint so it doesn't look "sticker-style". */
+.home2__quick-ico--violet { background: color-mix(in srgb, var(--cm-icon-violet-fg) 16%, transparent); color: var(--cm-icon-violet-fg); }
+.home2__quick-ico--pink   { background: color-mix(in srgb, var(--cm-icon-pink-fg) 16%, transparent);   color: var(--cm-icon-pink-fg); }
+.home2__quick-ico--blue   { background: color-mix(in srgb, var(--cm-icon-blue-fg) 16%, transparent);   color: var(--cm-icon-blue-fg); }
+.home2__quick-ico--gold   { background: color-mix(in srgb, var(--cm-icon-gold-fg) 16%, transparent);   color: var(--cm-icon-gold-fg); }
+.home2__quick-ico--teal   { background: color-mix(in srgb, var(--cm-icon-teal-fg) 16%, transparent);   color: var(--cm-icon-teal-fg); }
+.home2__quick-ico--green  { background: color-mix(in srgb, var(--cm-icon-green-fg) 16%, transparent);  color: var(--cm-icon-green-fg); }
+
+.home2__quick-label {
+  font-size: 11px;
+  color: var(--cm-text-secondary);
+  letter-spacing: 0.005em;
+  font-weight: 500;
+}
+
+
+/* ==========================================================================
+   10. Home "more" card — glass frame that ties socials + feedback together
+   ========================================================================== */
+
+.home2__section--more { margin-top: 8px; }
+
+.home2__more-card {
+  border-radius: 22px;
+  padding: 14px;
+  border: 0.5px solid rgba(125, 211, 252, 0.22);
+  background:
+    radial-gradient(
+      ellipse 80% 100% at 100% 0%,
+      color-mix(in srgb, var(--cm-accent) 12%, transparent) 0%,
+      transparent 60%
+    ),
+    var(--cm-surface);
+}
+
+.home2__social-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 0.5px solid rgba(155, 175, 240, 0.16);
+  background: color-mix(in srgb, #0d1030 45%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--cm-text-secondary);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 4px 12px rgba(3, 5, 20, 0.28);
+}
+
+/* Brand-coloured social buttons keep their own colours but slightly softer. */
+.home2__social-btn:nth-child(1) { background: #0b0d1a; border-color: rgba(255,255,255,0.08); color: #fff; }
+.home2__social-btn:nth-child(2) {
+  background: linear-gradient(135deg, #f58529 0%, #dd2a7b 45%, #8134af 100%);
+  border-color: transparent; color: #fff;
+}
+.home2__social-btn:nth-child(3) { background: #2aabee; border-color: transparent; color: #fff; }
+
+.home2__more-feedback {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 0.5px solid rgba(155, 175, 240, 0.16);
+  background: color-mix(in srgb, #0d1030 45%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--cm-text);
+  font-weight: 500;
+}
+
+
+/* ==========================================================================
+   11. Catalog — search field, tabs, filter chip
+   ========================================================================== */
+
+.catalog-concept__search {
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #141830 55%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--cm-text);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 4px 14px rgba(3, 5, 20, 0.28);
+}
+
+.catalog-concept__search input {
+  color: var(--cm-text);
+  font-size: 13px;
+}
+
+.catalog-concept__search input::placeholder {
+  color: var(--cm-text-dim);
+}
+
+.catalog-concept__search svg { color: var(--cm-text-secondary); }
+
+.catalog-concept__search:focus-within {
+  border-color: rgba(125, 211, 252, 0.55);
+  box-shadow:
+    0 0 0 3px rgba(125, 211, 252, 0.18),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 6px 20px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+}
+
+.catalog-concept__search:focus-within svg { color: var(--cm-accent); }
+
+.catalog-concept__tab {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #141830 42%, transparent);
+  color: var(--cm-chip-inactive-fg);
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 34px;
+}
+
+.catalog-concept__tab--active {
+  background: color-mix(in srgb, var(--cm-accent) 16%, transparent);
+  color: #eaf6ff;
+  border-color: rgba(125, 211, 252, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(125, 211, 252, 0.35) inset,
+    0 4px 16px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+}
+
+.catalog-concept__available-toggle {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #141830 42%, transparent);
+  color: var(--cm-text-secondary);
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.catalog-concept__available-toggle[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--cm-accent) 16%, transparent);
+  color: #eaf6ff;
+  border-color: rgba(125, 211, 252, 0.55);
+}
+
+.catalog-concept__filter {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 12px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #141830 42%, transparent);
+  color: var(--cm-text-secondary);
+}
+
+
+/* ==========================================================================
+   12. Catalog cards — tinted translucent (no backdrop-blur, keeps grids fast)
+   Icons redesigned as round chips.
+   ========================================================================== */
+
+.catalog-concept__card {
+  padding: 14px 12px 32px;
+  border-radius: 18px;
+  border: 0.5px solid var(--cm-border);
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in srgb, #1a1e3c 55%, transparent) 0%,
+      color-mix(in srgb, #10142c 65%, transparent) 100%
+    );
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 10px 26px rgba(3, 5, 20, 0.32);
+  min-height: 112px;
+}
+
+.catalog-concept__card:hover:not(.catalog-concept__card--locked) {
+  border-color: rgba(155, 175, 240, 0.28);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 12px 28px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+}
+
+.catalog-concept__icon {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  border: 0.5px solid transparent;
+  position: relative;
+}
+
+/* Inner glow ring inside every icon chip. */
+.catalog-concept__icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0));
+  opacity: 0.65;
+}
+
+.catalog-concept__name {
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cm-text);
+  letter-spacing: -0.005em;
+}
+
+.catalog-concept__sub {
+  color: var(--cm-text-muted);
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.catalog-concept__price {
+  color: var(--cm-coin-fg);
+  font-weight: 600;
+}
+
+.catalog-concept__lock {
+  color: color-mix(in srgb, var(--cm-accent) 60%, var(--cm-text-muted));
+}
+
+
+/* ==========================================================================
+   13. Coin widget — aurora amber pill
+   ========================================================================== */
+
+.coin-widget {
+  padding: 7px 12px 7px 10px;
+  border-radius: 999px;
+  border: 0.5px solid rgba(252, 211, 77, 0.42);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--cm-coin-fg) 14%, transparent) 0%,
+      color-mix(in srgb, #141830 40%, transparent) 100%
+    );
+  color: var(--cm-text);
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 4px 14px color-mix(in srgb, var(--cm-coin-fg) 16%, transparent);
+}
+
+
+/* ==========================================================================
+   14. Profile hub — glass wallet, glass tiles, glass rows
+   ========================================================================== */
+
+.profile-hub__wallet {
+  padding: 18px;
+  border-radius: 24px;
+  border: 0.5px solid rgba(252, 211, 77, 0.34);
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 100% 0%,
+      color-mix(in srgb, var(--cm-coin-fg) 16%, transparent) 0%,
+      transparent 60%
+    ),
+    var(--cm-surface);
+}
+
+.profile-hub__wallet-ico {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cm-coin-fg) 18%, transparent);
+  border: 0.5px solid rgba(252, 211, 77, 0.3);
+}
+
+.profile-hub__wallet-amount {
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cm-text);
+}
+
+.profile-hub__wallet-label {
+  color: var(--cm-text-muted);
+  letter-spacing: 0.14em;
+  font-weight: 600;
+}
+
+.profile-hub__wallet-topup {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 0.5px solid rgba(125, 211, 252, 0.5);
+  background: color-mix(in srgb, var(--cm-accent) 16%, transparent);
+  color: var(--cm-text);
+  font-weight: 600;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 4px 14px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+}
+
+.profile-hub__tile {
+  border-radius: 18px;
+  border: 0.5px solid var(--cm-border);
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in srgb, #1a1e3c 55%, transparent) 0%,
+      color-mix(in srgb, #10142c 65%, transparent) 100%
+    );
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 8px 20px rgba(3, 5, 20, 0.28);
+}
+
+.profile-hub__tile-title {
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-weight: 600;
+  color: var(--cm-text);
+}
+
+.profile-hub__tile-sub { color: var(--cm-text-muted); }
+
+.profile-hub__list-item {
+  border-radius: 16px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #141830 42%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+
+/* ==========================================================================
+   15. Subscription plan cards — dramatic glass with aurora border for
+       popular / current variants.
+   ========================================================================== */
+
+.subscription-plan-card {
+  border-radius: 24px;
+  padding: 20px 18px 18px;
+  border: 0.5px solid var(--cm-border);
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in srgb, #1a1e3c 55%, transparent) 0%,
+      color-mix(in srgb, #0d1030 65%, transparent) 100%
+    );
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 24px 60px rgba(3, 5, 20, 0.42);
+}
+
+.subscription-plan-card__name {
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cm-text);
+}
+
+.subscription-plan-card--free,
+.subscription-plan-card--basic,
+.subscription-plan-card--max,
+.subscription-plan-card--biz,
+.subscription-plan-card--popular,
+.subscription-plan-card--current {
+  border-width: 1px;
+}
+
+.subscription-plan-card--free    { border-color: var(--cm-plan-free-border);    box-shadow: 0 0 0 1px rgba(94,234,212,0.22) inset, 0 24px 50px var(--cm-plan-free-glow); }
+.subscription-plan-card--basic   { border-color: var(--cm-plan-basic-border);   box-shadow: 0 0 0 1px rgba(125,211,252,0.22) inset, 0 24px 50px var(--cm-plan-basic-glow); }
+.subscription-plan-card--max     { border-color: var(--cm-plan-max-border);     box-shadow: 0 0 0 1px rgba(252,211,77,0.22) inset,  0 24px 50px var(--cm-plan-max-glow); }
+.subscription-plan-card--biz     { border-color: var(--cm-plan-biz-border);     box-shadow: 0 0 0 1px rgba(240,171,252,0.24) inset, 0 24px 50px var(--cm-plan-biz-glow); }
+.subscription-plan-card--popular { border-color: var(--cm-plan-popular-border); box-shadow: 0 0 0 1px rgba(167,139,250,0.28) inset, 0 24px 50px rgba(167,139,250,0.22); }
+.subscription-plan-card--current { border-color: var(--cm-plan-current-border); box-shadow: 0 0 0 1px rgba(94,234,212,0.28) inset,  0 24px 50px var(--cm-plan-current-glow); }
+
+.subscription-plan-card__btn {
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  border: 0.5px solid rgba(125, 211, 252, 0.55);
+  background: color-mix(in srgb, var(--cm-accent) 16%, transparent);
+  color: var(--cm-text);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 4px 14px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+  transition: transform 0.16s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.subscription-plan-card__btn:hover:not(:disabled) { filter: brightness(1.1); }
+.subscription-plan-card__btn:active { transform: scale(0.98); }
+
+.subscription-plan-card__btn--current,
+.subscription-plan-card__btn:disabled {
+  border-color: rgba(94, 234, 212, 0.45);
+  background: color-mix(in srgb, var(--cm-accent-mint) 14%, transparent);
+  color: #a3f7e5;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+
+
+/* ==========================================================================
+   16. Coin packs — glass tiles with amber accent
+   ========================================================================== */
+
+.subscription-concept__coin-pack {
+  border-radius: 20px;
+  border: 0.5px solid rgba(252, 211, 77, 0.24);
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in srgb, var(--cm-coin-fg) 8%, transparent) 0%,
+      color-mix(in srgb, #10142c 55%, transparent) 100%
+    );
+  padding: 16px;
+}
+
+.subscription-concept__coin-pack-name {
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-weight: 600;
+  color: var(--cm-text);
+}
+
+.subscription-concept__coin-pack-coins { color: var(--cm-coin-fg); font-weight: 700; font-size: 20px; }
+
+.subscription-concept__coin-pack-badge {
+  border-radius: 999px;
+  border: 0.5px solid rgba(167, 139, 250, 0.5);
+  background: color-mix(in srgb, var(--cm-accent-violet) 14%, transparent);
+  color: #d4c4ff;
+  font-weight: 600;
+}
+
+
+/* ==========================================================================
+   17. Info hub FAQ — glass card list
+   ========================================================================== */
+
+.info-hub__faq-item {
+  border-radius: 18px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #141830 45%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  padding: 14px 16px;
+}
+
+.info-hub__faq-item--open {
+  border-color: rgba(125, 211, 252, 0.5);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 12px 32px color-mix(in srgb, var(--cm-accent) 18%, transparent);
+}
+
+
+/* ==========================================================================
+   18. Bottom nav — aurora pill indicator
+   ========================================================================== */
+
+.bottom-nav__inner {
+  border-radius: 22px;
+  padding: 8px 6px;
+  border: 0.5px solid var(--nav-glass-border);
+  background: var(--nav-glass-bg);
+  -webkit-backdrop-filter: var(--nav-glass-blur);
+  backdrop-filter: var(--nav-glass-blur);
+  box-shadow: var(--nav-glass-shadow);
+}
+
+.bottom-nav__indicator {
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--cm-accent) 18%, transparent);
+  border: 0.5px solid rgba(125, 211, 252, 0.4);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 0 22px color-mix(in srgb, var(--cm-accent) 32%, transparent);
+}
+
+.nav-button--active { color: var(--cm-accent); }
+.nav-button--active .nav-button__label { color: var(--cm-text); }
+
+
+/* ==========================================================================
+   19. Modals — glass with prominent shadow
+   ========================================================================== */
+
+.plan-detail-modal__panel {
+  border-radius: 24px;
+  border: 0.5px solid var(--plan-detail-glass-border);
+  background: var(--plan-detail-glass-bg);
+  box-shadow: var(--plan-detail-glass-shadow);
+  -webkit-backdrop-filter: var(--plan-detail-glass-blur);
+  backdrop-filter: var(--plan-detail-glass-blur);
+}
+
+.plan-detail-modal__title {
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cm-text);
+}
+
+.plan-detail-modal__eyebrow {
+  color: var(--cm-text-muted);
+  letter-spacing: 0.14em;
+  font-weight: 600;
+}
+
+.app-confirm__panel {
+  border-radius: 20px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #0d1030 82%, transparent);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  color: var(--cm-text);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 30px 60px rgba(3, 5, 20, 0.6);
+}
+
+.app-confirm__btn {
+  border-radius: 12px;
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-weight: 600;
+}
+
+.app-confirm__btn--ghost {
+  color: var(--cm-text-secondary);
+  border-color: var(--cm-border);
+}
+
+.app-confirm__btn--danger {
+  background: linear-gradient(135deg, #ef4444 0%, #d946ef 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.15) inset,
+    0 6px 18px rgba(239, 68, 68, 0.28);
+}
+
+
+/* ==========================================================================
+   20. Toasts / notifications
+   ========================================================================== */
+
+.app-notice {
+  border-radius: 14px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #0d1030 78%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  color: var(--cm-text);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 12px 28px rgba(3, 5, 20, 0.5);
+}
+
+
+/* ==========================================================================
+   21. AI screens — chat / image / video / voice / 3d shared UI
+   ========================================================================== */
+
+/* Chat input area — glass surface. */
+.ai-chat__input,
+.ai-image__prompt,
+.ai-video__prompt,
+.text-gen__textarea {
+  border-radius: 16px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #141830 55%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--cm-text);
+}
+
+.ai-chat__input:focus,
+.ai-image__prompt:focus,
+.ai-video__prompt:focus,
+.text-gen__textarea:focus {
+  border-color: rgba(125, 211, 252, 0.55);
+  box-shadow:
+    0 0 0 3px rgba(125, 211, 252, 0.18);
+}
+
+/* Primary "generate" buttons — signature aurora gradient. */
+.ai-chat__send,
+.ai-image__submit,
+.ai-video__submit,
+.text-gen__submit,
+.home-concept__promo-btn {
+  border: none;
+  border-radius: 14px;
+  background: var(--cm-aurora-gradient);
+  color: #ffffff;
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.2) inset,
+    0 8px 22px color-mix(in srgb, var(--cm-accent-violet) 32%, transparent);
+}
+
+.ai-chat__send:disabled,
+.ai-image__submit:disabled,
+.ai-video__submit:disabled,
+.text-gen__submit:disabled {
+  filter: saturate(0.5) brightness(0.7);
+  cursor: not-allowed;
+}
+
+.ai-chat__send-price,
+.ai-video__submit-price {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+}
+
+
+/* Chat bubbles. */
+.ai-chat__bubble--user {
+  background: color-mix(in srgb, var(--cm-accent) 16%, transparent);
+  border: 0.5px solid rgba(125, 211, 252, 0.4);
+  color: var(--cm-text);
+}
+
+.ai-chat__bubble--assistant {
+  background: color-mix(in srgb, #141830 55%, transparent);
+  border: 0.5px solid var(--cm-border);
+  color: var(--cm-bubble-assistant-fg);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+
+/* ==========================================================================
+   22. History list — cleaner separators
+   ========================================================================== */
+
+.history-concept__item {
+  border-radius: 16px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #141830 42%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  padding: 12px;
+}
+
+.history-concept__filters .catalog-concept__tab {
+  background: color-mix(in srgb, #141830 42%, transparent);
+}
+
+
+/* ==========================================================================
+   23. Referral / settings shared list rows — glass
+   ========================================================================== */
+
+.settings-page__option,
+.profile-concept__menu-item,
+.referral-page__row {
+  border-radius: 16px;
+  border: 0.5px solid var(--cm-border);
+  background: color-mix(in srgb, #141830 40%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+
+/* ==========================================================================
+   24. Skeletons — aurora tinted shimmer
+   ========================================================================== */
+
+.skeleton,
+.loading-shimmer,
+[data-skeleton='true'] {
+  background: color-mix(in srgb, #1a1e3c 60%, transparent);
+  border-radius: 12px;
+}
+
+.skeleton::after,
+.loading-shimmer::after,
+[data-skeleton='true']::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--cm-accent) 20%, transparent) 50%,
+    transparent 100%
+  );
+}
+
+
+/* ==========================================================================
+   25. Boot / app fatal — themed
+   ========================================================================== */
+
+.app-boot {
+  background: color-mix(in srgb, #0d1030 80%, transparent);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 0.5px solid var(--cm-border);
+  color: var(--cm-text);
+}
+
+.app-boot__spinner {
+  border: 2px solid rgba(125, 211, 252, 0.25);
+  border-top-color: var(--cm-accent);
+}
+
+
+/* ==========================================================================
+   26. Reduced motion + Telegram desktop fullscreen safety
+   Repeats the safety net from previous layers because we added a few new
+   ambient backgrounds above.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__orb,
+  .app-shell__orb--1,
+  .app-shell__orb--2,
+  .app-shell__orb--3,
+  .app-shell__orb--4 {
+    animation: none !important;
+  }
+}
+
+/* Telegram Desktop fullscreen: cut backdrop-filter cost on catalog grid
+   (already tinted) and keep only a couple of blurred surfaces. */
+html[data-tg-layout='desktop-full'] .catalog-concept__card,
+html[data-tg-layout='desktop-full'] .profile-hub__list-item,
+html[data-tg-layout='desktop-full'] .history-concept__item,
+html[data-tg-layout='desktop-full'] .settings-page__option,
+html[data-tg-layout='desktop-full'] .profile-concept__menu-item,
+html[data-tg-layout='desktop-full'] .referral-page__row {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+
+/* ==========================================================================
+   27. Accessible focus ring — kept from design-refresh, retuned to aurora
+   ========================================================================== */
+
+.app-shell button:focus-visible,
+.app-shell a:focus-visible,
+.app-shell [role='button']:focus-visible,
+.app-shell input:focus-visible,
+.app-shell textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.35);
+}

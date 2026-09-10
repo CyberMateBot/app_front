@@ -152,9 +152,13 @@ export function formatUserFacingError(error, language = 'ru') {
     const raw = error instanceof Error ? error.message : String(error);
     const lower = raw.toLowerCase();
     if (lower.includes('timed out') || lower.includes('taking too long') || lower.includes('timeout')) {
+        // "Снизьте разрешение" was in this message because the same helper
+        // is called from image/video screens too, but it reads as noise on
+        // the text chat where there is no resolution to lower. Keep the
+        // hint generic: try again or pick a faster model.
         return language === 'ru'
-            ? 'Модель сейчас отвечает дольше обычного. Попробуйте ещё раз или снизьте разрешение.'
-            : 'The model is taking longer than usual. Try again, or pick a lower resolution.';
+            ? 'Модель отвечает дольше обычного. Попробуйте ещё раз или выберите более быструю модель.'
+            : 'The model is taking longer than usual. Try again, or pick a faster model.';
     }
 
     return raw;
