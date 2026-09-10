@@ -438,68 +438,220 @@
 
 
 /* ==========================================================================
-   6. Sticky page header — refined glass panel, full-bleed edge-to-edge
+   6. Sticky page header — refined glass panel, TRUE viewport-edge full-bleed
 
-   The header sits inside `.app-main` which has horizontal `padding: 0
-   var(--page-pad-x)`. Without negative side margins, the glass background
-   only paints across the content-width area — it looks like a "cut-off
-   dark rectangle" with visible edges on the left and right.
+   Prior version used `margin-left/right: calc(-1 * var(--page-pad-x))`. That
+   was wrong in two cases:
+     (a) `.app-main` uses `padding-left: max(var(--page-pad-x), env(safe-area-
+         inset-left))` — on devices with a safe-area inset (notch / rounded
+         corners) the real padding is larger than `--page-pad-x`, and pulling
+         back only `--page-pad-x` still leaves a visible border.
+     (b) On wide desktops `.app-main` is `max-width: 1600px; margin: 0 auto`
+         — its outer edge is not the viewport edge at all.
 
-   Fix: negative horizontal margin equal to the page padding pulls the
-   header out to viewport edges, then equal positive padding puts the
-   content back inside the "safe" content area (so buttons/titles still
-   align with the rest of the page).
+   Fix: `margin-left/right: calc(50% - 50vw)` mathematically resolves to
+   whatever offset is needed to reach the true viewport left/right edge,
+   regardless of container padding or centering. `.app-shell` already
+   clips with `overflow-x: hidden` so no scrollbar leaks.
+
+   Also: `margin-top: 0` defeats any `padding-top` on the immediate parent
+   screen so the header hugs the top of its pane; no residual gap.
+
+   Also: dropped the outer downward box-shadow — it visually darkened the
+   filter bar below the header on Catalog, making it look as if the
+   header "swallowed" the filters. The bottom hairline alone is enough
+   to define the surface edge.
    ========================================================================== */
 
 .app-page-header,
 .home2__header {
-  margin-left: calc(-1 * var(--page-pad-x, 16px));
-  margin-right: calc(-1 * var(--page-pad-x, 16px));
-  padding-left: var(--page-pad-x, 16px);
-  padding-right: var(--page-pad-x, 16px);
-  background: color-mix(in srgb, #0d1030 55%, transparent);
-  -webkit-backdrop-filter: blur(24px) saturate(1.5);
-  backdrop-filter: blur(24px) saturate(1.5);
-  /* Hairline bottom border + soft downward shadow — this is the
-     "затемнение" that makes the header read as a defined surface with
-     a clear edge, not a floating strip. */
-  box-shadow:
-    0 0.5px 0 rgba(155, 175, 240, 0.14),
-    0 8px 20px rgba(3, 5, 20, 0.32);
+  /* Non-sticky header — scrolls with the rest of the page content.
+     Also fully transparent: per user request the header must NOT read
+     as a highlighted/tinted panel on any page. It's just the title
+     row over the page background.
+
+     `position: relative` (not `static`) is critical: the header has a
+     `.app-page-header__center` child with `position: absolute; inset: 0`
+     that must position against the HEADER's box (so the title sits in
+     the header row, centered). With `position: static` the child
+     escaped up the ancestor chain to `.app-main`, which centered the
+     title in the whole viewport — that's what dropped "Catalog"
+     halfway down the page. */
+  position: relative;
+  top: auto;
+  margin-top: 0;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  border-bottom: 0;
 }
 
 .app-page-header {
-  padding-top: 8px;
-  padding-bottom: 12px;
-  min-height: 48px;
+  padding-top: 6px;
+  padding-bottom: 10px;
+  min-height: 44px;
 }
 
 .home2__header {
-  padding-top: 8px;
-  padding-bottom: 12px;
+  padding-top: 6px;
+  padding-bottom: 10px;
 }
 
 :root[data-theme='light'] .app-page-header,
 :root[data-theme='light'] .home2__header {
-  background: color-mix(in srgb, #ffffff 72%, transparent);
-  box-shadow:
-    0 0.5px 0 rgba(90, 110, 180, 0.14),
-    0 8px 20px rgba(28, 34, 64, 0.06);
+  background: transparent;
+  box-shadow: none;
 }
 
-/* On AI screens (ai-chat/ai-image/ai-video/ai-voice/ai-3d) `.app-main`
-   itself has no horizontal padding (see App.css). Pulling the header out
-   with negative margins there would push it 16px past the viewport and
-   get clipped by `overflow-x: hidden`, which looks broken. Zero out the
-   negative margins there — the header still spans the full width of its
-   already-padding-less parent. */
-.app-shell[data-page='ai-chat'] .app-page-header,
-.app-shell[data-page='ai-image'] .app-page-header,
-.app-shell[data-page='ai-video'] .app-page-header,
-.app-shell[data-page='ai-voice'] .app-page-header,
-.app-shell[data-page='ai-3d'] .app-page-header {
-  margin-left: 0;
-  margin-right: 0;
+/* Kill the dark rounded "tile" backgrounds around the back-arrow /
+   action buttons in the header. App.css set them to
+   `background: var(--cm-surface)` which reads as small black boxes on
+   the aurora bg — the user asked for just the icons, no border/box. */
+.app-page-header__back,
+.app-page-header__action {
+  background: transparent;
+  border: none;
+  color: var(--cm-accent);
+}
+
+.app-page-header__back:hover,
+.app-page-header__action:hover {
+  background: color-mix(in srgb, var(--cm-accent) 12%, transparent);
+}
+
+/* Kill the `::after` fade band underneath the header — design-refresh.css
+   painted a `linear-gradient(--cm-bg 40% → transparent)` 8px strip below
+   the header intending to "dissolve" the glass panel into content.
+   With the header now fully transparent (no glass), that fade reads as
+   a visible dark line/band under the title on every page. Same for
+   `.home2__header::after`. Remove them entirely. */
+.app-page-header::after,
+.home2__header::after {
+  content: none;
+  display: none;
+  background: none;
+}
+
+/* Kill legacy `padding-top` reservations that were sized for an older
+   fixed/overlay header pattern. With the current inline `AppPageHeader`
+   these paddings show up as a visible gap between the screen top and
+   the header, which the user described as "distance from the border to
+   where the header starts". */
+.wallet-screen,
+.history-screen,
+.referral-screen,
+.text-gen-screen:not(.text-gen-screen--figma) {
+  padding-top: 0;
+}
+.profile-screen--concept {
+  padding-top: 0;
+}
+
+/* ==========================================================================
+   Catalog: pin filters with `position: fixed` — bulletproof, no ancestor
+   requirements. Multiple attempts with `position: sticky` failed
+   because SOMETHING between the sticky element and the scroll
+   container was silently breaking pinning (identified suspects:
+   animation transform on `.app-page-transition`, flex containers
+   swallowing sticky, and browser inconsistencies inside Telegram
+   WebView). Fixed positioning ignores all of that — it pins to the
+   viewport directly.
+
+   Trade-off: fixed elements are removed from the flow, so the scroll
+   area needs an explicit top-side gap that matches the pinned bar's
+   height. Content below the bar is reserved via padding-top on
+   `.catalog-screen--concept`. */
+.app-shell[data-page='catalog'] .app-main {
+  height: calc(
+    max(var(--app-height, 100dvh), 100dvh)
+    - var(--page-pad-top, 0px)
+    - var(--page-pad-bottom, env(safe-area-inset-bottom, 0px))
+  );
+  min-height: 0;
+  display: block;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0;
+}
+.app-shell[data-page='catalog'] .app-main::-webkit-scrollbar {
+  display: none;
+}
+.app-shell[data-page='catalog'] .app-page-transition {
+  display: block;
+  animation: none;
+  overflow: visible;
+  transform: none;
+  will-change: auto;
+}
+.app-shell[data-page='catalog'] .catalog-screen--concept {
+  display: block;
+  overflow: visible;
+  flex: initial;
+  height: auto;
+  /* Reserve vertical space equal to the fixed filter-bar height plus a
+     little breathing room, so the first cards row starts BELOW the
+     pinned bar rather than under it. Value is a measurement of the
+     bar's contents: header 48 + search 44 + tabs 44 + toggle 44 +
+     paddings 20 ≈ 200; +8 breathing room. */
+  padding-top: 208px;
+  padding-left: max(var(--page-pad-x, 16px), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-pad-x, 16px), env(safe-area-inset-right, 0px));
+  padding-bottom: calc(var(--nav-bar-height, 80px) + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)) + 24px);
+}
+.catalog-concept__scroll {
+  display: block;
+  overflow: visible;
+  flex: initial;
+  height: auto;
+  min-height: 0;
+  padding-bottom: 0;
+}
+.app-shell[data-page='catalog'] .catalog-concept__sticky {
+  /* Pin to the viewport. `top: page-pad-top` respects Telegram's own
+     top safe-area gap; on plain web / desktop that's 0. */
+  position: fixed;
+  top: var(--page-pad-top, 0px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: 6px max(var(--page-pad-x, 16px), env(safe-area-inset-left, 0px)) 12px;
+  margin: 0;
+  /* `flex` here is a no-op (parent is block per override above) but
+     forces the sticky wrapper's own children to lay out top-to-bottom
+     the way App.css intended. */
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+/* Bar bg strategy: mostly transparent with a HEAVY backdrop-filter
+   blur. The transparent portion lets the shell's multi-layer bg
+   (radial orbs + linear gradient) show through natively at their
+   real viewport-fixed positions — so the bar visually continues the
+   page's aurora, no solid dark rectangle. The blur smears anything
+   that scrolls behind the bar (cards, section titles) into an
+   unreadable smudge — so no ghost text either. A very slight
+   darkening tint (18%) is layered on top of the blur to keep the
+   filter chips legible in bright areas of the aurora. */
+:root:not([data-theme='light']) .app-shell[data-page='catalog'] .catalog-concept__sticky {
+  background: color-mix(in srgb, #05061a 18%, transparent);
+  backdrop-filter: blur(32px) saturate(150%);
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
+}
+:root[data-theme='light'] .app-shell[data-page='catalog'] .catalog-concept__sticky {
+  background: color-mix(in srgb, #f5f7ff 30%, transparent);
+  backdrop-filter: blur(32px) saturate(150%);
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
+}
+.catalog-concept__sticky > .catalog-concept__search {
+  margin-top: 4px;
 }
 
 
@@ -770,9 +922,14 @@
   background: color-mix(in srgb, var(--cm-accent) 16%, transparent);
   color: #eaf6ff;
   border-color: rgba(125, 211, 252, 0.55);
-  box-shadow:
-    0 0 0 1px rgba(125, 211, 252, 0.35) inset,
-    0 4px 16px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+  /* Inset ring only — no outer glow. Any outer `box-shadow` renders
+     from the pill's rectangular bounding box, so at the four corners
+     the glow from two adjacent edges overlaps and becomes visibly
+     brighter than along the flat sides. On the new semi-transparent
+     blur bar this shows as cyan "corner sparks" around the active
+     chip. Inset-only shadow keeps the pill lit without spilling
+     outside its rounded shape. */
+  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.35) inset;
 }
 
 .catalog-concept__available-toggle {
@@ -808,9 +965,18 @@
    Icons redesigned as round chips.
    ========================================================================== */
 
+/* Bump padding-bottom and min-height so the absolutely positioned
+   price pill (bottom-right) always has clear vertical separation from
+   the last line of the description text, even when the description
+   wraps to its `line-clamp: 2` maximum. App.css baseline was
+   padding-bottom: 30 / min-height: 108, which left only ~4px between
+   the 2-line description and the price pill on many models — enough
+   to read as overlap. */
+
 .catalog-concept__card {
-  padding: 14px 12px 32px;
-  border-radius: 18px;
+  padding: 12px 10px 42px;
+  min-height: 122px;
+  border-radius: 16px;
   border: 0.5px solid var(--cm-border);
   background:
     linear-gradient(
@@ -820,22 +986,24 @@
     );
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.05) inset,
-    0 10px 26px rgba(3, 5, 20, 0.32);
-  min-height: 112px;
+    0 8px 20px rgba(3, 5, 20, 0.28);
+}
+
+/* Give the 2-line description a wider safe zone on the right so its
+   second line's trailing text can never sit under the price pill
+   horizontally either. */
+.catalog-concept__sub {
+  padding-right: 52px;
 }
 
 .catalog-concept__card:hover:not(.catalog-concept__card--locked) {
   border-color: rgba(155, 175, 240, 0.28);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.08) inset,
-    0 12px 28px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+    0 10px 24px color-mix(in srgb, var(--cm-accent) 22%, transparent);
 }
 
 .catalog-concept__icon {
-  width: 38px;
-  height: 38px;
-  margin-bottom: 10px;
-  border-radius: 12px;
   border: 0.5px solid transparent;
   position: relative;
 }
@@ -853,25 +1021,87 @@
 
 .catalog-concept__name {
   font-family: 'K2D', 'Inter', sans-serif;
-  font-size: 13px;
   font-weight: 600;
   color: var(--cm-text);
   letter-spacing: -0.005em;
 }
 
-.catalog-concept__sub {
-  color: var(--cm-text-muted);
-  font-size: 10px;
-  margin-top: 3px;
-}
-
-.catalog-concept__price {
+/* `design-refresh.css` has `.catalog-concept__card > * { position:
+   relative }` (to stack children above the card's ::before highlight).
+   That override yanked the absolute-positioned pill, crown, and badge
+   out of their fixed corners and back into the flex flow — result:
+   the price pill ended up under the description text (blocking the
+   second line), the crown drifted from the top-right, and the badge
+   shifted too. Re-assert absolute positioning here with a higher-
+   specificity selector so aurora wins over design-refresh. */
+/* Colors for pinned corner elements — positioning itself is enforced
+   in the consolidated !important block below. */
+.catalog-concept__card > .catalog-concept__price {
   color: var(--cm-coin-fg);
   font-weight: 600;
 }
-
-.catalog-concept__lock {
+.catalog-concept__card > .catalog-concept__lock {
   color: color-mix(in srgb, var(--cm-accent) 60%, var(--cm-text-muted));
+}
+
+/* Plan-lock label ("Basic" / "Pro" / etc) on locked cards was inline
+   at bottom-left. Pin it to the bottom-right corner like the price
+   pill on unlocked cards, so both bottom-of-card labels sit in the
+   same spot — the card layout stays consistent whether the model
+   costs coins (price pill) or requires a subscription (plan pill).
+
+   `!important` is defensive here: `design-refresh.css` has a rule
+   `.catalog-concept__card > * { position: relative }` that keeps
+   trying to pull absolute-positioned children back into the flex
+   flow (that's the bug that dropped the price pill and crown out
+   of their corners earlier). Force our positioning to win. */
+.catalog-concept__card > .catalog-concept__plan-lock {
+  position: absolute !important;
+  right: 8px !important;
+  bottom: 8px !important;
+  top: auto !important;
+  left: auto !important;
+  z-index: 2 !important;
+  margin-top: 0 !important;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-accent) 14%, transparent);
+  border: 0.5px solid color-mix(in srgb, var(--cm-accent) 38%, transparent);
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--cm-accent);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Apply the same defense to price + lock corner icon + top-right
+   badge so the same design-refresh override can never yank them out
+   of their corners again either. */
+.catalog-concept__card > .catalog-concept__price {
+  position: absolute !important;
+  right: 8px !important;
+  bottom: 8px !important;
+  top: auto !important;
+  left: auto !important;
+  z-index: 2 !important;
+}
+.catalog-concept__card > .catalog-concept__lock {
+  position: absolute !important;
+  top: 9px !important;
+  right: 9px !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 2 !important;
+}
+.catalog-concept__card > .catalog-concept__badge {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 2 !important;
 }
 
 
@@ -988,7 +1218,6 @@
 
 .subscription-plan-card {
   border-radius: 24px;
-  padding: 20px 18px 18px;
   border: 0.5px solid var(--cm-border);
   background:
     linear-gradient(
@@ -1001,6 +1230,19 @@
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.06) inset,
     0 24px 60px rgba(3, 5, 20, 0.42);
+}
+
+/* Peek-scale carousel restored per user request: the active plan
+   scales up, neighboring plans deemphasize a touch. Keeping the App.css
+   defaults (scale: 0.82 for non-active, scale: 1 for active), just
+   softening the opacity so the peek cards stay readable at a glance
+   even in the periphery. */
+.subscription-page__plans .subscription-plan-card {
+  opacity: 0.68;
+}
+
+.subscription-page__plans .subscription-plan-card--active {
+  opacity: 1;
 }
 
 .subscription-plan-card__name {
@@ -1020,12 +1262,91 @@
   border-width: 1px;
 }
 
-.subscription-plan-card--free    { border-color: var(--cm-plan-free-border);    box-shadow: 0 0 0 1px rgba(94,234,212,0.22) inset, 0 24px 50px var(--cm-plan-free-glow); }
-.subscription-plan-card--basic   { border-color: var(--cm-plan-basic-border);   box-shadow: 0 0 0 1px rgba(125,211,252,0.22) inset, 0 24px 50px var(--cm-plan-basic-glow); }
-.subscription-plan-card--max     { border-color: var(--cm-plan-max-border);     box-shadow: 0 0 0 1px rgba(252,211,77,0.22) inset,  0 24px 50px var(--cm-plan-max-glow); }
-.subscription-plan-card--biz     { border-color: var(--cm-plan-biz-border);     box-shadow: 0 0 0 1px rgba(240,171,252,0.24) inset, 0 24px 50px var(--cm-plan-biz-glow); }
-.subscription-plan-card--popular { border-color: var(--cm-plan-popular-border); box-shadow: 0 0 0 1px rgba(167,139,250,0.28) inset, 0 24px 50px rgba(167,139,250,0.22); }
-.subscription-plan-card--current { border-color: var(--cm-plan-current-border); box-shadow: 0 0 0 1px rgba(94,234,212,0.28) inset,  0 24px 50px var(--cm-plan-current-glow); }
+/* Each plan gets a distinctly different background gradient AND a
+   matching border/glow, so the four plans are instantly visually
+   distinguishable in the horizontal carousel (previously they all
+   shared the same slate/navy gradient and only differed by border
+   color).
+
+   Palette:
+     Free    → mint / teal   (accent #5eead4)
+     Basic   → sky  / cyan   (accent #7dd3fc)
+     Max     → gold / amber  (accent #fcd34d)
+     Biz     → pink / fuchsia (accent #f0abfc)
+     Popular → violet         (accent #a78bfa)
+     Current → mint (subtle) */
+
+.subscription-plan-card--free {
+  border-color: var(--cm-plan-free-border);
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in srgb, #5eead4 22%, #0d1030) 0%,
+      color-mix(in srgb, #14b8a6 14%, #05061a) 100%
+    );
+  box-shadow:
+    0 0 0 1px rgba(94, 234, 212, 0.28) inset,
+    0 24px 54px color-mix(in srgb, #5eead4 22%, transparent);
+}
+
+.subscription-plan-card--basic {
+  border-color: var(--cm-plan-basic-border);
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in srgb, #7dd3fc 22%, #0d1030) 0%,
+      color-mix(in srgb, #38bdf8 12%, #05061a) 100%
+    );
+  box-shadow:
+    0 0 0 1px rgba(125, 211, 252, 0.28) inset,
+    0 24px 54px color-mix(in srgb, #7dd3fc 22%, transparent);
+}
+
+.subscription-plan-card--max {
+  border-color: var(--cm-plan-max-border);
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in srgb, #fcd34d 22%, #0d1030) 0%,
+      color-mix(in srgb, #f59e0b 12%, #05061a) 100%
+    );
+  box-shadow:
+    0 0 0 1px rgba(252, 211, 77, 0.28) inset,
+    0 24px 54px color-mix(in srgb, #fcd34d 20%, transparent);
+}
+
+.subscription-plan-card--biz {
+  border-color: var(--cm-plan-biz-border);
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in srgb, #f0abfc 24%, #0d1030) 0%,
+      color-mix(in srgb, #d946ef 12%, #05061a) 100%
+    );
+  box-shadow:
+    0 0 0 1px rgba(240, 171, 252, 0.28) inset,
+    0 24px 54px color-mix(in srgb, #f0abfc 22%, transparent);
+}
+
+.subscription-plan-card--popular {
+  border-color: var(--cm-plan-popular-border);
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in srgb, #a78bfa 24%, #0d1030) 0%,
+      color-mix(in srgb, #7c3aed 14%, #05061a) 100%
+    );
+  box-shadow:
+    0 0 0 1px rgba(167, 139, 250, 0.32) inset,
+    0 24px 54px rgba(167, 139, 250, 0.24);
+}
+
+.subscription-plan-card--current {
+  border-color: var(--cm-plan-current-border);
+  box-shadow:
+    0 0 0 1px rgba(94, 234, 212, 0.30) inset,
+    0 24px 54px var(--cm-plan-current-glow);
+}
 
 .subscription-plan-card__btn {
   padding: 12px 16px;
