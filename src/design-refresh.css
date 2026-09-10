@@ -1,0 +1,1007 @@
+/* ==========================================================================
+   design-refresh.css  —  visual polish layer, loaded LAST.
+
+   This file only ADDS effects on top of the existing App/experimental/compact/
+   modern-polish stack. It intentionally does not change:
+     • color palette (uses existing --cm-* tokens)
+     • layout (no widths, no grid template changes)
+     • navigation structure
+
+   Performance rules followed everywhere in this file:
+     • animations use only  transform / opacity / filter / box-shadow / background-position
+     • no backdrop-filter on large surfaces (kept only where it already existed)
+     • all motion gated by prefers-reduced-motion: no-preference
+     • large animated layers get an explicit prefers-reduced-motion: reduce off-switch
+     • decorative pseudo-layers use pointer-events: none and never intercept clicks
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1. Extra design tokens
+   These do not override anything — they add a scale for shadows / motion /
+   radii that the rest of this file consumes.
+   ========================================================================== */
+
+:root {
+  --dr-radius-xs: 8px;
+  --dr-radius-sm: 12px;
+  --dr-radius-md: 16px;
+  --dr-radius-lg: 20px;
+  --dr-radius-xl: 24px;
+  --dr-radius-pill: 999px;
+
+  /* Layered shadows: ambient soft glow + hard-contact shadow.
+     Kept dark-friendly (dark theme dominates the app). */
+  --dr-shadow-1:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 8px 24px rgba(0, 0, 0, 0.22);
+  --dr-shadow-2:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 2px 6px rgba(0, 0, 0, 0.28),
+    0 14px 40px rgba(0, 0, 0, 0.32);
+  --dr-shadow-3:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 4px 10px rgba(0, 0, 0, 0.32),
+    0 24px 60px rgba(0, 0, 0, 0.42);
+
+  /* Accent glow around interactive elements (focus rings, primary btns). */
+  --dr-accent-glow: 0 0 0 3px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+  --dr-accent-glow-lg: 0 8px 28px color-mix(in srgb, var(--cm-accent) 38%, transparent);
+
+  /* Motion curves. */
+  --dr-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dr-ease-in-out: cubic-bezier(0.6, 0.05, 0.4, 1);
+  --dr-ease-bounce: cubic-bezier(0.34, 1.35, 0.64, 1);
+
+  /* Two-stop accent gradient reused in many places. */
+  --dr-accent-gradient: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cm-accent) 100%, transparent) 0%,
+    color-mix(in srgb, var(--cm-accent-violet) 100%, transparent) 100%
+  );
+}
+
+:root[data-theme='light'] {
+  --dr-shadow-1:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 1px 2px rgba(20, 24, 36, 0.06),
+    0 6px 18px rgba(20, 24, 36, 0.06);
+  --dr-shadow-2:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 2px 6px rgba(20, 24, 36, 0.08),
+    0 12px 32px rgba(20, 24, 36, 0.08);
+  --dr-shadow-3:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 4px 10px rgba(20, 24, 36, 0.1),
+    0 20px 48px rgba(20, 24, 36, 0.12);
+  --dr-accent-glow: 0 0 0 3px color-mix(in srgb, var(--cm-accent) 20%, transparent);
+  --dr-accent-glow-lg: 0 8px 28px color-mix(in srgb, var(--cm-accent) 24%, transparent);
+}
+
+
+/* ==========================================================================
+   2. Global tap / selection tweaks
+   ========================================================================== */
+
+.app-shell button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Nicer text selection colour — accent-tinted. */
+::selection {
+  background: color-mix(in srgb, var(--cm-accent) 42%, transparent);
+  color: var(--cm-text);
+}
+
+
+/* ==========================================================================
+   3. Sticky page headers — softer edge fade instead of a hard rectangle
+   The header itself already uses --nav-glass-bg + backdrop-filter. We
+   add a subtle bottom fade so the glass panel dissolves into the content
+   instead of ending with a visible flat edge.
+   ========================================================================== */
+
+.app-page-header {
+  border-radius: 0;
+}
+
+.app-page-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 8px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--cm-bg) 40%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+/* Same treatment for the greeting header on the home page. */
+.home2__header {
+  position: sticky;
+}
+
+.home2__header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 8px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--cm-bg) 40%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+
+/* ==========================================================================
+   4. Coin widget — subtle accent gradient + glow on interactive parts
+   ========================================================================== */
+
+.coin-widget {
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--cm-coin-bg) 100%, transparent) 0%,
+    color-mix(in srgb, var(--cm-coin-fg) 8%, var(--cm-surface)) 100%
+  );
+  border-color: color-mix(in srgb, var(--cm-coin-fg) 26%, var(--cm-border));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 4px 14px color-mix(in srgb, var(--cm-coin-fg) 14%, transparent);
+  transition:
+    transform 0.18s var(--dr-ease-out),
+    box-shadow 0.22s var(--dr-ease-out),
+    filter 0.18s var(--dr-ease-out);
+}
+
+@media (hover: hover) {
+  .coin-widget:hover {
+    filter: brightness(1.06);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.07) inset,
+      0 6px 20px color-mix(in srgb, var(--cm-coin-fg) 22%, transparent);
+  }
+}
+
+.coin-widget:active {
+  transform: scale(0.97);
+}
+
+
+/* ==========================================================================
+   5. Home hero — animated accent aurora inside the greeting card
+   Keeps existing structure/colours, only paints one soft radial blob that
+   very slowly drifts. GPU-friendly (transform only).
+   ========================================================================== */
+
+.home2__hero {
+  isolation: isolate;
+  border: 0.5px solid color-mix(in srgb, var(--cm-accent) 22%, var(--cm-border));
+  box-shadow: var(--dr-shadow-1);
+  contain: layout paint;
+}
+
+/*
+ * Kept strictly INSIDE the hero's rounded rectangle:
+ *   • the pseudo is sized 0..100% of the parent (no negative offsets),
+ *   • its background is a radial-gradient that fades to transparent well
+ *     before the pseudo's own edge, so nothing hard-clips against the
+ *     parent's rounded corners even though the parent intentionally
+ *     doesn't set overflow: hidden.
+ *   • motion is a small translate that never pushes the visible core of
+ *     the blob outside the container.
+ */
+.home2__hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 62%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 62% 40%,
+    color-mix(in srgb, var(--cm-accent-violet) 30%, transparent) 0%,
+    color-mix(in srgb, var(--cm-accent) 8%, transparent) 34%,
+    transparent 60%
+  );
+  opacity: 0.85;
+  border-radius: inherit;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home2__hero::before {
+    animation: dr-hero-drift 22s var(--dr-ease-in-out) infinite alternate;
+  }
+}
+
+@keyframes dr-hero-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-4%, 2%, 0); }
+}
+
+/* CTA row gets a soft press feedback + subtle top highlight. */
+.home2__hero-cta {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 4px 12px rgba(0, 0, 0, 0.18);
+  transition:
+    transform 0.16s var(--dr-ease-out),
+    box-shadow 0.2s var(--dr-ease-out),
+    border-color 0.2s var(--dr-ease-out);
+}
+
+@media (hover: hover) {
+  .home2__hero-cta:hover {
+    border-color: color-mix(in srgb, var(--cm-accent) 44%, var(--cm-border));
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 6px 20px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+  }
+}
+
+.home2__hero-cta:active {
+  transform: scale(0.985);
+}
+
+/* Balance pill in header — subtle inner sheen. */
+.home2__hero-balance {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 4px 14px color-mix(in srgb, var(--cm-accent) 18%, transparent);
+  transition: filter 0.2s var(--dr-ease-out), transform 0.16s var(--dr-ease-out);
+}
+
+@media (hover: hover) {
+  .home2__hero-balance:hover { filter: brightness(1.08); }
+}
+
+.home2__hero-balance:active { transform: scale(0.96); }
+
+
+/* ==========================================================================
+   6. Quick access tiles — polished icon buttons with soft press
+   ========================================================================== */
+
+.home2__quick-item {
+  transition:
+    transform 0.16s var(--dr-ease-out),
+    filter 0.2s var(--dr-ease-out);
+}
+
+.home2__quick-ico {
+  position: relative;
+  isolation: isolate;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 4px 10px rgba(0, 0, 0, 0.22);
+  transition:
+    transform 0.2s var(--dr-ease-bounce),
+    box-shadow 0.22s var(--dr-ease-out),
+    filter 0.2s var(--dr-ease-out);
+}
+
+/* Soft inner top-light on each tile — makes them read as glossy chips. */
+.home2__quick-ico::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0) 45%
+  );
+  mix-blend-mode: overlay;
+  opacity: 0.9;
+}
+
+:root[data-theme='light'] .home2__quick-ico::after {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0) 55%
+  );
+  mix-blend-mode: normal;
+  opacity: 0.6;
+}
+
+@media (hover: hover) {
+  .home2__quick-item:hover .home2__quick-ico {
+    transform: translate3d(0, -2px, 0);
+    filter: brightness(1.08);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 8px 22px rgba(0, 0, 0, 0.32);
+  }
+
+  .home2__quick-item:hover .home2__quick-label {
+    color: var(--cm-text);
+  }
+}
+
+.home2__quick-item:active .home2__quick-ico {
+  transform: scale(0.94);
+}
+
+
+/* ==========================================================================
+   7. News widget — inner ring highlight + softer dots + hover lift
+   ========================================================================== */
+
+.home-news-widget {
+  isolation: isolate;
+  box-shadow: var(--dr-shadow-2);
+  transition:
+    transform 0.2s var(--dr-ease-out),
+    box-shadow 0.22s var(--dr-ease-out);
+}
+
+/* Thin inner ring keeps the widget looking "framed" against dark bg. */
+.home-news-widget::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme='light'] .home-news-widget::before {
+  box-shadow:
+    inset 0 0 0 0.5px rgba(20, 24, 36, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+@media (hover: hover) {
+  .home-news-widget:hover {
+    transform: translate3d(0, -2px, 0);
+    box-shadow: var(--dr-shadow-3);
+  }
+}
+
+/* Softer progress dots with animated fill using existing rules — we
+   just adjust the base rail so it reads more like a chapter bar. */
+.home-news-widget__dot {
+  background: rgba(255, 255, 255, 0.14);
+  height: 3px;
+}
+
+
+/* ==========================================================================
+   8. "More" card (social links / feedback) — subtle top highlight
+   ========================================================================== */
+
+.home2__more-card {
+  position: relative;
+  isolation: isolate;
+  box-shadow: var(--dr-shadow-1);
+}
+
+.home2__more-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0) 40%
+  );
+}
+
+:root[data-theme='light'] .home2__more-card::before {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  opacity: 0.6;
+}
+
+.home2__social-btn,
+.home2__more-feedback {
+  transition:
+    transform 0.16s var(--dr-ease-out),
+    filter 0.2s var(--dr-ease-out),
+    box-shadow 0.22s var(--dr-ease-out);
+}
+
+.home2__social-btn {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
+}
+
+@media (hover: hover) {
+  .home2__social-btn:hover,
+  .home2__more-feedback:hover {
+    transform: translate3d(0, -2px, 0);
+    filter: brightness(1.08);
+  }
+
+  .home2__more-feedback:hover {
+    border-color: color-mix(in srgb, var(--cm-accent) 38%, var(--cm-border));
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--cm-accent) 20%, transparent);
+  }
+}
+
+.home2__social-btn:active,
+.home2__more-feedback:active {
+  transform: scale(0.96);
+}
+
+
+/* ==========================================================================
+   9. Catalog / hub cards — refined lift, gradient hover outline
+   Composes cleanly with modern-polish.css hover rules (adds outline glow,
+   doesn't clash with its transform).
+   ========================================================================== */
+
+.catalog-concept__card,
+.profile-hub__tile,
+.profile-hub__list-item {
+  position: relative;
+  isolation: isolate;
+  box-shadow: var(--dr-shadow-1);
+  transition:
+    transform 0.2s var(--dr-ease-out),
+    box-shadow 0.22s var(--dr-ease-out),
+    border-color 0.2s var(--dr-ease-out),
+    filter 0.2s var(--dr-ease-out);
+}
+
+/* Very subtle top-inside highlight — reads as a soft glass surface. */
+.catalog-concept__card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0) 42%
+  );
+  z-index: 0;
+}
+
+:root[data-theme='light'] .catalog-concept__card::before {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0) 55%
+  );
+  opacity: 0.55;
+}
+
+/* Bring real content above the ::before highlight (modern-polish already
+   uses ::after for the sheen sweep on hover, so those stack cleanly). */
+.catalog-concept__card > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (hover: hover) {
+  .catalog-concept__card:hover:not(.catalog-concept__card--locked) {
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 10px 26px color-mix(in srgb, var(--cm-accent) 26%, transparent);
+  }
+
+  .profile-hub__tile:hover,
+  .profile-hub__list-item:hover {
+    transform: translate3d(0, -2px, 0);
+    border-color: color-mix(in srgb, var(--cm-accent) 32%, var(--cm-border));
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--cm-accent) 14%, transparent);
+  }
+}
+
+
+/* ==========================================================================
+   10. Profile wallet card — animated accent shimmer stripe
+   Non-intrusive, sits behind content, GPU animated with transform.
+   ========================================================================== */
+
+.profile-hub__wallet {
+  isolation: isolate;
+  box-shadow: var(--dr-shadow-2);
+}
+
+.profile-hub__wallet::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 60%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--cm-coin-fg) 22%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translate3d(-100%, 0, 0) skewX(-14deg);
+  z-index: 0;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .profile-hub__wallet::before {
+    animation: dr-shimmer-slow 6s var(--dr-ease-in-out) 2s infinite;
+  }
+}
+
+@keyframes dr-shimmer-slow {
+  0%   { transform: translate3d(-100%, 0, 0) skewX(-14deg); opacity: 0; }
+  20%  { opacity: 0.6; }
+  60%  { transform: translate3d(240%, 0, 0) skewX(-14deg); opacity: 0.6; }
+  100% { transform: translate3d(240%, 0, 0) skewX(-14deg); opacity: 0; }
+}
+
+.profile-hub__wallet-topup {
+  transition:
+    transform 0.16s var(--dr-ease-out),
+    filter 0.2s var(--dr-ease-out),
+    box-shadow 0.22s var(--dr-ease-out);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--cm-accent) 20%, transparent);
+}
+
+@media (hover: hover) {
+  .profile-hub__wallet-topup:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--cm-accent) 30%, transparent);
+  }
+}
+
+.profile-hub__wallet-topup:active { transform: scale(0.96); }
+
+
+/* ==========================================================================
+   11. Subscription plan cards — animated accent border for popular / current
+   Uses conic-gradient rotated behind the card. Rendered on a compositor
+   layer via transform, cheap even on mobile.
+   ========================================================================== */
+
+.subscription-plan-card {
+  isolation: isolate;
+  transition:
+    transform 0.22s var(--dr-ease-out),
+    box-shadow 0.24s var(--dr-ease-out);
+}
+
+@media (hover: hover) {
+  .subscription-plan-card:hover {
+    transform: translate3d(0, -3px, 0);
+    box-shadow: var(--dr-shadow-2);
+  }
+}
+
+/*
+ * The card itself uses overflow: hidden (see App.css .subscription-plan-card)
+ * so painting an outer halo via a pseudo child is not possible without
+ * changing the base rule. Instead we paint a slow drifting radial glow
+ * INSIDE the card — behaves like an aurora tint on the highlighted plans.
+ * Rendered on the ::after slot which is unused for popular/current in the
+ * base stylesheet.
+ */
+.subscription-plan-card--popular::after,
+.subscription-plan-card--current::after {
+  content: '';
+  position: absolute;
+  top: -30%;
+  left: -10%;
+  width: 120%;
+  height: 160%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 30% 40%,
+    color-mix(in srgb, var(--cm-accent) 22%, transparent) 0%,
+    transparent 55%
+  );
+  opacity: 0.85;
+}
+
+.subscription-plan-card--current::after {
+  background: radial-gradient(
+    circle at 30% 40%,
+    color-mix(in srgb, var(--cm-plan-current-border) 22%, transparent) 0%,
+    transparent 55%
+  );
+}
+
+/* Keep all card content (positioned children) above the decorative aurora. */
+.subscription-plan-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .subscription-plan-card--popular::after,
+  .subscription-plan-card--current::after {
+    animation: dr-plan-drift 18s var(--dr-ease-in-out) infinite alternate;
+  }
+}
+
+@keyframes dr-plan-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-6%, 4%, 0) scale(1.08); }
+}
+
+
+/* ==========================================================================
+   12. Coin packs — clearer hover, gradient border on hover
+   ========================================================================== */
+
+.subscription-concept__coin-pack {
+  position: relative;
+  isolation: isolate;
+  transition:
+    transform 0.2s var(--dr-ease-out),
+    box-shadow 0.22s var(--dr-ease-out),
+    border-color 0.2s var(--dr-ease-out);
+  box-shadow: var(--dr-shadow-1);
+}
+
+@media (hover: hover) {
+  .subscription-concept__coin-pack:hover {
+    transform: translate3d(0, -2px, 0);
+    border-color: color-mix(in srgb, var(--cm-coin-fg) 45%, var(--cm-border));
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 10px 24px color-mix(in srgb, var(--cm-coin-fg) 22%, transparent);
+  }
+}
+
+
+/* ==========================================================================
+   13. Tabs & chips — soft active glow underneath
+   ========================================================================== */
+
+.catalog-concept__tab {
+  position: relative;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 1px 2px rgba(0, 0, 0, 0.14);
+}
+
+.catalog-concept__tab--active {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 4px 16px color-mix(in srgb, var(--cm-tab-active-border) 28%, transparent);
+}
+
+/* Underline flourish for the currently active filter tab. */
+.catalog-concept__tab--active::after {
+  content: '';
+  position: absolute;
+  left: 30%;
+  right: 30%;
+  bottom: -6px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--cm-tab-active-border) 90%, transparent),
+    transparent
+  );
+  opacity: 0.85;
+}
+
+.catalog-concept__available-toggle {
+  transition:
+    transform 0.16s var(--dr-ease-out),
+    background 0.2s var(--dr-ease-out),
+    border-color 0.2s var(--dr-ease-out),
+    box-shadow 0.22s var(--dr-ease-out);
+}
+
+.catalog-concept__available-toggle:active { transform: scale(0.96); }
+
+
+/* ==========================================================================
+   14. Search input — animated focus glow + softer icon
+   ========================================================================== */
+
+.catalog-concept__search {
+  transition:
+    border-color 0.2s var(--dr-ease-out),
+    box-shadow 0.22s var(--dr-ease-out),
+    background 0.2s var(--dr-ease-out);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 1px 2px rgba(0, 0, 0, 0.14);
+}
+
+.catalog-concept__search:focus-within {
+  border-color: color-mix(in srgb, var(--cm-accent) 55%, var(--cm-border));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--cm-accent) 18%, transparent),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 4px 18px color-mix(in srgb, var(--cm-accent) 16%, transparent);
+}
+
+.catalog-concept__search svg {
+  transition: color 0.2s var(--dr-ease-out), transform 0.2s var(--dr-ease-out);
+}
+
+.catalog-concept__search:focus-within svg {
+  color: var(--cm-accent);
+  transform: scale(1.05);
+}
+
+
+/* ==========================================================================
+   15. Icon buttons on page header — subtle hover ring
+   ========================================================================== */
+
+.home-concept__icon-btn,
+.app-page-header__side .catalog-concept__filter,
+.app-page-header__side .history-concept__action {
+  transition:
+    transform 0.16s var(--dr-ease-out),
+    background 0.2s var(--dr-ease-out),
+    color 0.2s var(--dr-ease-out),
+    box-shadow 0.22s var(--dr-ease-out);
+}
+
+@media (hover: hover) {
+  .home-concept__icon-btn:hover,
+  .app-page-header__side .catalog-concept__filter:hover,
+  .app-page-header__side .history-concept__action:hover {
+    background: color-mix(in srgb, var(--cm-accent) 12%, transparent);
+    color: var(--cm-text);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cm-accent) 14%, transparent);
+  }
+}
+
+
+/* ==========================================================================
+   16. Bottom nav — soft accent halo behind the active indicator
+   The indicator is already animated; we add a low-intensity ambient glow
+   that fades in on the active button so tapping is more tactile.
+   ========================================================================== */
+
+.bottom-nav__inner {
+  box-shadow: var(--nav-glass-shadow), 0 -1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.bottom-nav__inner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.14),
+    transparent
+  );
+  opacity: 0.7;
+}
+
+:root[data-theme='light'] .bottom-nav__inner::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(20, 24, 36, 0.14),
+    transparent
+  );
+  opacity: 0.5;
+}
+
+.nav-button--active::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  z-index: -1;
+  border-radius: 14px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 60%,
+    color-mix(in srgb, var(--cm-accent) 24%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+
+/* ==========================================================================
+   17. App notifications (`.app-notice`) — slide + fade entrance
+   ========================================================================== */
+
+.app-notice {
+  box-shadow: var(--dr-shadow-2);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-notice {
+    animation: dr-notice-in 0.32s var(--dr-ease-out) both;
+  }
+}
+
+@keyframes dr-notice-in {
+  from { opacity: 0; transform: translate3d(-50%, 14px, 0); }
+  to   { opacity: 1; transform: translate3d(-50%, 0, 0); }
+}
+
+
+/* ==========================================================================
+   18. Confirmation dialog — scale-fade enter
+   Only applied to `.app-confirm` (basic confirmation dialogs that currently
+   have no enter animation). `PlanDetailModal` intentionally keeps its own
+   handcrafted transition and is left untouched here to avoid a jarring
+   double-transition on the same panel.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-confirm {
+    animation: dr-backdrop-in 0.22s ease-out both;
+  }
+
+  .app-confirm__panel {
+    animation: dr-dialog-in 0.26s var(--dr-ease-out) both;
+    box-shadow: var(--dr-shadow-3);
+  }
+}
+
+@keyframes dr-dialog-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.98); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes dr-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Always give the confirm panel a proper elevated shadow, even without motion. */
+.app-confirm__panel {
+  box-shadow: var(--dr-shadow-3);
+}
+
+
+/* ==========================================================================
+   19. Loading skeletons / spinners — shimmer polish
+   Any element the app already uses as a skeleton (has class `.skeleton`,
+   `.loading-shimmer` or `[aria-busy="true"]` block) gets a nicer sweep.
+   Safe: if no such element exists, nothing renders.
+   ========================================================================== */
+
+.skeleton,
+.loading-shimmer,
+[data-skeleton='true'] {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--cm-surface) 90%, var(--cm-bg));
+}
+
+.skeleton::after,
+.loading-shimmer::after,
+[data-skeleton='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--cm-text) 6%, transparent) 50%,
+    transparent 100%
+  );
+  transform: translate3d(-100%, 0, 0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton::after,
+  .loading-shimmer::after,
+  [data-skeleton='true']::after {
+    animation: dr-skeleton-sweep 1.4s linear infinite;
+  }
+}
+
+@keyframes dr-skeleton-sweep {
+  to { transform: translate3d(100%, 0, 0); }
+}
+
+
+/* ==========================================================================
+   20. Focus-visible — a single consistent focus ring for keyboard users
+   Only fires on focus-visible (keyboard nav), so mouse users don't see it.
+   ========================================================================== */
+
+.app-shell button:focus-visible,
+.app-shell a:focus-visible,
+.app-shell [role='button']:focus-visible,
+.app-shell input:focus-visible,
+.app-shell textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--dr-accent-glow);
+}
+
+
+/* ==========================================================================
+   21. Info hub FAQ — smoother expand indicator
+   ========================================================================== */
+
+.info-hub__faq-item {
+  transition:
+    background 0.22s var(--dr-ease-out),
+    border-color 0.22s var(--dr-ease-out),
+    box-shadow 0.22s var(--dr-ease-out);
+}
+
+.info-hub__faq-item--open {
+  border-color: color-mix(in srgb, var(--cm-accent) 32%, var(--cm-border));
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--cm-accent) 12%, transparent);
+}
+
+
+/* ==========================================================================
+   22. Global performance / reduced-motion safety net
+   Any decorative pseudo-layer added above is turned off here for people who
+   prefer less motion, and for hosts we already know are heavy (Telegram
+   Desktop fullscreen keeps other effects lighter).
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .home2__hero::before,
+  .profile-hub__wallet::before,
+  .subscription-plan-card--popular::after,
+  .subscription-plan-card--current::after,
+  .skeleton::after,
+  .loading-shimmer::after,
+  [data-skeleton='true']::after {
+    animation: none !important;
+  }
+
+  .app-notice,
+  .app-confirm,
+  .app-confirm__panel {
+    animation: none !important;
+  }
+}
+
+/* Telegram Desktop fullscreen: skip the heaviest ambient blobs added here. */
+html[data-tg-layout='desktop-full'] .home2__hero::before,
+html[data-tg-layout='desktop-full'] .profile-hub__wallet::before {
+  display: none;
+}
+
+
+/* ==========================================================================
+   23. Light theme micro-refinements
+   Existing tokens already flip well; we just soften a few shadow layers.
+   ========================================================================== */
+
+:root[data-theme='light'] .home2__quick-ico {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 3px 8px rgba(20, 24, 36, 0.06);
+}
+
+:root[data-theme='light'] .catalog-concept__card {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 4px 14px rgba(20, 24, 36, 0.06);
+}
+
+:root[data-theme='light'] .bottom-nav__inner::before {
+  opacity: 0.4;
+}
