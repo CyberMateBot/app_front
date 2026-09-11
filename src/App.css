@@ -653,25 +653,23 @@
 
 .home2__mid {
   display: grid;
-  /* Wider photo column so a 3:4 card is ~300px tall on a phone —
-     the same height the widget had when it stretched to quick-access. */
-  grid-template-columns: minmax(0, 1fr) minmax(120px, 36%);
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 46%);
+  align-items: stretch;
   gap: 10px;
+  min-height: 360px;
   margin-bottom: 14px;
-  overflow: visible;
 }
 
 .home2__mid .home-news-widget {
-  /* Exact 3:4 frame (same as admin crop) sized from column width.
-     `cover` then fills the card with no letterbox and no extra crop. */
-  align-self: start;
+  /* Original column width. Height grows downward (360px) instead of
+     widening the card. Photo still `cover`s the frame — no side bars. */
+  align-self: stretch;
   width: 100%;
-  height: 0;
-  padding-bottom: calc(100% * 4 / 3);
-  min-height: 0;
+  height: 100%;
+  min-height: 360px;
   max-height: none;
   aspect-ratio: auto;
+  padding-bottom: 0;
   margin: 0;
 }
 
@@ -683,8 +681,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 0;
-  align-self: stretch;
+  min-height: 360px;
 }
 
 .home2__quick .home2__section-label {
