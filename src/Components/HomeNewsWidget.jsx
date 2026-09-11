@@ -100,27 +100,29 @@ export default function HomeNewsWidget({ slides }) {
                     aria-hidden={index !== current}
                 >
                     {slide.imageUrl && !brokenImageIds.has(slide.id) ? (
-                        <img
-                            className="home-news-widget__slide-image"
-                            src={slide.imageUrl}
-                            alt=""
-                            draggable={false}
-                            loading={index === 0 ? 'eager' : 'lazy'}
-                            decoding="async"
-                            // If the photo fails to load (broken link, blocked
-                            // request...) fall back to the gradient instead of
-                            // leaving an empty "frame" with a broken-image icon.
-                            onError={() => {
-                                setBrokenImageIds((prev) => {
-                                    if (prev.has(slide.id)) {
-                                        return prev;
-                                    }
-                                    const next = new Set(prev);
-                                    next.add(slide.id);
-                                    return next;
-                                });
-                            }}
-                        />
+                        <div className="home-news-widget__slide-media">
+                            <img
+                                className="home-news-widget__slide-image"
+                                src={slide.imageUrl}
+                                alt=""
+                                draggable={false}
+                                loading={index === 0 ? 'eager' : 'lazy'}
+                                decoding="async"
+                                // If the photo fails to load (broken link, blocked
+                                // request...) fall back to the gradient instead of
+                                // leaving an empty "frame" with a broken-image icon.
+                                onError={() => {
+                                    setBrokenImageIds((prev) => {
+                                        if (prev.has(slide.id)) {
+                                            return prev;
+                                        }
+                                        const next = new Set(prev);
+                                        next.add(slide.id);
+                                        return next;
+                                    });
+                                }}
+                            />
+                        </div>
                     ) : (
                         <div className="home-news-widget__slide-bg" style={{ background: slide.background }} />
                     )}
