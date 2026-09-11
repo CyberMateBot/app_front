@@ -532,7 +532,7 @@ html[data-tg-layout='desktop-full'] .home2__mid .home-news-widget {
 }
 
 html[data-tg-layout='desktop-full'] .home2__mid {
-  grid-template-columns: minmax(0, 1.3fr) minmax(160px, 34%);
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 32%);
   gap: 14px;
   min-height: 0;
   overflow: visible;

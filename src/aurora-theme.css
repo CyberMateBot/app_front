@@ -755,6 +755,10 @@
   overflow: hidden;
 }
 
+.home2__mid {
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 36%);
+}
+
 .home2__mid .home-news-widget,
 html[data-tg-layout='desktop-full'] .home2__mid .home-news-widget,
 html[data-tg-fullscreen='1'] .home2__mid .home-news-widget {
