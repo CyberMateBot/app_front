@@ -523,21 +523,24 @@ html[data-tg-layout='desktop-full'] .home2__mid .home-news-widget {
   flex: unset;
   align-self: start;
   width: 100%;
-  height: auto;
+  height: 0;
+  padding-bottom: calc(100% * 4 / 3);
   min-height: 0;
   max-height: none;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: auto;
   margin-bottom: 0;
 }
 
 html[data-tg-layout='desktop-full'] .home2__mid {
   grid-template-columns: minmax(0, 1.3fr) minmax(160px, 34%);
   gap: 14px;
-  min-height: 400px;
+  min-height: 0;
+  overflow: visible;
 }
 
 html[data-tg-layout='desktop-full'] .home2__quick {
-  min-height: 400px;
+  min-height: 0;
+  align-self: stretch;
 }
 
 html[data-tg-layout='desktop-full'] .home2__quick-ico {

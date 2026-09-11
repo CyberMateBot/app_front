@@ -657,18 +657,23 @@
   align-items: start;
   gap: 10px;
   margin-bottom: 14px;
+  overflow: visible;
 }
 
 .home2__mid .home-news-widget {
-  /* Same 3:4 frame as the admin cropper. Stretching this card to the
-     quick-access column used to make it taller than 3:4, so a photo
-     cropped in admin was cropped AGAIN on the phone. */
+  /* 3:4 via padding-bottom, not `aspect-ratio` + `min-height: 0`.
+     On a grid item, `min-height: 0` lets the row shrink to the
+     shorter quick-access column; the card then overflows and the
+     "Ещё" block paints over its bottom corner. Percentage padding
+     is always based on the column width, so the row grows to the
+     full poster and the next section starts below it. */
   align-self: start;
   width: 100%;
-  height: auto;
+  height: 0;
+  padding-bottom: calc(100% * 4 / 3);
   min-height: 0;
   max-height: none;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: auto;
   margin: 0;
 }
 
@@ -680,7 +685,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 300px;
+  min-height: 0;
+  align-self: stretch;
 }
 
 .home2__quick .home2__section-label {
