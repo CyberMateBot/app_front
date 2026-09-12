@@ -61,10 +61,23 @@ function isRecentTimestamp(value, maxAgeMs) {
 }
 
 function walletTransactionId(tx, index) {
+    // Prefer a stable server-issued id. If missing, fall back to a
+    // deterministic fingerprint (type + created_at + amount) so the same
+    // transaction produces the same notification id across app launches.
+    // The old fallback used `index` which meant deleting an older tx
+    // would rename every subsequent notification and make them all pop
+    // as unread again — the exact bug users hit ("каждый заход в апку
+    // уведомление о покупке подписки появляется заново").
     return String(
         tx?.id
         ?? tx?.transaction_id
-        ?? `${tx?.type ?? 'tx'}-${tx?.created_at ?? tx?.date ?? index}`,
+        ?? [
+            tx?.type ?? 'tx',
+            tx?.created_at ?? tx?.date ?? '',
+            tx?.amount ?? '',
+            tx?.reason ?? tx?.description ?? '',
+        ].join('|')
+        ?? `idx-${index}`,
     );
 }
 
@@ -168,8 +181,14 @@ export function buildAppNotifications({
             && subscription.started_at
             && isRecentTimestamp(subscription.started_at, RECENT_SUBSCRIPTION_MS)
         ) {
+            // Key the notification only on plan id + calendar day, not on
+            // the raw ISO timestamp. Backend sometimes returns started_at
+            // with a slightly different resolution between calls (ms vs
+            // s), which would give a fresh id every reload and re-mark
+            // the "activated" notice as unread on every app launch.
+            const startedDay = String(subscription.started_at).slice(0, 10);
             items.push({
-                id: `subscription-started-${subscription.plan_id}-${subscription.started_at}`,
+                id: `subscription-started-${subscription.plan_id}-${startedDay}`,
                 type: 'subscription-purchase',
                 title: language === 'ru' ? 'Подписка активирована' : 'Subscription activated',
                 message: language === 'ru'

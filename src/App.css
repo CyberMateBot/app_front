@@ -5016,6 +5016,30 @@
   border: 0.5px solid var(--cm-border);
 }
 
+/* Catalog defines 7 accents (violet/green/pink/gold/blue/teal/red) but
+   history-concept__thumb was missing --blue / --teal / --red — so tools
+   whose visual accent is one of those (image, audio, 3d models) rendered
+   with a transparent background in history while the same icon in the
+   catalog got a properly-tinted tile. Users perceived this as "icons look
+   different in catalog vs history". Mirror the catalog palette here. */
+.history-concept__thumb--blue {
+  background: var(--cm-icon-blue-bg);
+  color: var(--cm-icon-blue-fg);
+  border: 0.5px solid var(--cm-border);
+}
+
+.history-concept__thumb--teal {
+  background: var(--cm-icon-teal-bg);
+  color: var(--cm-icon-teal-fg);
+  border: 0.5px solid var(--cm-border);
+}
+
+.history-concept__thumb--red {
+  background: var(--cm-icon-red-bg);
+  color: var(--cm-icon-red-fg);
+  border: 0.5px solid var(--cm-border);
+}
+
 .history-concept__info {
   flex: 1;
   min-width: 0;
@@ -6826,8 +6850,12 @@
   align-items: flex-end;
   width: 100%;
   box-sizing: border-box;
-  padding-left: max(var(--page-pad-x, 12px), env(safe-area-inset-left, 0px));
-  padding-right: max(var(--page-pad-x, 12px), env(safe-area-inset-right, 0px));
+  /* Small breathing room but hug the screen edges — the previous 12–16px
+     side padding left visible "transparent stripes" on either side of the
+     pill that the user flagged on phones. 4px is enough to keep the pill
+     from touching the OS gesture zone while eliminating those stripes. */
+  padding-left: max(4px, env(safe-area-inset-left, 0px));
+  padding-right: max(4px, env(safe-area-inset-right, 0px));
   padding-bottom: max(8px, var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
   background: transparent;
   border: none;

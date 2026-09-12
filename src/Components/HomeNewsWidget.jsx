@@ -79,18 +79,17 @@ export default function HomeNewsWidget({ slides }) {
                 restartAuto();
             }}
         >
+            {/* Single progress bar for the current slide. Restart the CSS
+                animation on slide change by keying the fill element on `current`
+                — React re-mounts the node, resetting the animation to 0%. */}
             <div className="home-news-widget__dots" aria-hidden="true">
-                {slides.map((slide, index) => (
+                <div className="home-news-widget__dot home-news-widget__dot--active">
                     <div
-                        key={slide.id}
-                        className={`home-news-widget__dot${index < current ? ' home-news-widget__dot--done' : ''}${index === current ? ' home-news-widget__dot--active' : ''}`}
-                    >
-                        <div
-                            className="home-news-widget__dot-fill"
-                            style={index === current ? { animationDuration: `${SLIDE_DURATION_MS}ms` } : undefined}
-                        />
-                    </div>
-                ))}
+                        key={current}
+                        className="home-news-widget__dot-fill"
+                        style={{ animationDuration: `${SLIDE_DURATION_MS}ms` }}
+                    />
+                </div>
             </div>
 
             {slides.map((slide, index) => (

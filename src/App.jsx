@@ -32,7 +32,6 @@ import {
     Paperclip,
     Plus,
     Search,
-    Settings,
     Send,
     Square,
     Trash2,
@@ -105,7 +104,12 @@ import { readImageReferenceFile, readVideoReferenceFile } from './lib/readMediaF
 import MediaReferenceField from './Components/MediaReferenceField.jsx';
 import { createChatSessionId } from './lib/chatSession.js';
 import { downloadMediaUrl, guessMediaFilename } from './lib/downloadMedia.js';
-import { clearMediaSession, loadMediaSession, saveMediaSession } from './lib/mediaSessions.js';
+import {
+    clearMediaSession,
+    loadLastUsedSession,
+    loadMediaSession,
+    saveMediaSession,
+} from './lib/mediaSessions.js';
 import {
     resolveAudioSessionState,
     resolveChatSessionState,
@@ -6113,6 +6117,18 @@ function App() {
         [historyItems],
     );
 
+    // Tracks the last AI screen the user touched (via `saveMediaSession`).
+    // Refreshed whenever we land on home so the greeting CTA reflects the
+    // truth right after the user comes back from a generation flow. We
+    // don't use useSyncExternalStore because the write happens synchronously
+    // right before navigation to home in nearly every real path.
+    const [homeLastUsedSession, setHomeLastUsedSession] = useState(() => loadLastUsedSession());
+    useEffect(() => {
+        if (currentPage === 'home') {
+            setHomeLastUsedSession(loadLastUsedSession());
+        }
+    }, [currentPage]);
+
     const homeHistoryLabelParams = useMemo(() => ({
         effectiveTextModels,
         textModelSelectorItems,
@@ -6135,7 +6151,73 @@ function App() {
         text,
     ]);
 
+    // Resolve a human-friendly label for a last-used-session pointer.
+    // Falls back through: text model → image model → video model → audio
+    // model → generic "AI" label so an unknown/legacy model id still gets
+    // a sensible name instead of a raw slug.
+    const resolveLastUsedLabel = useCallback((session) => {
+        if (!session || !session.kind) {
+            return null;
+        }
+
+        const modelId = String(session.modelId || '').toLowerCase();
+
+        if (session.kind === 'chat' && modelId) {
+            return getModelLabel(effectiveTextModels, modelId, textModelSelectorItems)
+                || text.chatTitle;
+        }
+
+        if (session.kind === 'image' && modelId) {
+            const def = IMAGE_MODEL_DEFINITIONS.find((m) => m.id === modelId);
+            if (def) {
+                const item = getMediaSelectorItemForModelId(imageModelSelectorItems, def.id);
+                if (item?.type === 'tiered') {
+                    return getImageSelectorChipLabel(item, text);
+                }
+                return text[def.nameKey] || def.id;
+            }
+        }
+
+        if (session.kind === 'video' && modelId) {
+            const def = VIDEO_MODEL_DEFINITIONS.find((m) => m.id === modelId);
+            if (def) {
+                const item = getMediaSelectorItemForModelId(videoModelSelectorItems, def.id);
+                if (item?.type === 'tiered') {
+                    return getVideoSelectorChipLabel(item, text);
+                }
+                return text[def.nameKey] || def.id;
+            }
+        }
+
+        if (session.kind === 'audio' && modelId) {
+            const def = AUDIO_MODEL_DEFINITIONS.find((m) => m.id === modelId);
+            if (def) {
+                const item = getMediaSelectorItemForModelId(audioModelSelectorItems, def.id);
+                if (item?.type === 'tiered') {
+                    return getAudioSelectorChipLabel(item, text);
+                }
+                return text[def.nameKey] || def.id;
+            }
+        }
+
+        return null;
+    }, [
+        effectiveTextModels,
+        textModelSelectorItems,
+        imageModelSelectorItems,
+        videoModelSelectorItems,
+        audioModelSelectorItems,
+        text,
+    ]);
+
     const homeContinueModelLabel = useMemo(() => {
+        // Prefer the last-used AI screen so the label matches where the
+        // CTA will actually route the user.
+        const lastLabel = resolveLastUsedLabel(homeLastUsedSession);
+        if (lastLabel) {
+            return lastLabel;
+        }
+
         if (homeContinueTopic) {
             return getHistoryTopicLabel({
                 topic: homeContinueTopic,
@@ -6144,14 +6226,21 @@ function App() {
         }
 
         return getModelLabel(effectiveTextModels, textModel, textModelSelectorItems) || text.chatTitle;
-    }, [homeContinueTopic, homeHistoryLabelParams, effectiveTextModels, textModel, textModelSelectorItems, text.chatTitle]);
+    }, [homeLastUsedSession, resolveLastUsedLabel, homeContinueTopic, homeHistoryLabelParams, effectiveTextModels, textModel, textModelSelectorItems, text.chatTitle]);
 
     const homeContinueTitle = useMemo(() => {
-        const template = homeContinueTopic ? text.homeContinueWith : text.homeContinueStart;
+        const hasLast = Boolean(homeLastUsedSession?.kind && resolveLastUsedLabel(homeLastUsedSession));
+        const hasTopic = Boolean(homeContinueTopic);
+        const template = (hasLast || hasTopic) ? text.homeContinueWith : text.homeContinueStart;
         return formatTemplate(template, { model: homeContinueModelLabel });
-    }, [homeContinueTopic, text.homeContinueWith, text.homeContinueStart, homeContinueModelLabel]);
+    }, [homeLastUsedSession, resolveLastUsedLabel, homeContinueTopic, text.homeContinueWith, text.homeContinueStart, homeContinueModelLabel]);
 
     const homeContinueSubtitle = useMemo(() => {
+        if (homeLastUsedSession?.savedAt) {
+            return formatTemplate(text.homeContinueSub, {
+                time: formatRelativeTime(new Date(homeLastUsedSession.savedAt).toISOString(), language),
+            });
+        }
         if (homeContinueTopic?.latestAt) {
             return formatTemplate(text.homeContinueSub, {
                 time: formatRelativeTime(homeContinueTopic.latestAt, language),
@@ -6159,15 +6248,49 @@ function App() {
         }
 
         return text.homeContinueEmptySub;
-    }, [homeContinueTopic, text.homeContinueSub, text.homeContinueEmptySub, language]);
+    }, [homeLastUsedSession, homeContinueTopic, text.homeContinueSub, text.homeContinueEmptySub, language]);
 
     const handleHomeContinueClick = () => {
+        // Priority 1: reopen the most recently touched AI screen — even if
+        // the user hasn't yet produced a persisted history record (e.g.
+        // opened image gen, typed a prompt, closed without submitting).
+        // The last-used pointer is written by `saveMediaSession`, which is
+        // called from every media/chat effect that persists prompt/messages.
+        const last = homeLastUsedSession || loadLastUsedSession();
+        if (last && last.kind) {
+            const FRESH_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+            const isFresh = !last.savedAt || (Date.now() - last.savedAt) < FRESH_MS;
+
+            if (isFresh) {
+                if (last.kind === 'image' && last.modelId) {
+                    openAiImage(last.modelId, 'home');
+                    return;
+                }
+                if (last.kind === 'video' && last.modelId) {
+                    openAiVideo(last.modelId, 'home');
+                    return;
+                }
+                if (last.kind === 'audio' && last.modelId) {
+                    openAiVoice(last.modelId, 'home');
+                    return;
+                }
+                if (last.kind === 'chat' && last.modelId) {
+                    openAiChat(last.modelId, 'home');
+                    return;
+                }
+            }
+        }
+
+        // Priority 2: fall back to the most recent history topic — this is
+        // the previous behaviour and still covers users on a fresh device
+        // whose sessions were only ever saved on the backend.
         if (homeContinueTopic) {
             openHistoryTopic(homeContinueTopic);
             return;
         }
 
-            openAiChat(textModel, 'home');
+        // Priority 3: cold-start — just open the currently-selected chat.
+        openAiChat(textModel, 'home');
     };
 
     const handleHomeSocialTelegram = async () => {
@@ -6198,17 +6321,11 @@ function App() {
                         }}
                         onMarkRead={handleMarkNotificationsRead}
                     />
-                    <button
-                        type="button"
-                        className="home-concept__icon-btn"
-                        aria-label={text.settingsTitle}
-                        onClick={() => {
-                            setSettingsReturnPage('home');
-                            setCurrentPage('settings');
-                        }}
-                    >
-                        <Settings size={22} />
-                    </button>
+                    {/* Settings entry removed (Sep 2026): documents already
+                        live in profile and the language toggle was the only
+                        other item — users asked for the section to go away.
+                        Language selection still works via the ?lang= URL
+                        param and Telegram's own locale detection. */}
                 </div>
             </header>
 
@@ -7720,19 +7837,8 @@ function App() {
                     title={text.profileTitle}
                     onBack={() => setCurrentPage('home')}
                     backLabel={text.back}
-                    trailing={(
-                    <button
-                        type="button"
-                            className="app-page-header__action"
-                        aria-label={text.settingsTitle}
-                        onClick={() => {
-                            setSettingsReturnPage('profile');
-                            setCurrentPage('settings');
-                        }}
-                    >
-                        <Settings size={18} aria-hidden="true" />
-                    </button>
-                    )}
+                    /* Settings icon removed — see comment on the home header
+                       for context. */
                 />
 
                 <div className="profile-hub__hero">
