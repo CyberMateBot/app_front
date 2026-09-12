@@ -1427,18 +1427,20 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
   box-shadow: 0 2px 6px rgba(3, 5, 20, 0.28);
 }
 
-/* "Current plan" modifier — must NOT override the plan-color border,
-   otherwise every current plan is repainted with the mint/teal
-   turquoise from `--cm-plan-current-border`. Previously that made
-   the Business card's border appear turquoise instead of rose, which
-   the user flagged. Keep the plan tint (border-color declared by
-   `--free/--basic/--max/--biz/--popular` above) and instead layer a
-   soft outer ring + slightly lifted shadow to signal "this is your
-   plan". */
+/* "Current plan" modifier — must NOT introduce any new hue, or every
+   current plan is repainted with the mint/teal turquoise that used to
+   live in `--cm-plan-current-border` / `--cm-plan-current-glow`. The
+   previous fix removed the border-color override but still added a
+   turquoise-tinted box-shadow ring, which is exactly what the user
+   kept seeing as a "turquoise obvodka" on the Business card. Signal
+   "this is your plan" with a purely neutral (white) ring + a plain
+   dark lift-shadow — zero color of its own, so the plan's own border
+   color (declared by --free/--basic/--max/--biz/--popular above)
+   remains the only color anyone sees. */
 .subscription-plan-card--current {
   box-shadow:
-    0 0 0 2px rgba(94, 234, 212, 0.32),
-    0 24px 54px var(--cm-plan-current-glow);
+    0 0 0 2px rgba(255, 255, 255, 0.24),
+    0 24px 54px rgba(3, 5, 20, 0.4);
 }
 
 .subscription-plan-card__btn {
@@ -1759,6 +1761,42 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
 /* ==========================================================================
    22. History list — cleaner separators
    ========================================================================== */
+
+/* Reliable nav-bar clearance for the history scroller.
+   The previous fix only padded `.history-screen--concept` (the content
+   *inside* the scroller) by 32px + safe-area, banking on `.app-main`'s
+   own `height: calc(... - var(--nav-bar-height))` to already carve out
+   the nav's footprint. That double-accounting is fragile — it only
+   works if the JS-measured `--nav-bar-height` custom property has
+   already been written to the DOM by the time layout runs, and any
+   drift (first paint before the ResizeObserver fires, iOS dynamic
+   viewport quirks, etc.) leaves the last chat sitting exactly behind
+   the fixed nav with no way to scroll further, because the *scroll
+   container itself* never reserved that space.
+
+   The catalog page already solved this correctly: its scroll element
+   (`.catalog-concept__scroll`) carries the nav reservation directly as
+   its own `padding-bottom` — `nav-bar-height + safe-area + 48px` — so
+   the reserved space is baked into the scrollable content itself and
+   can never be "lost". Mirror that here: stop subtracting
+   `--nav-bar-height` from `.app-main`'s height for the history page
+   (let it take the full viewport, like catalog does) and move the
+   real reservation onto `.app-page-transition`, the actual scroller. */
+.app-shell[data-page='history'] .app-main {
+  height: calc(
+    max(var(--app-height, 100dvh), 100dvh)
+    - var(--page-pad-top, 0px)
+    - var(--page-pad-bottom, env(safe-area-inset-bottom, 0px))
+  );
+}
+
+.app-shell[data-page='history'] .app-page-transition {
+  padding-bottom: calc(
+    var(--nav-bar-height, 80px)
+    + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px))
+    + 48px
+  );
+}
 
 .history-concept__item {
   border-radius: 16px;
