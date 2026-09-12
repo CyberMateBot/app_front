@@ -166,6 +166,7 @@ import AppPageHeader from './Components/AppPageHeader.jsx';
 import CoinBalanceWidget from './Components/CoinBalanceWidget.jsx';
 import CoinIcon from './Components/CoinIcon.jsx';
 import HomeNewsWidget from './Components/HomeNewsWidget.jsx';
+import BrandLogo from './Components/BrandLogo.jsx';
 import AiVariantSelect from './Components/AiVariantSelect.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
 import MediaMessageBubble from './Components/MediaMessageBubble.jsx';
@@ -6307,15 +6308,12 @@ function App() {
         <section className="home-screen home-screen--concept home2" aria-label={text.navHome}>
             <header className="home2__header">
                 <div className="home2__brand">
-                    {/* New chrome-lettered CyberMate wordmark — the brand
-                        name is already inside the image, so the sibling
-                        text span was removed. `alt` still carries the
-                        readable name for screen readers. */}
-                    <img
-                        className="home2__brand-logo home2__brand-logo--wordmark"
-                        src="/logo-cm.png"
-                        alt={text.homeBrandName}
-                    />
+                    {/* Inline-SVG brand mark — see BrandLogo.jsx. The
+                        previous chrome-JPG logo was flagged as "clashing
+                        with the app design"; this variant pulls the app's
+                        own aurora palette (cyan → violet → mint) so it
+                        reads as part of the visual system. */}
+                    <BrandLogo unique="home" title={text.homeBrandName} />
                 </div>
                 <div className="home2__header-actions">
                     <AppNotifications

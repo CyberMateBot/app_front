@@ -1427,10 +1427,17 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
   box-shadow: 0 2px 6px rgba(3, 5, 20, 0.28);
 }
 
+/* "Current plan" modifier — must NOT override the plan-color border,
+   otherwise every current plan is repainted with the mint/teal
+   turquoise from `--cm-plan-current-border`. Previously that made
+   the Business card's border appear turquoise instead of rose, which
+   the user flagged. Keep the plan tint (border-color declared by
+   `--free/--basic/--max/--biz/--popular` above) and instead layer a
+   soft outer ring + slightly lifted shadow to signal "this is your
+   plan". */
 .subscription-plan-card--current {
-  border-color: var(--cm-plan-current-border);
   box-shadow:
-    0 0 0 1px rgba(94, 234, 212, 0.30) inset,
+    0 0 0 2px rgba(94, 234, 212, 0.32),
     0 24px 54px var(--cm-plan-current-glow);
 }
 

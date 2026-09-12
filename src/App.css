@@ -473,58 +473,74 @@
 .home2__brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
-  /* Logo alone is the whole brand cell now (name span removed — it's
-     part of the image). Allow the row to grow so the wordmark can take
-     its natural width up to the header inner width. */
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
-.home2__brand-logo {
-  display: block;
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-/* Full CyberMate wordmark (chrome lettering on a black JPG background).
-   `mix-blend-mode: screen` maps the black bg to transparent while
-   preserving the metallic highlights — result reads as a clean lettered
-   logo floating on the aurora. Drop-shadow gives depth so the chrome
-   doesn't disappear on lighter regions of the gradient. */
-.home2__brand-logo--wordmark {
-  width: auto;
-  height: 34px;
-  max-width: min(220px, 62vw);
-  mix-blend-mode: screen;
-  filter:
-    drop-shadow(0 0 6px rgba(125, 211, 252, 0.28))
-    drop-shadow(0 2px 8px rgba(3, 5, 20, 0.55));
-  transition: filter 0.25s ease, transform 0.25s ease;
-}
-
-.home2__brand-logo--wordmark:hover {
-  filter:
-    drop-shadow(0 0 10px rgba(125, 211, 252, 0.42))
-    drop-shadow(0 2px 10px rgba(3, 5, 20, 0.5));
-  transform: translateY(-0.5px);
-}
-
-/* Light theme: `screen` on a light bg leaves the black JPG bg looking
-   grey/washed. Swap to `multiply` (inverse math) — black stays,
-   highlights blend into the light page cleanly enough. */
-:root[data-theme='light'] .home2__brand-logo--wordmark {
-  mix-blend-mode: multiply;
-  filter: drop-shadow(0 2px 6px rgba(20, 24, 36, 0.28));
-}
-
-/* Legacy brand-name span removed from the DOM; keep the class defined
-   in case older cached HTML still references it, but hide it so no
-   duplicate text appears next to the wordmark logo. */
+/* Legacy IMG-based logo classes — kept in case older cached HTML
+   references them, but hidden. The new logo is rendered by
+   Components/BrandLogo.jsx. */
+.home2__brand-logo,
+.home2__brand-logo--wordmark,
 .home2__brand-name {
   display: none;
+}
+
+/* ---------------------------------------------------------------------
+   Brand logo (inline SVG monogram + wordmark) — Components/BrandLogo.jsx
+   Layered look:
+   - SVG tile with cyan→violet→mint gradient stroke that maps to the
+     app's own aurora palette (`--cm-accent`, `--cm-accent-2`).
+   - Wordmark next to it uses the same gradient as a background-clip on
+     text, tying the two halves visually.
+   - Subtle drop-shadow gives the mark depth so it never disappears on
+     lighter regions of the aurora background.
+   --------------------------------------------------------------------- */
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-logo__mark {
+  display: block;
+  flex-shrink: 0;
+  filter: drop-shadow(0 6px 14px rgba(3, 5, 20, 0.45));
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.brand-logo:hover .brand-logo__mark {
+  transform: translateY(-0.5px);
+  filter: drop-shadow(0 8px 18px rgba(125, 211, 252, 0.35));
+}
+
+.brand-logo__wordmark {
+  font-family: 'K2D', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  /* Same aurora gradient the SVG monogram uses — glue between the two
+     halves of the logo. Text-fill-color trick so the letters read as
+     one metallic gradient rather than flat white. */
+  background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 55%, #5eead4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 12px rgba(125, 211, 252, 0.14);
+  white-space: nowrap;
+}
+
+/* Light theme — the aurora gradient washes out on a light background,
+   so switch to a darker teal→purple range that stays legible. */
+:root[data-theme='light'] .brand-logo__wordmark {
+  background: linear-gradient(120deg, #0ea5e9 0%, #7c3aed 55%, #14b8a6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow: none;
 }
 
 .home2__header-actions {
@@ -4881,7 +4897,14 @@
 .history-screen--concept {
   width: 100%;
   margin: 0;
-  padding: 8px 4px 16px;
+  /* Bottom padding — the app-shell reserves `--nav-bar-height` (80px)
+     for the fixed bottom nav via the app-main height calc, but the
+     actual visible nav pill + its safe-area padding is often taller
+     than 80px on phones with a home indicator (Telegram WebView on
+     iPhone 15+ / recent Android). Add explicit breathing room at the
+     bottom of the list so the last topic is never hidden under the
+     nav — 32px + safe-area covers even the largest measured overlap. */
+  padding: 8px 4px calc(32px + env(safe-area-inset-bottom, 0px));
   font-family: 'K2D', 'Inter', sans-serif;
   color: var(--cm-text);
   /* Override the legacy `.history-screen` rule that sets
