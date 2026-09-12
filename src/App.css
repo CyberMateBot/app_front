@@ -2509,12 +2509,13 @@
   min-height: 44px;
   flex-shrink: 0;
   padding: 4px 0 10px;
-  /* Same translucent glass look as the bottom nav bar, so the header
-     reads as one consistent "floating over content" surface while
-     scrolling, instead of a flat opaque (near-black) slab. */
-  background: var(--nav-glass-bg);
-  -webkit-backdrop-filter: var(--nav-glass-blur);
-  backdrop-filter: var(--nav-glass-blur);
+  /* Transparent header: the previous `var(--nav-glass-bg)` tint read as
+     a solid "blue rectangle" over the aurora page background on the
+     chat screen. Let the aurora show through fully — content that
+     scrolls under the header is out of view anyway. */
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .app-page-header__side {
@@ -2535,20 +2536,20 @@
 }
 
 .app-page-header__center {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 0;
+  /* Was `position: absolute; inset: 0; padding: 0 52px` — the fixed
+     52px right padding wasn't wide enough for the "Новый диалог" text
+     button (~110px), so the subtitle text passed under the button.
+     Switch to a normal flex-1 child so the sides naturally push the
+     center in proportion to their real intrinsic width and the
+     subtitle can't collide with the trailing action anymore. */
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 0;
-  padding: 0 52px;
+  padding: 0 8px;
   text-align: center;
-  pointer-events: none;
 }
 
 .app-page-header__center > * {
@@ -4546,6 +4547,14 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  /* The sticky container above the catalog is `display: flex;
+     flex-direction: column`, whose default `align-items: stretch` was
+     forcing this inline-flex chip to full row width. Pin the chip to
+     the start of the cross axis so it hugs its content width — the
+     "Доступные" pill was reading as a huge banner otherwise. */
+  align-self: flex-start;
+  width: auto;
+  max-width: max-content;
   margin: 10px 0 12px;
   padding: 7px 14px;
   border-radius: 20px;
@@ -5271,9 +5280,14 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--nav-glass-bg);
-  -webkit-backdrop-filter: var(--nav-glass-blur);
-  backdrop-filter: var(--nav-glass-blur);
+  /* Was `var(--nav-glass-bg)` (translucent blue) with `--nav-glass-blur`.
+     On the aurora chat page that translucent slab still read as a
+     solid blue rectangle. Fully transparent header lets aurora show
+     through cleanly; content that scrolls under it is out of the
+     visible flow anyway. */
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .ai-image-screen--concept .ai-variant-select,
@@ -5281,7 +5295,12 @@
   position: sticky;
   top: 54px;
   z-index: 15;
-  background: var(--cm-bg);
+  /* Was solid `var(--cm-bg)` — read as another dark bar right under
+     the header. Use a very light glass so the sticky chip row blends
+     with the page instead of stacking a second opaque slab. */
+  background: color-mix(in srgb, var(--cm-bg) 30%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   padding-bottom: 6px;
 }
 
@@ -6042,8 +6061,12 @@
   gap: 8px;
   flex-shrink: 0;
   padding: 10px 0 calc(12px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
-  border-top: 0.5px solid var(--cm-border);
-  background: var(--cm-bg);
+  /* Was a solid `var(--cm-bg)` (~near-black) with a hard border-top,
+     which read as an out-of-place black rectangle at the bottom of the
+     chat screen. Drop the background so the aurora shows through, and
+     soften the divider to a barely-there hairline. */
+  border-top: 0.5px solid rgba(255, 255, 255, 0.06);
+  background: transparent;
 }
 
 .ai-chat__composer--no-attach .ai-chat__composer-field {

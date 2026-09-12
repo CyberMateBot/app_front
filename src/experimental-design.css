@@ -612,9 +612,12 @@
   border: 0.5px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Chat bubbles */
+/* Chat composer — was `rgba(7, 8, 15, 0.85)` which read as a solid
+   black rectangle at the bottom of the chat screen. Keep the blur so
+   scrolling bubbles smear behind it, but drop the near-opaque tint so
+   the aurora shows through and the composer blends into the page. */
 :root:not([data-theme='light']) .ai-chat__composer {
-  background: rgba(7, 8, 15, 0.85);
+  background: transparent;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }

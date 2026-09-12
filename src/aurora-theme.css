@@ -1401,6 +1401,27 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
   text-shadow: 0 1px 2px rgba(3, 5, 20, 0.55);
 }
 
+/* Badge (Бесплатно / Доступный / Популярный / …) sat right below the
+   name and used to inherit near-transparent bg + accent-colored text.
+   On the repainted deep-colored cards that low contrast made the badge
+   effectively invisible ("сливается с цветом самой карточки").
+   Force a bright semi-solid white chip with dark ink — always readable
+   over any tier gradient. Override per-badge selectors so they don't
+   fall back to the old subtle palette. */
+.subscription-plan-card__badge,
+.subscription-plan-card__badge--free,
+.subscription-plan-card__badge--basic,
+.subscription-plan-card__badge--max,
+.subscription-plan-card__badge--biz,
+.subscription-plan-card__badge--popular {
+  background: rgba(255, 255, 255, 0.92);
+  border: 0.5px solid rgba(255, 255, 255, 0.55);
+  color: #0f1330;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 6px rgba(3, 5, 20, 0.28);
+}
+
 .subscription-plan-card--current {
   border-color: var(--cm-plan-current-border);
   box-shadow:
