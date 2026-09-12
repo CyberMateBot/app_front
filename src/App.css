@@ -5006,6 +5006,18 @@
   margin-bottom: 10px;
 }
 
+/* Unconditional bottom-of-list spacer — see the comment at its JSX call
+   site in App.jsx. Sized generously (140px is comfortably above any
+   real bottom-nav height we ship, even with max safe-area) so the very
+   last history topic can always be scrolled clear of the fixed nav and
+   tapped, independent of the `--nav-bar-height`/calc() reservations
+   elsewhere on this page. */
+.history-concept__bottom-spacer {
+  flex-shrink: 0;
+  width: 100%;
+  height: calc(140px + env(safe-area-inset-bottom, 0px));
+}
+
 .history-concept__item {
   position: relative;
   display: flex;

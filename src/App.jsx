@@ -8468,6 +8468,17 @@ function App() {
                     </div>
                 </div>
             ))}
+            {historyTopicGroups.length > 0 ? (
+                /* Real, unconditional spacer — not a CSS padding/calc trick.
+                   Guarantees the scroller's scrollHeight includes enough
+                   room to fully clear the fixed bottom nav no matter what
+                   `--nav-bar-height` currently resolves to or how the CSS
+                   cascade plays out on a given device/cache state. Users
+                   reported the very last chat staying stuck behind the nav
+                   even after two CSS-only attempts to reserve space, so
+                   this trades a little empty scroll room for certainty. */
+                <div className="history-concept__bottom-spacer" aria-hidden="true" />
+            ) : null}
         </section>
     );
 
