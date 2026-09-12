@@ -137,7 +137,10 @@
 
   .home-concept__grid > *,
   .subscription-page__plans .subscription-plan-card,
-  .history-concept__item,
+  /* `.history-concept__item` intentionally excluded — the per-item
+     staggered `mp-card-in` (opacity + translate3d) was killing scroll
+     performance on lists with 20+ topics. The page-level `mp-page-in`
+     already animates the whole history screen in on entry. */
   .profile-concept__balance-card,
   .profile-concept__menu-item,
   .profile-hub__wallet,

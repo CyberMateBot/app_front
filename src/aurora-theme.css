@@ -1373,13 +1373,18 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
 }
 
 .subscription-plan-card--biz {
-  border-color: rgba(244, 114, 182, 0.6);
+  /* Retuned to pull the border color out of the card's deep-magenta
+     base (#4a0f37) instead of the brighter accent-pink used in the
+     top-right glow. Now behaves like the other tiers where the border
+     visually ties into the darker body of the card rather than the
+     top highlight. */
+  border-color: rgba(190, 60, 130, 0.7);
   background:
     radial-gradient(120% 90% at 100% 0%, rgba(244, 114, 182, 0.38) 0%, transparent 55%),
     linear-gradient(160deg, #4a0f37 0%, #1c0619 100%);
   box-shadow:
-    0 0 0 1px rgba(244, 114, 182, 0.35) inset,
-    0 24px 54px rgba(219, 39, 119, 0.3);
+    0 0 0 1px rgba(190, 60, 130, 0.32) inset,
+    0 24px 54px rgba(190, 60, 130, 0.28);
 }
 
 .subscription-plan-card--popular {
@@ -1751,9 +1756,13 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
 .history-concept__item {
   border-radius: 16px;
   border: 0.5px solid var(--cm-border);
-  background: color-mix(in srgb, #141830 42%, transparent);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  /* Was `color-mix(#141830 42%, transparent) + blur(8px)`. Backdrop
+     filter on every list row is a real GPU cost — on Telegram Android
+     WebView with 20+ history rows scrolling turned into a slideshow
+     ("плохо прогружается + не листается"). Bump the tile to a
+     near-opaque tint so it still reads as glass but requires zero
+     backdrop filtering. */
+  background: color-mix(in srgb, #141830 78%, transparent);
   padding: 12px;
 }
 

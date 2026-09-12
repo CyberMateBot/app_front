@@ -6307,8 +6307,15 @@ function App() {
         <section className="home-screen home-screen--concept home2" aria-label={text.navHome}>
             <header className="home2__header">
                 <div className="home2__brand">
-                    <img className="home2__brand-logo" src="/logo-cm.png" alt="" />
-                    <span className="home2__brand-name">{text.homeBrandName}</span>
+                    {/* New chrome-lettered CyberMate wordmark — the brand
+                        name is already inside the image, so the sibling
+                        text span was removed. `alt` still carries the
+                        readable name for screen readers. */}
+                    <img
+                        className="home2__brand-logo home2__brand-logo--wordmark"
+                        src="/logo-cm.png"
+                        alt={text.homeBrandName}
+                    />
                 </div>
                 <div className="home2__header-actions">
                     <AppNotifications
