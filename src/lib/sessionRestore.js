@@ -142,8 +142,12 @@ export function resolveAudioSessionState({ memory, stored }) {
     const generatedAudioUrl = String(memory?.generatedAudioUrl || '').trim()
         || String(stored?.generatedAudioUrl || '').trim()
         || '';
+    const messages = memory?.messages?.length
+        ? memory.messages
+        : (stored?.messages ?? []);
     const hasContent = Boolean(audioPrompt)
         || Boolean(generatedAudioUrl)
+        || Boolean(messages.length)
         || Boolean(memory?.isGenerating)
         || Boolean(stored?.isGenerating);
 
@@ -161,6 +165,7 @@ export function resolveAudioSessionState({ memory, stored }) {
         sessionId: memory?.sessionId || stored?.sessionId || createChatSessionId(),
         audioPrompt,
         generatedAudioUrl,
+        messages,
         isGenerating,
     };
 }

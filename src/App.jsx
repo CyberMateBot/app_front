@@ -907,6 +907,16 @@ const translations = {
         chatDownloadHtml: 'Скачать HTML',
         chatHtmlDownloaded: 'HTML сохранён',
         chatHtmlDownloadFailed: 'Не удалось скачать HTML.',
+        chatPreviewOpen: 'Открыть предпросмотр',
+        chatPreviewTitle: 'Предпросмотр',
+        chatPreviewTabPreview: 'Просмотр',
+        chatPreviewTabCode: 'Код',
+        chatPreviewReload: 'Перезагрузить',
+        chatPreviewClose: 'Закрыть',
+        chatPreviewDeviceMobile: 'Телефон',
+        chatPreviewDeviceDesktop: 'Десктоп',
+        audioVoiceGeneratedNote: 'Озвучка готова.',
+        audioMusicGeneratedNote: 'Музыка сгенерирована.',
         historyDeleteConfirm: 'Удалить всю историю промтов? Это действие нельзя отменить.',
         historyTopicDeleteConfirm: 'Удалить этот диалог из истории?',
         historyTopicDeleted: 'Диалог удалён.',
@@ -1568,6 +1578,16 @@ const translations = {
         chatDownloadHtml: 'Download HTML',
         chatHtmlDownloaded: 'HTML saved',
         chatHtmlDownloadFailed: 'Could not download HTML.',
+        chatPreviewOpen: 'Open preview',
+        chatPreviewTitle: 'Preview',
+        chatPreviewTabPreview: 'Preview',
+        chatPreviewTabCode: 'Code',
+        chatPreviewReload: 'Reload',
+        chatPreviewClose: 'Close',
+        chatPreviewDeviceMobile: 'Phone',
+        chatPreviewDeviceDesktop: 'Desktop',
+        audioVoiceGeneratedNote: 'Voice generated.',
+        audioMusicGeneratedNote: 'Music generated.',
         historyDeleteConfirm: 'Delete all prompt history? This cannot be undone.',
         historyTopicDeleteConfirm: 'Delete this conversation from history?',
         historyTopicDeleted: 'Conversation deleted.',
@@ -1967,6 +1987,7 @@ function App() {
     const [audioAttachment, setAudioAttachment] = useState(null);
     const [generatedAudioUrl, setGeneratedAudioUrl] = useState('');
     const [audioSessionId, setAudioSessionId] = useState(() => createChatSessionId());
+    const [audioSessionMessages, setAudioSessionMessages] = useState([]);
     const [threeDModel, setThreeDModel] = useState('hunyuan3d-v3.1-rapid');
     const [threeDPrompt, setThreeDPrompt] = useState('');
     const [threeDNegativePrompt, setThreeDNegativePrompt] = useState(initialThreeDDefaults.negativePrompt ?? '');
@@ -2202,9 +2223,10 @@ function App() {
             sessionId: audioSessionId,
             audioPrompt,
             generatedAudioUrl,
+            messages: audioSessionMessages,
             isGenerating: isGeneratingAudio,
         }, audioSessionScope);
-    }, [audioModel, audioSessionId, audioPrompt, generatedAudioUrl, isGeneratingAudio, audioSessionScope]);
+    }, [audioModel, audioSessionId, audioPrompt, generatedAudioUrl, audioSessionMessages, isGeneratingAudio, audioSessionScope]);
 
     useEffect(() => {
         saveMediaSession('chat', {
@@ -4802,6 +4824,7 @@ function App() {
             sessionId: audioSessionId,
             audioPrompt,
             generatedAudioUrl,
+            messages: audioSessionMessages,
             isGenerating: isGeneratingAudio,
         }, audioSessionScope);
 
@@ -4815,10 +4838,12 @@ function App() {
             setAudioSessionId(stored.sessionId || createChatSessionId());
             setAudioPrompt(stored.audioPrompt ?? '');
             setGeneratedAudioUrl(stored.generatedAudioUrl ?? '');
+            setAudioSessionMessages(Array.isArray(stored.messages) ? stored.messages : []);
         } else {
             startNewAudioSession();
             setAudioPrompt('');
             setGeneratedAudioUrl('');
+            setAudioSessionMessages([]);
         }
 
         setAudioAttachment(null);
@@ -4827,15 +4852,18 @@ function App() {
 
     const handleNewAudioDialog = async () => {
         await archiveMediaMessagesToHistory({
-            messages: [],
+            messages: audioSessionMessages,
             model: audioModel,
             sessionId: audioSessionId,
+            getResponse: (message) => message?.audioUrl ?? message?.audio_url ?? '',
             extraItems: audioPrompt.trim() && generatedAudioUrl.trim()
+                && !audioSessionMessages.some((message) => message?.audioUrl === generatedAudioUrl)
                 ? [{ prompt: audioPrompt.trim(), response: generatedAudioUrl.trim() }]
                 : [],
         });
         clearMediaSession('audio', audioSessionScope);
         startNewAudioSession();
+        setAudioSessionMessages([]);
         setAudioPrompt('');
         setAudioAttachment(null);
         setGeneratedAudioUrl('');
@@ -4894,6 +4922,7 @@ function App() {
             }
             setAudioPrompt(options.prompt ?? '');
             setGeneratedAudioUrl(options.audioUrl ?? '');
+            setAudioSessionMessages([]);
             setIsGeneratingAudio(false);
         } else {
             const restored = resolveAudioSessionState({
@@ -4902,6 +4931,7 @@ function App() {
                         sessionId: audioSessionId,
                         audioPrompt,
                         generatedAudioUrl,
+                        messages: audioSessionMessages,
                         isGenerating: isGeneratingAudio,
                     }
                     : null,
@@ -4912,11 +4942,13 @@ function App() {
                 setAudioSessionId(restored.sessionId || createChatSessionId());
                 setAudioPrompt(restored.audioPrompt);
                 setGeneratedAudioUrl(restored.generatedAudioUrl);
+                setAudioSessionMessages(Array.isArray(restored.messages) ? restored.messages : []);
                 setIsGeneratingAudio(restored.isGenerating);
             } else {
                 startNewAudioSession();
                 setAudioPrompt('');
                 setGeneratedAudioUrl('');
+                setAudioSessionMessages([]);
                 setIsGeneratingAudio(false);
             }
         }
@@ -5311,6 +5343,30 @@ function App() {
                 return;
             }
 
+            const isMusicModel = audioModelIsMusic(audioModel);
+            const assistantNote = isMusicModel
+                ? text.audioMusicGeneratedNote
+                : text.audioVoiceGeneratedNote;
+            const userPromptForBubble = trimmedPrompt
+                || (isAceStep ? audioStyleInstruction.trim() : '');
+
+            setAudioSessionMessages((prev) => [
+                ...prev,
+                {
+                    id: `aud-user-${Date.now()}`,
+                    role: 'user',
+                    content: userPromptForBubble,
+                },
+                {
+                    id: `aud-assistant-${Date.now()}`,
+                    role: 'assistant',
+                    content: assistantNote,
+                    scenePrompt: userPromptForBubble,
+                    audioUrl,
+                },
+            ]);
+            setAudioPrompt('');
+            setAudioAttachment(null);
             setGeneratedAudioUrl(audioUrl);
             void refreshWalletBalance();
         } catch (error) {
@@ -6485,6 +6541,19 @@ function App() {
                             downloadHtmlLabel={text.chatDownloadHtml}
                             htmlDownloadedLabel={text.chatHtmlDownloaded}
                             htmlDownloadFailedLabel={text.chatHtmlDownloadFailed}
+                            previewLabel={text.chatPreviewOpen}
+                            previewModalLabels={{
+                                title: text.chatPreviewTitle,
+                                previewTab: text.chatPreviewTabPreview,
+                                codeTab: text.chatPreviewTabCode,
+                                copyLabel: text.chatCopy,
+                                copiedLabel: text.chatCopied,
+                                downloadLabel: text.chatDownloadHtml,
+                                reloadLabel: text.chatPreviewReload,
+                                closeLabel: text.chatPreviewClose,
+                                deviceMobile: text.chatPreviewDeviceMobile,
+                                deviceDesktop: text.chatPreviewDeviceDesktop,
+                            }}
                         />
                     ))}
                 </div>
@@ -7271,7 +7340,23 @@ function App() {
                     ) : null}
 
                     <div className="ai-image__content ai-image__content--in-main">
-                        {isGeneratingAudio ? (
+                        {audioSessionMessages.length > 0 ? (
+                            <div className="ai-chat__messages ai-chat__messages--media" aria-live="polite">
+                                {audioSessionMessages.map((message) => (
+                                    <MediaMessageBubble
+                                        key={message.id}
+                                        message={message}
+                                        onDownload={handleMediaDownload}
+                                        downloadBusy={mediaDownloadBusy}
+                                        downloadLabel={text.mediaDownloadButton}
+                                        downloadingLabel={text.mediaDownloading}
+                                    />
+                                ))}
+                                {isGeneratingAudio ? (
+                                    <p className="ai-chat__empty">{generatingLabel}</p>
+                                ) : null}
+                            </div>
+                        ) : isGeneratingAudio ? (
                             <p className="ai-chat__empty">{generatingLabel}</p>
                         ) : generatedAudioUrl ? (
                             <section className="ai-image__result" aria-label={text.voiceResultTitle}>
@@ -7288,10 +7373,11 @@ function App() {
                                     </button>
                                 </div>
                                 <audio
-                                className="ai-image__preview"
+                                    className="ai-image__preview"
                                     src={generatedAudioUrl}
                                     controls
-                            />
+                                    preload="metadata"
+                                />
                         </section>
                         ) : (
                             <p className="ai-chat__empty">{promptPlaceholder}</p>

@@ -524,6 +524,41 @@
   background: color-mix(in srgb, var(--cm-accent) 12%, transparent);
 }
 
+/* "Text" actions in the header (e.g. "Новый диалог"): give them a real,
+   visible surface so they don't read as bare text — glass pill with an
+   accent-tinted border, matching the aurora palette. Keeps the icon-only
+   actions above untouched. */
+.app-page-header__action--text {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 0.5px solid rgba(125, 211, 252, 0.38);
+  background: color-mix(in srgb, var(--cm-accent) 14%, transparent);
+  color: #e6f6ff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 6px 14px rgba(3, 5, 20, 0.28);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.app-page-header__action--text:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cm-accent) 22%, transparent);
+  border-color: rgba(125, 211, 252, 0.6);
+}
+
+.app-page-header__action--text:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.app-page-header__action--text:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Kill the `::after` fade band underneath the header — design-refresh.css
    painted a `linear-gradient(--cm-bg 40% → transparent)` 8px strip below
    the header intending to "dissolve" the glass panel into content.
@@ -1539,6 +1574,10 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
    ========================================================================== */
 
 .app-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
   border-radius: 14px;
   border: 0.5px solid var(--cm-border);
   background: color-mix(in srgb, #0d1030 78%, transparent);
@@ -1548,6 +1587,57 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.06) inset,
     0 12px 28px rgba(3, 5, 20, 0.5);
+}
+
+/* Ensure the notice never overflows its container and is always centered
+   between padding-x. The base rule in App.css uses `left`/`right`,
+   which correctly anchors both sides; no transform tricks needed. */
+:root:not([data-theme='light']) .app-notice__text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: #e6ecff;
+}
+
+:root:not([data-theme='light']) .app-notice--error .app-notice__text {
+  color: #fecaca;
+}
+
+:root:not([data-theme='light']) .app-notice--success .app-notice__text {
+  color: #bbf7d0;
+}
+
+:root:not([data-theme='light']) .app-notice--error {
+  border-color: rgba(248, 113, 113, 0.5);
+  background: color-mix(in srgb, #2a0a10 82%, transparent);
+}
+
+:root:not([data-theme='light']) .app-notice--success {
+  border-color: rgba(52, 211, 153, 0.5);
+  background: color-mix(in srgb, #062418 82%, transparent);
+}
+
+:root:not([data-theme='light']) .app-notice__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #c8d0ec;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+:root:not([data-theme='light']) .app-notice__close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 

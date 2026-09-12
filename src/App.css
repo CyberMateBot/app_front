@@ -5721,6 +5721,185 @@
   background: rgba(252, 165, 165, 0.12);
 }
 
+.ai-chat__bubble-copy--preview {
+  color: #7dd3fc;
+  background: rgba(125, 211, 252, 0.14);
+}
+
+.ai-chat__bubble-copy--preview:hover {
+  background: rgba(125, 211, 252, 0.22);
+}
+
+/* ========================================================================
+   Code preview modal — sandboxed iframe with rendered HTML/CSS/JS.
+   Uses the same dark aurora vocabulary as the app.
+   ======================================================================== */
+.code-preview__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(3, 5, 20, 0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.code-preview__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 720px);
+  height: min(100%, 88vh);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #0a0d24;
+  border: 0.5px solid rgba(125, 211, 252, 0.24);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.code-preview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 13, 36, 0.94);
+}
+
+.code-preview__tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.code-preview__tab {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #a4b0d4;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.code-preview__tab--active {
+  background: color-mix(in srgb, #7dd3fc 22%, transparent);
+  color: #eaf6ff;
+}
+
+.code-preview__toolbar {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.code-preview__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: #c8d0ec;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.code-preview__icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.code-preview__icon-btn--active {
+  color: #7dd3fc;
+  background: rgba(125, 211, 252, 0.18);
+  border-color: rgba(125, 211, 252, 0.45);
+}
+
+.code-preview__icon-btn--close {
+  color: #fecaca;
+}
+
+.code-preview__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #05061a;
+}
+
+.code-preview__frame-wrap {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 12px;
+  overflow: auto;
+  background:
+    radial-gradient(1200px 400px at 50% -100px, rgba(125, 211, 252, 0.08), transparent 60%),
+    #05061a;
+}
+
+.code-preview__frame-wrap--mobile .code-preview__frame {
+  width: min(390px, 100%);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.code-preview__frame-wrap--desktop .code-preview__frame {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.code-preview__frame {
+  height: 100%;
+  min-height: 320px;
+  background: #ffffff;
+}
+
+.code-preview__code {
+  flex: 1;
+  margin: 0;
+  padding: 14px 16px;
+  overflow: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #d6def4;
+  background: #05061a;
+  white-space: pre;
+  tab-size: 2;
+}
+
+@media (max-width: 480px) {
+  .code-preview__backdrop {
+    padding: 8px;
+  }
+  .code-preview__panel {
+    height: 96vh;
+    border-radius: 14px;
+  }
+  .code-preview__tab {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+}
+
 .ai-chat__bubble--assistant:has(.ai-chat__bubble-actions) {
   padding-top: 34px;
 }

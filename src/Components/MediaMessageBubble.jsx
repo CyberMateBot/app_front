@@ -7,6 +7,10 @@ const MEDIA_NOTE_PLACEHOLDERS = [
     'видео создано.',
     'видео отредактировано.',
     'видео продлено.',
+    'аудио создано.',
+    'аудио сгенерировано.',
+    'озвучка готова.',
+    'музыка сгенерирована.',
     'image created.',
     'image created',
     'image edited.',
@@ -17,6 +21,12 @@ const MEDIA_NOTE_PLACEHOLDERS = [
     'video edited',
     'video extended.',
     'video extended',
+    'audio generated.',
+    'audio generated',
+    'voice generated.',
+    'voice generated',
+    'music generated.',
+    'music generated',
 ];
 
 function isMediaNote(text) {
@@ -50,9 +60,11 @@ export default function MediaMessageBubble({
 
     const imageUrl = String(message.imageUrl ?? message.image_url ?? '').trim();
     const videoUrl = String(message.videoUrl ?? message.video_url ?? '').trim();
+    const audioUrl = String(message.audioUrl ?? message.audio_url ?? '').trim();
     const showNote = message.content && !isMediaNote(message.content);
-    const downloadKey = imageUrl ? 'image' : (videoUrl ? 'video' : '');
-    const mediaUrl = imageUrl || videoUrl;
+    const downloadKey = imageUrl ? 'image' : (videoUrl ? 'video' : (audioUrl ? 'audio' : ''));
+    const mediaUrl = imageUrl || videoUrl || audioUrl;
+    const downloadFilename = imageUrl ? 'image.png' : (videoUrl ? 'video.mp4' : 'audio.mp3');
 
     return (
         <div className="ai-chat__bubble ai-chat__bubble--assistant ai-media-message">
@@ -72,11 +84,19 @@ export default function MediaMessageBubble({
                     playsInline
                 />
             ) : null}
+            {audioUrl ? (
+                <audio
+                    className="ai-image__preview ai-image__preview--audio ai-image__preview--inline"
+                    src={audioUrl}
+                    controls
+                    preload="metadata"
+                />
+            ) : null}
             {mediaUrl && onDownload ? (
                 <button
                     type="button"
                     className="ai-media__download ai-media-message__download"
-                    onClick={() => onDownload(downloadKey, mediaUrl, imageUrl ? 'image.png' : 'video.mp4')}
+                    onClick={() => onDownload(downloadKey, mediaUrl, downloadFilename)}
                     disabled={downloadBusy === downloadKey}
                 >
                     <Download size={14} aria-hidden="true" />

@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Copy, FileDown } from 'lucide-react';
+import { Check, Copy, FileDown, PlayCircle } from 'lucide-react';
 import MarkdownMessage from './MarkdownMessage.jsx';
 import TypingMessage from './TypingMessage.jsx';
 import GeneratingBubble from './GeneratingBubble.jsx';
+import CodePreviewModal from './CodePreviewModal.jsx';
 import { copyTextToClipboard } from '../lib/copyText.js';
-import { extractHtmlFromChat, guessHtmlFilename } from '../lib/chatHtml.js';
+import { extractHtmlFromChat, extractPreviewDocument, guessHtmlFilename } from '../lib/chatHtml.js';
 import { downloadGeneratedFile } from '../lib/downloadMedia.js';
 
 export default function ChatMessageBubble({
@@ -15,16 +16,24 @@ export default function ChatMessageBubble({
     downloadHtmlLabel = 'Download HTML',
     htmlDownloadedLabel = 'HTML saved',
     htmlDownloadFailedLabel = 'Could not download HTML.',
+    previewLabel = 'Открыть предпросмотр',
+    previewModalLabels,
 }) {
     const renderMarkdown = message.role === 'assistant';
     const [isCopied, setIsCopied] = useState(false);
     const [htmlState, setHtmlState] = useState('idle');
+    const [previewOpen, setPreviewOpen] = useState(false);
     const canCopy = message.role === 'assistant'
         && !message.isPending
         && !message.isTyping
         && Boolean(String(message.content ?? '').trim());
     const htmlDocument = useMemo(
         () => (canCopy ? extractHtmlFromChat(message.content) : null),
+        [canCopy, message.content],
+    );
+    // A wider preview that also matches standalone css/js and mixed blocks.
+    const previewDocument = useMemo(
+        () => (canCopy ? extractPreviewDocument(message.content) : null),
         [canCopy, message.content],
     );
 
@@ -73,6 +82,20 @@ export default function ChatMessageBubble({
 
     const actions = canCopy ? (
         <div className="ai-chat__bubble-actions">
+            {previewDocument ? (
+                <button
+                    type="button"
+                    className="ai-chat__bubble-copy ai-chat__bubble-copy--preview"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        setPreviewOpen(true);
+                    }}
+                    aria-label={previewLabel}
+                    title={previewLabel}
+                >
+                    <PlayCircle size={14} aria-hidden="true" />
+                </button>
+            ) : null}
             {htmlDocument ? (
                 <button
                     type="button"
@@ -133,6 +156,12 @@ export default function ChatMessageBubble({
             ) : (
                 <p>{message.content}</p>
             )}
+            <CodePreviewModal
+                open={previewOpen}
+                document={previewDocument}
+                onClose={() => setPreviewOpen(false)}
+                labels={previewModalLabels}
+            />
         </div>
     );
 }
