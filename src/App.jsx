@@ -6313,7 +6313,7 @@ function App() {
                         with the app design"; this variant pulls the app's
                         own aurora palette (cyan → violet → mint) so it
                         reads as part of the visual system. */}
-                    <BrandLogo unique="home" title={text.homeBrandName} />
+                    <BrandLogo title={text.homeBrandName} />
                 </div>
                 <div className="home2__header-actions">
                     <AppNotifications

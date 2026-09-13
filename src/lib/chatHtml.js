@@ -138,6 +138,9 @@ export function extractPreviewDocument(content) {
 
     // No HTML — but we still may have standalone CSS or JS. Wrap them in a
     // minimal viewer so the user can visually confirm what the model produced.
+    // Give the CSS *something* to style (a couple of common demo elements)
+    // rather than an empty <body>, so the preview isn't a blank white
+    // page when the model returns "just some CSS".
     if (cssBlocks.length || jsBlocks.length) {
         const styles = cssBlocks.join('\n\n');
         const scripts = jsBlocks.join('\n\n');
@@ -148,11 +151,24 @@ export function extractPreviewDocument(content) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CyberMate preview</title>
 <style>
+body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #f5f6fb; color: #10111a; padding: 24px; }
+.preview-demo { display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 0 auto; }
+.preview-demo h1 { margin: 0; font-size: 22px; }
+.preview-demo button { padding: 10px 16px; border-radius: 10px; border: 1px solid #d5d8e6; background: #ffffff; color: inherit; cursor: pointer; }
+.preview-demo .card { padding: 16px; border-radius: 14px; background: #ffffff; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+</style>
+<style>
 ${styles || '/* no styles */'}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app" class="preview-demo">
+  <h1>Preview</h1>
+  <div class="card">
+    <p>Пример элементов, на которых можно проверить стили или скрипт.</p>
+    <button type="button">Кнопка</button>
+  </div>
+</div>
 <script>
 ${scripts || '// no script'}
 </script>

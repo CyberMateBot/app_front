@@ -1687,8 +1687,12 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
    21. AI screens — chat / image / video / voice / 3d shared UI
    ========================================================================== */
 
-/* Chat input area — glass surface. */
-.ai-chat__input,
+/* Chat input area — glass surface.
+   NOTE (Sep 2026): the AI *chat* screen now has its own dedicated pill
+   composer (`.ai-chat__composer-field`) that hosts the textarea, so the
+   `.ai-chat__input` here participates only as a transparent inner
+   element. The image/video/text-gen textareas keep the old bordered
+   glass look. */
 .ai-image__prompt,
 .ai-video__prompt,
 .text-gen__textarea {
@@ -1700,7 +1704,6 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
   color: var(--cm-text);
 }
 
-.ai-chat__input:focus,
 .ai-image__prompt:focus,
 .ai-video__prompt:focus,
 .text-gen__textarea:focus {
@@ -1709,8 +1712,10 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
     0 0 0 3px rgba(125, 211, 252, 0.18);
 }
 
-/* Primary "generate" buttons — signature aurora gradient. */
-.ai-chat__send,
+/* Primary "generate" buttons — signature aurora gradient.
+   `.ai-chat__send` intentionally omitted here: it now gets a rounded
+   pill treatment defined in App.css (matching the new composer pill).
+   Overriding it in aurora-theme.css re-squares the corners. */
 .ai-image__submit,
 .ai-video__submit,
 .text-gen__submit,
@@ -1727,7 +1732,6 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
     0 8px 22px color-mix(in srgb, var(--cm-accent-violet) 32%, transparent);
 }
 
-.ai-chat__send:disabled,
 .ai-image__submit:disabled,
 .ai-video__submit:disabled,
 .text-gen__submit:disabled {
@@ -1742,20 +1746,10 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
 }
 
 
-/* Chat bubbles. */
-.ai-chat__bubble--user {
-  background: color-mix(in srgb, var(--cm-accent) 16%, transparent);
-  border: 0.5px solid rgba(125, 211, 252, 0.4);
-  color: var(--cm-text);
-}
-
-.ai-chat__bubble--assistant {
-  background: color-mix(in srgb, #141830 55%, transparent);
-  border: 0.5px solid var(--cm-border);
-  color: var(--cm-bubble-assistant-fg);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-}
+/* Chat bubbles are fully styled in App.css now (Sep 2026 chat redesign
+   — aurora gradient user bubble, glass assistant bubble, thin gradient
+   accent stripe). This block used to add its own subtle glass backdrop
+   which fought the new gradient look. Removed intentionally. */
 
 
 /* ==========================================================================

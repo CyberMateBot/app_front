@@ -385,14 +385,24 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.ai-chat__input:focus,
-.ai-chat__input:focus-within,
 .ai-image__prompt:focus,
 .ai-video__prompt:focus,
 .text-gen__textarea:focus {
   outline: none;
   border-color: rgba(120, 110, 255, 0.5);
   box-shadow: 0 0 0 3px rgba(90, 70, 255, 0.16);
+}
+
+/* Chat input focus is handled by the pill composer's `:focus-within`
+   ring (see .ai-chat__composer-field in App.css) — the input itself
+   has no border/background of its own in the new design, so a per-
+   input focus ring would just draw a mis-aligned rectangle inside
+   the pill. */
+.ai-chat__input:focus,
+.ai-chat__input:focus-within {
+  outline: none;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 /* Chips — smoother feedback. */

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Copy, FileDown, PlayCircle } from 'lucide-react';
+import { Check, Copy, FileDown, PlayCircle, User } from 'lucide-react';
 import MarkdownMessage from './MarkdownMessage.jsx';
 import TypingMessage from './TypingMessage.jsx';
 import GeneratingBubble from './GeneratingBubble.jsx';
@@ -8,6 +8,15 @@ import { copyTextToClipboard } from '../lib/copyText.js';
 import { extractHtmlFromChat, extractPreviewDocument, guessHtmlFilename } from '../lib/chatHtml.js';
 import { downloadGeneratedFile } from '../lib/downloadMedia.js';
 
+/**
+ * Chat message row — avatar + bubble + optional action strip below.
+ *
+ * The layout is aligned around an inline-flex row: assistant messages sit
+ * on the left with the brand-mark avatar (using the same PNG as the home
+ * logo), user messages sit on the right with a neutral silhouette icon.
+ * Copy/preview/download actions live in a small strip *under* the bubble
+ * so long messages never fight for space with the action buttons.
+ */
 export default function ChatMessageBubble({
     message,
     generatingLabel,
@@ -80,6 +89,24 @@ export default function ChatMessageBubble({
         }
     }, [htmlDocument]);
 
+    const role = message.role === 'assistant' ? 'assistant' : 'user';
+    const rowClass = `ai-chat__row ai-chat__row--${role}`;
+
+    const avatar = (
+        <div className={`ai-chat__avatar ai-chat__avatar--${role}`} aria-hidden="true">
+            {role === 'assistant' ? (
+                <img
+                    className="ai-chat__avatar-img"
+                    src="/brand-mark.png"
+                    alt=""
+                    draggable={false}
+                />
+            ) : (
+                <User size={14} aria-hidden="true" />
+            )}
+        </div>
+    );
+
     const actions = canCopy ? (
         <div className="ai-chat__bubble-actions">
             {previewDocument ? (
@@ -122,46 +149,61 @@ export default function ChatMessageBubble({
 
     if (message.role === 'assistant' && message.isPending) {
         return (
-            <div className={`ai-chat__bubble ai-chat__bubble--${message.role} ai-chat__bubble--pending`}>
-                <GeneratingBubble label={generatingLabel} />
+            <div className={rowClass}>
+                {avatar}
+                <div className="ai-chat__bubble-stack">
+                    <div className={`ai-chat__bubble ai-chat__bubble--${role} ai-chat__bubble--pending`}>
+                        <GeneratingBubble label={generatingLabel} />
+                    </div>
+                </div>
             </div>
         );
     }
 
     if (message.role === 'assistant' && message.isTyping) {
         return (
-            <div className={`ai-chat__bubble ai-chat__bubble--${message.role} ai-chat__bubble--typing`}>
-                <TypingMessage
-                    messageId={message.id}
-                    text={message.content ?? ''}
-                    typingProgress={message.typingProgress ?? 0}
-                    renderMarkdown={renderMarkdown}
-                />
+            <div className={rowClass}>
+                {avatar}
+                <div className="ai-chat__bubble-stack">
+                    <div className={`ai-chat__bubble ai-chat__bubble--${role} ai-chat__bubble--typing`}>
+                        <TypingMessage
+                            messageId={message.id}
+                            text={message.content ?? ''}
+                            typingProgress={message.typingProgress ?? 0}
+                            renderMarkdown={renderMarkdown}
+                        />
+                    </div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className={`ai-chat__bubble ai-chat__bubble--${message.role}`}>
-            {actions}
-            {message.imagePreview ? (
-                <img
-                    className="ai-chat__bubble-image"
-                    src={message.imagePreview}
-                    alt=""
+        <div className={rowClass}>
+            {avatar}
+            <div className="ai-chat__bubble-stack">
+                <div className={`ai-chat__bubble ai-chat__bubble--${role}`}>
+                    {message.imagePreview ? (
+                        <img
+                            className="ai-chat__bubble-image"
+                            src={message.imagePreview}
+                            alt=""
+                        />
+                    ) : null}
+                    {renderMarkdown ? (
+                        <MarkdownMessage content={message.content} />
+                    ) : (
+                        <p>{message.content}</p>
+                    )}
+                </div>
+                {actions}
+                <CodePreviewModal
+                    open={previewOpen}
+                    document={previewDocument}
+                    onClose={() => setPreviewOpen(false)}
+                    labels={previewModalLabels}
                 />
-            ) : null}
-            {renderMarkdown ? (
-                <MarkdownMessage content={message.content} />
-            ) : (
-                <p>{message.content}</p>
-            )}
-            <CodePreviewModal
-                open={previewOpen}
-                document={previewDocument}
-                onClose={() => setPreviewOpen(false)}
-                labels={previewModalLabels}
-            />
+            </div>
         </div>
     );
 }

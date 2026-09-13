@@ -35,6 +35,7 @@ export default function CodePreviewModal({
     const [device, setDevice] = useState('mobile');
     const [copied, setCopied] = useState(false);
     const [iframeKey, setIframeKey] = useState(0);
+    const [previewUrl, setPreviewUrl] = useState('');
     const dialogRef = useRef(null);
 
     // Close on Esc.
@@ -55,6 +56,29 @@ export default function CodePreviewModal({
             setIframeKey((k) => k + 1);
         }
     }, [open, htmlDocument]);
+
+    /* Render the HTML document via a Blob URL rather than `srcdoc`.
+       `srcdoc` + `sandbox="allow-scripts"` (no allow-same-origin) is
+       supposed to just work, but on Telegram Mini App WebViews on
+       Android (and some iOS builds) it silently renders as a blank
+       white iframe — the sandbox null-origin + srcdoc combo hits a
+       navigation guard. A Blob URL sidesteps that: the iframe loads
+       a real (temporary) URL with the correct MIME type and the
+       sandbox still isolates it into its own opaque origin. */
+    useEffect(() => {
+        if (!open || !htmlDocument) {
+            setPreviewUrl('');
+            return undefined;
+        }
+
+        const blob = new Blob([htmlDocument], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
+
+        return () => {
+            URL.revokeObjectURL(url);
+        };
+    }, [open, htmlDocument, iframeKey]);
 
     const filename = useMemo(
         () => guessHtmlFilename(htmlDocument || ''),
@@ -189,14 +213,19 @@ export default function CodePreviewModal({
                         <div
                             className={`code-preview__frame-wrap code-preview__frame-wrap--${device}`}
                         >
-                            <iframe
-                                key={iframeKey}
-                                className="code-preview__frame"
-                                title={title}
-                                sandbox="allow-scripts"
-                                srcDoc={htmlDocument}
-                                loading="lazy"
-                            />
+                            {previewUrl ? (
+                                <iframe
+                                    key={iframeKey}
+                                    className="code-preview__frame"
+                                    title={title}
+                                    /* Blob URL loads into its own origin;
+                                       keep the sandbox as a defense-in-
+                                       depth layer without allow-same-origin
+                                       so the preview can't reach parent APIs. */
+                                    sandbox="allow-scripts allow-forms allow-popups"
+                                    src={previewUrl}
+                                />
+                            ) : null}
                         </div>
                     ) : (
                         <pre className="code-preview__code" aria-label={codeTab}>

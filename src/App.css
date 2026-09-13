@@ -507,13 +507,30 @@
 .brand-logo__mark {
   display: block;
   flex-shrink: 0;
-  filter: drop-shadow(0 6px 14px rgba(3, 5, 20, 0.45));
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  /* The user-provided PNG has a black background that we want to drop
+     so the gradient "CM" glyph reads as if floating on the aurora page.
+     `mix-blend-mode: screen` maps black → transparent while preserving
+     the cyan/violet strokes on top of the app's dark background. */
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 4px 10px rgba(125, 211, 252, 0.35));
   transition: transform 0.25s ease, filter 0.25s ease;
 }
 
 .brand-logo:hover .brand-logo__mark {
   transform: translateY(-0.5px);
-  filter: drop-shadow(0 8px 18px rgba(125, 211, 252, 0.35));
+  filter: drop-shadow(0 6px 14px rgba(167, 139, 250, 0.5));
+}
+
+/* Light theme: `screen` washes the mark out on a light page, and the
+   PNG background stays black. Switch to `multiply` so the glyph
+   integrates the other direction (light bg preserved, dark strokes
+   remain). */
+:root[data-theme='light'] .brand-logo__mark {
+  mix-blend-mode: multiply;
+  filter: drop-shadow(0 2px 6px rgba(20, 24, 36, 0.28));
 }
 
 .brand-logo__wordmark {
@@ -5692,8 +5709,11 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 4px 0 12px;
+  /* Larger vertical rhythm between rows in the new chat design — each
+     row now carries its own avatar and action strip, so we want a bit
+     more room to let them breathe. */
+  gap: 14px;
+  padding: 8px 0 16px;
   scrollbar-width: thin;
   touch-action: pan-y;
 }
@@ -5701,21 +5721,132 @@
 .ai-chat__empty {
   margin: auto 0;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--cm-text-muted);
-  line-height: 1.5;
-  padding: 24px 12px;
+  line-height: 1.55;
+  padding: 32px 16px;
+  border-radius: 22px;
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, #7dd3fc 8%, transparent),
+    color-mix(in srgb, #a78bfa 10%, transparent)
+  );
+  border: 0.5px solid rgba(125, 211, 252, 0.18);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* -----------------------------------------------------------------
+   NEW chat row structure (Sep 2026 redesign)
+   -----------------------------------------------------------------
+   - .ai-chat__row: horizontal container, avatar + bubble stack side
+     by side; user rows are reversed so the avatar sits on the right.
+   - .ai-chat__avatar: 30x30 circular badge — assistant uses the brand
+     mark PNG, user uses a soft glass silhouette.
+   - .ai-chat__bubble-stack: vertical column holding the bubble + the
+     action strip so long bubbles never fight the copy buttons for
+     space (the old design floated them absolutely on top of the
+     content, which broke word-wrap on tiny screens).
+   ----------------------------------------------------------------- */
+
+.ai-chat__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+  animation: ai-chat-row-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ai-chat__row--user {
+  flex-direction: row-reverse;
+}
+
+@keyframes ai-chat-row-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.ai-chat__avatar {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  align-self: flex-end;
+  /* Slight offset so the avatar visually anchors to the tail of the
+     bubble rather than its baseline. */
+  margin-bottom: 2px;
+}
+
+.ai-chat__avatar--assistant {
+  background:
+    radial-gradient(120% 120% at 30% 20%,
+      color-mix(in srgb, #7dd3fc 26%, transparent) 0%,
+      color-mix(in srgb, #a78bfa 20%, transparent) 55%,
+      transparent 100%),
+    #0a0d24;
+  border: 0.5px solid rgba(125, 211, 252, 0.32);
+  box-shadow: 0 4px 14px rgba(3, 5, 20, 0.4);
+}
+
+.ai-chat__avatar--user {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--cm-accent) 70%, transparent),
+    color-mix(in srgb, var(--cm-accent-violet) 70%, transparent));
+  color: #ffffff;
+  border: 0.5px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 14px rgba(3, 5, 20, 0.35);
+}
+
+.ai-chat__avatar-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  /* Same black-background PNG we use for the home logo — screen blend
+     drops the black and lets the gradient glyph glow on the avatar. */
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.ai-chat__bubble-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  max-width: calc(100% - 40px);
+}
+
+.ai-chat__row--user .ai-chat__bubble-stack {
+  align-items: flex-end;
+}
+
+.ai-chat__row--assistant .ai-chat__bubble-stack {
+  align-items: flex-start;
 }
 
 .ai-chat__bubble {
-  max-width: 88%;
   min-width: 0;
-  padding: 10px 12px;
-  border-radius: 14px;
-  font-size: 13px;
-  line-height: 1.45;
+  max-width: 100%;
+  padding: 12px 14px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.5;
   overflow-wrap: anywhere;
   word-break: break-word;
+  /* Smooth glass finish across every bubble, distinct from the
+     surrounding aurora background. */
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(3, 5, 20, 0.28);
 }
 
 .ai-chat__bubble p {
@@ -5779,23 +5910,65 @@
 }
 
 .ai-chat__bubble--user {
-  align-self: flex-end;
-  background: var(--cm-bubble-user-bg);
-  color: var(--cm-text);
-  border: 0.5px solid var(--cm-bubble-user-border);
-  border-bottom-right-radius: 4px;
+  /* Aurora gradient bubble for the outgoing message — instantly
+     distinguishes user from assistant without needing tail arrows. */
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--cm-accent) 88%, transparent),
+      color-mix(in srgb, var(--cm-accent-violet) 88%, transparent));
+  color: #ffffff;
+  border: 0.5px solid rgba(255, 255, 255, 0.22);
+  border-bottom-right-radius: 6px;
+  box-shadow:
+    0 10px 30px rgba(60, 40, 200, 0.28),
+    0 1px 0 rgba(255, 255, 255, 0.14) inset;
+}
+
+.ai-chat__bubble--user p,
+.ai-chat__bubble--user .markdown-message,
+.ai-chat__bubble--user .markdown-message p {
+  color: #ffffff;
 }
 
 .ai-chat__bubble--assistant {
-  align-self: flex-start;
   position: relative;
-  background: var(--cm-bubble-assistant-bg);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, #141830 78%, transparent),
+    color-mix(in srgb, #0b0e22 82%, transparent)
+  );
   color: var(--cm-bubble-assistant-fg);
-  border: 0.5px solid var(--cm-bubble-assistant-border);
-  border-bottom-left-radius: 4px;
+  border: 0.5px solid rgba(125, 211, 252, 0.16);
+  border-bottom-left-radius: 6px;
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
+}
+
+/* Thin gradient stripe on the leading edge of the assistant bubble
+   — reads as an accent border without introducing hard geometry. */
+.ai-chat__bubble--assistant::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #7dd3fc 0%, #a78bfa 50%, #5eead4 100%);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+:root[data-theme='light'] .ai-chat__bubble--assistant {
+  background: #ffffff;
+  border-color: rgba(30, 40, 80, 0.14);
+  box-shadow: 0 8px 22px rgba(20, 24, 36, 0.06);
+}
+
+:root[data-theme='light'] .ai-chat__bubble--user {
+  color: #ffffff;
+  border-color: rgba(30, 40, 80, 0.12);
 }
 
 .ai-chat__bubble--assistant .markdown-message,
@@ -5808,31 +5981,48 @@
   -webkit-touch-callout: default;
 }
 
+/* Action strip now lives BELOW the assistant bubble, not on top of it.
+   Positioned by the flex parent (.ai-chat__bubble-stack) so no more
+   overlapping content vs buttons on tight screens. */
 .ai-chat__bubble-actions {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #0a0d24 42%, transparent);
+  border: 0.5px solid rgba(125, 211, 252, 0.14);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+:root[data-theme='light'] .ai-chat__bubble-actions {
+  background: #ffffff;
+  border-color: rgba(30, 40, 80, 0.1);
+  box-shadow: 0 4px 12px rgba(20, 24, 36, 0.06);
 }
 
 .ai-chat__bubble-copy {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: none;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: transparent;
   color: var(--cm-text-muted);
   cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+.ai-chat__bubble-copy:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--cm-text);
 }
 
 .ai-chat__bubble-copy:disabled {
@@ -6000,8 +6190,11 @@
 }
 
 .code-preview__frame {
+  display: block;
   height: 100%;
+  width: 100%;
   min-height: 320px;
+  border: 0;
   background: #ffffff;
 }
 
@@ -6033,9 +6226,9 @@
   }
 }
 
-.ai-chat__bubble--assistant:has(.ai-chat__bubble-actions) {
-  padding-top: 34px;
-}
+/* Legacy padding-top hack removed — the action strip is now rendered
+   below the bubble (see .ai-chat__bubble-stack) so bubbles no longer
+   need artificial top space to make room for floating buttons. */
 
 .ai-chat__bubble--typing,
 .ai-chat__bubble--pending {
@@ -6090,11 +6283,26 @@
   height: 44px;
   flex-shrink: 0;
   padding: 0;
-  border: 0.5px solid var(--cm-border);
-  border-radius: 12px;
-  background: var(--cm-surface);
+  border: 0.5px solid rgba(125, 211, 252, 0.22);
+  border-radius: 999px;
+  background: color-mix(in srgb, #0a0d24 55%, transparent);
   color: var(--cm-text-soft);
   cursor: pointer;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 6px 18px rgba(3, 5, 20, 0.28);
+  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.ai-chat__attach:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cm-accent) 24%, transparent);
+  color: #ffffff;
+}
+
+:root[data-theme='light'] .ai-chat__attach {
+  background: #ffffff;
+  border-color: rgba(30, 40, 80, 0.14);
+  box-shadow: 0 4px 12px rgba(20, 24, 36, 0.08);
 }
 
 .ai-chat__attach:disabled {
@@ -6102,12 +6310,40 @@
   cursor: not-allowed;
 }
 
+/* Composer wraps its textarea (and optional attachment preview) in a
+   rounded glass pill grouped visually with the attach + send buttons.
+   The old flat rectangle read as "unfinished" on the aurora bg. */
 .ai-chat__composer-field {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 4px 10px;
+  border-radius: 22px;
+  border: 0.5px solid rgba(125, 211, 252, 0.22);
+  background: color-mix(in srgb, #0a0d24 55%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 8px 24px rgba(3, 5, 20, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ai-chat__composer-field:focus-within {
+  border-color: color-mix(in srgb, var(--cm-accent) 55%, transparent);
+  box-shadow:
+    0 8px 24px rgba(3, 5, 20, 0.4),
+    0 0 0 3px color-mix(in srgb, var(--cm-accent) 18%, transparent);
+}
+
+:root[data-theme='light'] .ai-chat__composer-field {
+  background: #ffffff;
+  border-color: rgba(30, 40, 80, 0.14);
+  box-shadow:
+    0 6px 18px rgba(20, 24, 36, 0.08),
+    0 1px 0 rgba(20, 24, 36, 0.04) inset;
 }
 
 .ai-chat__attachment-preview {
@@ -6151,11 +6387,7 @@
   gap: 8px;
   flex-shrink: 0;
   padding: 10px 0 calc(12px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
-  /* Was a solid `var(--cm-bg)` (~near-black) with a hard border-top,
-     which read as an out-of-place black rectangle at the bottom of the
-     chat screen. Drop the background so the aurora shows through, and
-     soften the divider to a barely-there hairline. */
-  border-top: 0.5px solid rgba(255, 255, 255, 0.06);
+  border-top: none;
   background: transparent;
 }
 
@@ -6165,18 +6397,19 @@
 
 .ai-chat__input {
   flex: 1;
-  min-height: 44px;
-  max-height: 120px;
+  min-height: 40px;
+  max-height: 140px;
   resize: none;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 0.5px solid var(--cm-border);
-  background: var(--cm-surface);
+  padding: 10px 4px;
+  border-radius: 0;
+  border: none;
+  background: transparent;
   color: var(--cm-text-input);
   font-family: inherit;
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 14px;
+  line-height: 1.45;
   outline: none;
+  box-shadow: none;
 }
 
 .ai-chat__input::placeholder {
@@ -6184,8 +6417,10 @@
 }
 
 .ai-chat__input:focus {
-  border-color: var(--cm-tab-active-border);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cm-tab-active-border) 35%, transparent);
+  /* Focus ring lives on the .ai-chat__composer-field wrapper (see
+     `:focus-within` above), so the textarea itself stays borderless. */
+  border-color: transparent;
+  box-shadow: none;
 }
 
 :root[data-theme='light'] .ai-chat__attach,
@@ -6209,11 +6444,20 @@
   height: 44px;
   flex-shrink: 0;
   padding: 0;
-  border: none;
-  border-radius: 12px;
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
   background: linear-gradient(135deg, var(--cm-accent), var(--cm-accent-violet));
   color: #ffffff;
   cursor: pointer;
+  box-shadow:
+    0 8px 22px rgba(60, 40, 200, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.24) inset;
+  transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease;
+}
+
+.ai-chat__send:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
 .ai-chat__send:disabled {
@@ -6234,8 +6478,9 @@
   width: auto;
   min-width: 44px;
   max-width: 140px;
-  padding: 0 10px;
+  padding: 0 12px;
   background: rgba(120, 120, 130, 0.35);
+  border-radius: 999px;
 }
 
 .ai-chat__send-label {
