@@ -19,8 +19,8 @@ export default function BrandLogo({ title = 'CyberMate' }) {
                 alt=""
                 aria-hidden="true"
                 draggable={false}
-                width="36"
-                height="36"
+                width="48"
+                height="48"
             />
             <span className="brand-logo__wordmark">{title}</span>
         </span>

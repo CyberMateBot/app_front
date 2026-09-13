@@ -899,6 +899,11 @@ const translations = {
         catalogSectionVideo: 'Генерация видео',
         chatTitle: 'AI Чат',
         chatEmpty: 'Напишите сообщение — модель ответит здесь.',
+        chatEmptyTitle: 'Готов помочь',
+        chatEmptyHint: 'Спросите что угодно или выберите готовый промт ниже.',
+        chatSuggestion1: 'Придумай идею для стартапа',
+        chatSuggestion2: 'Напиши код, который...',
+        chatSuggestion3: 'Объясни как ребёнку',
         chatPlaceholder: 'Сообщение...',
         chatSend: 'Отправить',
         chatStop: 'Остановить',
@@ -1570,6 +1575,11 @@ const translations = {
         catalogSectionVideo: 'Video generation',
         chatTitle: 'AI Chat',
         chatEmpty: 'Send a message — the model will reply here.',
+        chatEmptyTitle: 'Ready to help',
+        chatEmptyHint: 'Ask anything or pick a ready-made prompt below.',
+        chatSuggestion1: 'Come up with a startup idea',
+        chatSuggestion2: 'Write code that...',
+        chatSuggestion3: 'Explain like I am 5',
         chatPlaceholder: 'Message...',
         chatSend: 'Send',
         chatStop: 'Stop',
@@ -6651,7 +6661,31 @@ function App() {
 
                 <div className="ai-chat__messages" aria-live="polite">
                     {chatMessages.length === 0 && !isGeneratingText ? (
-                        <p className="ai-chat__empty">{text.chatEmpty}</p>
+                        <div className="ai-chat__welcome" role="status" aria-live="polite">
+                            <img
+                                className="ai-chat__welcome-mark"
+                                src="/brand-mark.png"
+                                alt=""
+                                aria-hidden="true"
+                                draggable={false}
+                            />
+                            <h3 className="ai-chat__welcome-title">{text.chatEmptyTitle}</h3>
+                            <p className="ai-chat__welcome-hint">{text.chatEmptyHint}</p>
+                            <div className="ai-chat__welcome-chips" role="group">
+                                {[text.chatSuggestion1, text.chatSuggestion2, text.chatSuggestion3]
+                                    .filter(Boolean)
+                                    .map((prompt) => (
+                                        <button
+                                            key={prompt}
+                                            type="button"
+                                            className="ai-chat__welcome-chip"
+                                            onClick={() => setTextPrompt(prompt)}
+                                        >
+                                            {prompt}
+                                        </button>
+                                    ))}
+                            </div>
+                        </div>
                     ) : null}
                     {chatMessages.map((message) => (
                         <ChatMessageBubble

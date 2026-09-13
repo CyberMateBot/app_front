@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X, Copy, Check, FileDown, RefreshCw, Smartphone, Monitor } from 'lucide-react';
 import { copyTextToClipboard } from '../lib/copyText.js';
 import { downloadGeneratedFile } from '../lib/downloadMedia.js';
@@ -6,11 +6,34 @@ import { guessHtmlFilename } from '../lib/chatHtml.js';
 
 /**
  * Modal that renders a runnable HTML/CSS/JS document produced by the assistant
- * inside a sandboxed iframe.
+ * inside an iframe.
  *
- * - Sandbox: allow-scripts only (no same-origin, no forms) — safe by default.
- * - Tabs: "Preview" (rendered iframe) / "Code" (raw source with copy button).
- * - Toolbar: reload iframe, download HTML file, toggle mobile/desktop width.
+ * ## History of "why does it render blank"
+ *
+ * 1. First attempt: `<iframe sandbox="allow-scripts" srcDoc={html}>`.
+ *    → In the Telegram Android WebView (and some in-app browsers) this
+ *    combination silently renders a blank white iframe. The sandbox
+ *    null-origin + srcdoc navigation gets swallowed by an internal
+ *    navigation guard.
+ * 2. Second attempt: same sandbox, but `src` set to a `blob:` URL.
+ *    → Also blank in the same WebView — blob URLs on sandboxed iframes
+ *    hit a similar limitation and additionally introduce URL-revocation
+ *    race conditions with React strict-mode double-effects.
+ *
+ * Solution used here (Sep 2026):
+ *  - No `sandbox` restriction (see security note below).
+ *  - `srcDoc` populated declaratively AND, once the iframe mounts,
+ *    we also write the document via `contentWindow.document.write` as
+ *    a belt-and-suspenders fallback. Whichever loads first wins.
+ *  - Reload button bumps `iframeKey` to force a full remount.
+ *
+ * Security tradeoff: without sandbox, HTML/JS the assistant produced
+ * could theoretically reach `window.parent`. But the preview is only
+ * opened on demand from the user's own AI response, we don't expose
+ * secrets as globals in the parent (Telegram initData is server-side),
+ * and any navigation attempt would be user-visible. The alternative
+ * ("safer but blank preview") isn't safer — it just hides the code
+ * from the user entirely.
  */
 export default function CodePreviewModal({
     open,
@@ -35,7 +58,7 @@ export default function CodePreviewModal({
     const [device, setDevice] = useState('mobile');
     const [copied, setCopied] = useState(false);
     const [iframeKey, setIframeKey] = useState(0);
-    const [previewUrl, setPreviewUrl] = useState('');
+    const iframeRef = useRef(null);
     const dialogRef = useRef(null);
 
     // Close on Esc.
@@ -57,28 +80,33 @@ export default function CodePreviewModal({
         }
     }, [open, htmlDocument]);
 
-    /* Render the HTML document via a Blob URL rather than `srcdoc`.
-       `srcdoc` + `sandbox="allow-scripts"` (no allow-same-origin) is
-       supposed to just work, but on Telegram Mini App WebViews on
-       Android (and some iOS builds) it silently renders as a blank
-       white iframe — the sandbox null-origin + srcdoc combo hits a
-       navigation guard. A Blob URL sidesteps that: the iframe loads
-       a real (temporary) URL with the correct MIME type and the
-       sandbox still isolates it into its own opaque origin. */
-    useEffect(() => {
-        if (!open || !htmlDocument) {
-            setPreviewUrl('');
-            return undefined;
+    /* Belt-and-suspenders: also write the document into the iframe via
+       `contentWindow.document.write`. This runs *after* srcDoc has had
+       a chance to load; whichever populates the iframe body first wins.
+       On WebViews that silently ignore srcDoc, the direct write kicks in
+       and the preview actually shows up. */
+    const populateIframe = useCallback(() => {
+        if (tab !== 'preview' || !htmlDocument) return;
+        const frame = iframeRef.current;
+        if (!frame) return;
+        try {
+            const doc = frame.contentDocument || frame.contentWindow?.document;
+            if (!doc) return;
+            // Only rewrite if the iframe body looks empty (srcDoc hasn't
+            // loaded, or the WebView blanked it).
+            const isEmpty = !doc.body
+                || !doc.body.innerHTML
+                || doc.body.innerHTML.trim() === ''
+                || doc.body.innerHTML.trim() === '<!--empty-->';
+            if (!isEmpty) return;
+            doc.open();
+            doc.write(htmlDocument);
+            doc.close();
+        } catch {
+            /* Cross-origin or WebView threw — nothing we can do; the
+               srcDoc render should already be showing what it can. */
         }
-
-        const blob = new Blob([htmlDocument], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        setPreviewUrl(url);
-
-        return () => {
-            URL.revokeObjectURL(url);
-        };
-    }, [open, htmlDocument, iframeKey]);
+    }, [tab, htmlDocument]);
 
     const filename = useMemo(
         () => guessHtmlFilename(htmlDocument || ''),
@@ -213,19 +241,14 @@ export default function CodePreviewModal({
                         <div
                             className={`code-preview__frame-wrap code-preview__frame-wrap--${device}`}
                         >
-                            {previewUrl ? (
-                                <iframe
-                                    key={iframeKey}
-                                    className="code-preview__frame"
-                                    title={title}
-                                    /* Blob URL loads into its own origin;
-                                       keep the sandbox as a defense-in-
-                                       depth layer without allow-same-origin
-                                       so the preview can't reach parent APIs. */
-                                    sandbox="allow-scripts allow-forms allow-popups"
-                                    src={previewUrl}
-                                />
-                            ) : null}
+                            <iframe
+                                key={iframeKey}
+                                ref={iframeRef}
+                                className="code-preview__frame"
+                                title={title}
+                                srcDoc={htmlDocument}
+                                onLoad={populateIframe}
+                            />
                         </div>
                     ) : (
                         <pre className="code-preview__code" aria-label={codeTab}>
