@@ -7048,7 +7048,7 @@ function App() {
                     ) : null}
                 </div>
 
-                <footer className={`ai-chat__composer ${supportsSourceUpload ? 'ai-chat__composer--no-attach' : ''}`}>
+                <footer className="ai-chat__composer ai-chat__composer--no-attach">
                     {!supportsSourceUpload ? (
                         <input
                             ref={imagePhotoInputRef}
@@ -7060,18 +7060,19 @@ function App() {
                             onChange={handleImagePhotoSelect}
                         />
                     ) : null}
-                    {!supportsSourceUpload ? (
+                    <div className={`ai-chat__composer-field ${!supportsSourceUpload ? 'ai-chat__composer-field--with-attach' : ''}`}>
+                        {!supportsSourceUpload ? (
                             <button
                                 type="button"
-                            className="ai-chat__attach"
-                            aria-label={text.imageAttachPhoto}
+                                className="ai-chat__attach ai-chat__attach--inline"
+                                aria-label={text.imageAttachPhoto}
+                                title={text.imageAttachPhoto}
                                 disabled={isGeneratingImage}
-                            onClick={() => imagePhotoInputRef.current?.click()}
+                                onClick={() => imagePhotoInputRef.current?.click()}
                             >
-                            <Paperclip size={18} aria-hidden="true" />
+                                <Paperclip size={16} aria-hidden="true" />
                             </button>
-                    ) : null}
-                    <div className="ai-chat__composer-field">
+                        ) : null}
                         {!supportsSourceUpload && imageAttachment ? (
                             <div className="ai-chat__attachment-preview">
                                 <img src={imageAttachment.previewUrl} alt="" />
@@ -7083,18 +7084,18 @@ function App() {
                                 >
                                     ×
                                 </button>
-                </div>
+                            </div>
                         ) : null}
-                    <textarea
-                        id="ai-image-prompt"
+                        <textarea
+                            id="ai-image-prompt"
                             className="ai-chat__input"
-                        value={imagePrompt}
-                        onChange={(event) => setImagePrompt(event.target.value)}
+                            value={imagePrompt}
+                            onChange={(event) => setImagePrompt(event.target.value)}
                             onKeyDown={handleImageComposerKeyDown}
                             placeholder={promptPlaceholder}
                             rows={2}
-                        disabled={isGeneratingImage}
-                    />
+                            disabled={isGeneratingImage}
+                        />
                     </div>
                     <button
                         type="button"
@@ -7635,7 +7636,7 @@ function App() {
                     ) : null}
                 </div>
 
-                <footer className={`ai-chat__composer ${supportsClone ? '' : 'ai-chat__composer--no-attach'}`}>
+                <footer className="ai-chat__composer ai-chat__composer--no-attach">
                     {supportsClone ? (
                         <input
                             ref={audioFileInputRef}
@@ -7647,18 +7648,19 @@ function App() {
                             onChange={handleAudioAttachmentSelect}
                         />
                     ) : null}
-                    {supportsClone ? (
-                        <button
-                            type="button"
-                            className="ai-chat__attach"
-                            aria-label={text.voiceAttachAudio}
-                            disabled={isGeneratingAudio}
-                            onClick={() => audioFileInputRef.current?.click()}
-                        >
-                            <Paperclip size={18} aria-hidden="true" />
-                        </button>
-                    ) : null}
-                    <div className="ai-chat__composer-field">
+                    <div className={`ai-chat__composer-field ${supportsClone ? 'ai-chat__composer-field--with-attach' : ''}`}>
+                        {supportsClone ? (
+                            <button
+                                type="button"
+                                className="ai-chat__attach ai-chat__attach--inline"
+                                aria-label={text.voiceAttachAudio}
+                                title={text.voiceAttachAudio}
+                                disabled={isGeneratingAudio}
+                                onClick={() => audioFileInputRef.current?.click()}
+                            >
+                                <Paperclip size={16} aria-hidden="true" />
+                            </button>
+                        ) : null}
                         {supportsClone && audioAttachment ? (
                             <div className="ai-chat__attachment-preview ai-chat__attachment-preview--audio">
                                 <audio src={audioAttachment.previewUrl} controls />
@@ -7870,13 +7872,13 @@ function App() {
                         {(requiresImage || requiresMultiImage) ? (
                             <button
                                 type="button"
-                                className="ai-chat__attach ai-video__attach-inline"
+                                className="ai-chat__attach ai-chat__attach--inline"
                                 aria-label={requiresMultiImage ? text.threeDAttachImages : text.threeDAttachImage}
+                                title={requiresMultiImage ? text.threeDAttachImages : text.threeDAttachImage}
                                 disabled={isGeneratingThreeD}
                                 onClick={() => threeDFileInputRef.current?.click()}
                             >
-                                <Paperclip size={18} aria-hidden="true" />
-                                <span>{requiresMultiImage ? text.threeDAttachImages : text.threeDAttachImage}</span>
+                                <Paperclip size={16} aria-hidden="true" />
                             </button>
                         ) : null}
 

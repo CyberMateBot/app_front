@@ -270,16 +270,24 @@
 
 /* Collapsible model picker. Behaves like a parameter card: a trigger
    row at the top with the current selection, click to expand a
-   horizontally-scrolling strip of pills. This shrinks the top panel
-   on AI chats from ~90px to ~44px when collapsed. */
+   vertical list of options. Sticky at top:54 so the picker stays
+   visible as chat messages scroll — background is deliberately
+   opaque enough to fully occlude messages that scroll under it. */
 .ai-chat-screen--concept .ai-variant-select,
 .ai-image-screen--concept .ai-variant-select {
-  padding: 6px 12px 4px !important;
+  position: sticky !important;
+  top: 54px !important;
+  z-index: 15 !important;
+  padding: 6px 12px 6px !important;
   margin-top: 2px !important;
-  animation: ai-lab-card-in 0.5s cubic-bezier(0.22, 0.9, 0.3, 1) both;
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
+  background: linear-gradient(180deg,
+    rgba(4, 6, 20, 0.94) 0%,
+    rgba(4, 6, 20, 0.9) 100%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+  backdrop-filter: blur(12px) saturate(140%) !important;
 }
 
 .ai-chat-screen--concept .ai-variant-select__trigger,
@@ -749,37 +757,25 @@
    pulses when hovered.  Because CSS can't animate dashed strokes, we
    fake it with four moving gradient background layers (top/bottom/
    left/right) that shift position over time. */
-/* Dropzone — dashed border marches (background-position keyframe) but
-   we removed the backdrop-filter (was compositing on every march
-   frame). Solid rgba inner keeps the glass look at a fraction of the
-   GPU cost. */
+/* Dropzone — user asked to kill the marching-dashes look entirely
+   (it was animated background layers, and on mobile the animation
+   made the whole tile visibly jitter). Now it's a plain glassy
+   rounded card with a solid 1px accent border. No animation, no
+   dashed pattern, no repeat-x/y layers to composite. */
 .ai-image-screen--concept .media-reference-field__dropzone {
   position: relative;
   padding: 18px !important;
   border-radius: 20px !important;
-  border: none !important;
-  background:
-    /* dashed pattern layers */
-    linear-gradient(90deg, rgba(125, 211, 252, 0.55) 50%, transparent 50%) top left / 22px 2px repeat-x,
-    linear-gradient(90deg, rgba(167, 139, 250, 0.55) 50%, transparent 50%) bottom left / 22px 2px repeat-x,
-    linear-gradient(180deg, rgba(125, 211, 252, 0.55) 50%, transparent 50%) top left / 2px 22px repeat-y,
-    linear-gradient(180deg, rgba(167, 139, 250, 0.55) 50%, transparent 50%) top right / 2px 22px repeat-y,
-    /* inner surface */
-    linear-gradient(160deg,
-      rgba(14, 19, 48, 0.9),
-      rgba(22, 32, 74, 0.85)) content-box !important;
-  background-clip: border-box, border-box, border-box, border-box, content-box !important;
-  animation: ai-lab-dashed-march 4s linear infinite;
-  will-change: background-position;
-  transition: box-shadow 0.22s ease !important;
-  contain: layout paint;
+  border: 1px solid rgba(125, 211, 252, 0.28) !important;
+  background: linear-gradient(160deg,
+    rgba(14, 19, 48, 0.9),
+    rgba(22, 32, 74, 0.85)) !important;
+  animation: none !important;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease !important;
 }
 .ai-image-screen--concept .media-reference-field__dropzone:hover {
-  box-shadow: 0 12px 30px rgba(125, 211, 252, 0.16),
-              0 0 0 1px rgba(125, 211, 252, 0.28) inset;
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-image-screen--concept .media-reference-field__dropzone { animation: none; }
+  border-color: rgba(167, 139, 250, 0.55) !important;
+  box-shadow: 0 12px 30px rgba(125, 211, 252, 0.12);
 }
 
 /* Upload button inside dropzone. */
