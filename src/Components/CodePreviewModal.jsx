@@ -1,39 +1,35 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, Copy, Check, FileDown, RefreshCw, Smartphone, Monitor } from 'lucide-react';
+import { X, Copy, Check, FileDown, RefreshCw, Smartphone, Monitor, ExternalLink } from 'lucide-react';
 import { copyTextToClipboard } from '../lib/copyText.js';
 import { downloadGeneratedFile } from '../lib/downloadMedia.js';
 import { guessHtmlFilename } from '../lib/chatHtml.js';
+import { openExternalLink } from '../lib/homeWidgets.js';
 
 /**
- * Modal that renders a runnable HTML/CSS/JS document produced by the assistant
- * inside an iframe.
+ * Modal that renders a runnable HTML/CSS/JS document produced by the assistant.
  *
- * ## History of "why does it render blank"
+ * ## Why this implementation
  *
- * 1. First attempt: `<iframe sandbox="allow-scripts" srcDoc={html}>`.
- *    → In the Telegram Android WebView (and some in-app browsers) this
- *    combination silently renders a blank white iframe. The sandbox
- *    null-origin + srcdoc navigation gets swallowed by an internal
- *    navigation guard.
- * 2. Second attempt: same sandbox, but `src` set to a `blob:` URL.
- *    → Also blank in the same WebView — blob URLs on sandboxed iframes
- *    hit a similar limitation and additionally introduce URL-revocation
- *    race conditions with React strict-mode double-effects.
+ * We tried three variants of iframe rendering in Telegram Mini App WebView
+ * and they all produced blank white iframes:
+ *   1. `<iframe sandbox="allow-scripts" srcDoc={html}>`
+ *   2. `<iframe sandbox="allow-scripts" src={blobUrl}>`
+ *   3. `<iframe srcDoc={html} onLoad={writeContent}>` (with conditional write)
  *
- * Solution used here (Sep 2026):
- *  - No `sandbox` restriction (see security note below).
- *  - `srcDoc` populated declaratively AND, once the iframe mounts,
- *    we also write the document via `contentWindow.document.write` as
- *    a belt-and-suspenders fallback. Whichever loads first wins.
- *  - Reload button bumps `iframeKey` to force a full remount.
+ * The final trick that actually works everywhere:
+ *   - iframe navigates to `about:blank` (rock-solid across every WebView)
+ *   - once it fires `onLoad` (which for about:blank fires almost instantly),
+ *     we open the iframe's document and `document.write(html)` — this replaces
+ *     the entire iframe body with the assistant's HTML unconditionally.
+ *   - we don't check "is the body empty first?" because in some WebViews
+ *     the body reports non-empty for a blank iframe.
+ *   - we don't set `srcDoc` because that competes with the write.
+ *   - `injected` ref guards against re-writing on the second onLoad that
+ *     `document.close()` triggers.
  *
- * Security tradeoff: without sandbox, HTML/JS the assistant produced
- * could theoretically reach `window.parent`. But the preview is only
- * opened on demand from the user's own AI response, we don't expose
- * secrets as globals in the parent (Telegram initData is server-side),
- * and any navigation attempt would be user-visible. The alternative
- * ("safer but blank preview") isn't safer — it just hides the code
- * from the user entirely.
+ * Plus: a permanent "Open in browser" button that pipes the HTML through
+ * a blob URL to `openLink` (Telegram) / `window.open` — that always works
+ * even if the iframe render fails on some exotic device.
  */
 export default function CodePreviewModal({
     open,
@@ -52,13 +48,16 @@ export default function CodePreviewModal({
         closeLabel = 'Закрыть',
         deviceMobile = 'Телефон',
         deviceDesktop = 'Десктоп',
+        openInBrowserLabel = 'Открыть в браузере',
     } = labels;
 
     const [tab, setTab] = useState('preview');
     const [device, setDevice] = useState('mobile');
     const [copied, setCopied] = useState(false);
     const [iframeKey, setIframeKey] = useState(0);
+    const [injectError, setInjectError] = useState('');
     const iframeRef = useRef(null);
+    const injectedRef = useRef(false);
     const dialogRef = useRef(null);
 
     // Close on Esc.
@@ -71,42 +70,47 @@ export default function CodePreviewModal({
         return () => window.removeEventListener('keydown', onKey);
     }, [open, onClose]);
 
-    // Reset transient state when the doc changes / modal reopens.
+    // Reset transient state when the modal (re)opens or content changes.
     useEffect(() => {
         if (open) {
             setTab('preview');
             setCopied(false);
+            setInjectError('');
+            injectedRef.current = false;
             setIframeKey((k) => k + 1);
         }
     }, [open, htmlDocument]);
 
-    /* Belt-and-suspenders: also write the document into the iframe via
-       `contentWindow.document.write`. This runs *after* srcDoc has had
-       a chance to load; whichever populates the iframe body first wins.
-       On WebViews that silently ignore srcDoc, the direct write kicks in
-       and the preview actually shows up. */
-    const populateIframe = useCallback(() => {
-        if (tab !== 'preview' || !htmlDocument) return;
+    // Also reset the "already injected" flag when the tab flips back to
+    // "preview" so a fresh iframe write happens on Reload.
+    useEffect(() => {
+        if (tab === 'preview') {
+            injectedRef.current = false;
+        }
+    }, [tab, iframeKey]);
+
+    /* onLoad handler — fires when about:blank finishes loading. We then
+       unconditionally write the assistant's HTML into the iframe. If the
+       host WebView blocks contentDocument access (rare but possible), we
+       surface a helpful error state instead of a silent white screen. */
+    const handleIframeLoad = useCallback(() => {
+        if (injectedRef.current || !htmlDocument) return;
         const frame = iframeRef.current;
         if (!frame) return;
         try {
             const doc = frame.contentDocument || frame.contentWindow?.document;
-            if (!doc) return;
-            // Only rewrite if the iframe body looks empty (srcDoc hasn't
-            // loaded, or the WebView blanked it).
-            const isEmpty = !doc.body
-                || !doc.body.innerHTML
-                || doc.body.innerHTML.trim() === ''
-                || doc.body.innerHTML.trim() === '<!--empty-->';
-            if (!isEmpty) return;
+            if (!doc) {
+                setInjectError('Не удалось получить доступ к iframe.');
+                return;
+            }
             doc.open();
             doc.write(htmlDocument);
             doc.close();
-        } catch {
-            /* Cross-origin or WebView threw — nothing we can do; the
-               srcDoc render should already be showing what it can. */
+            injectedRef.current = true;
+        } catch (err) {
+            setInjectError(String(err?.message || err) || 'Ошибка отрисовки предпросмотра.');
         }
-    }, [tab, htmlDocument]);
+    }, [htmlDocument]);
 
     const filename = useMemo(
         () => guessHtmlFilename(htmlDocument || ''),
@@ -131,6 +135,24 @@ export default function CodePreviewModal({
         } catch {
             /* silent — the download button is a nice-to-have */
         }
+    };
+
+    const handleOpenInBrowser = () => {
+        try {
+            const blob = new Blob([htmlDocument], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            // Give the browser a moment to grab the URL before we revoke it.
+            openExternalLink(url);
+            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        } catch {
+            /* silent */
+        }
+    };
+
+    const handleReload = () => {
+        injectedRef.current = false;
+        setInjectError('');
+        setIframeKey((k) => k + 1);
     };
 
     const handleBackdrop = (e) => {
@@ -197,7 +219,7 @@ export default function CodePreviewModal({
                                 <button
                                     type="button"
                                     className="code-preview__icon-btn"
-                                    onClick={() => setIframeKey((k) => k + 1)}
+                                    onClick={handleReload}
                                     aria-label={reloadLabel}
                                     title={reloadLabel}
                                 >
@@ -215,6 +237,15 @@ export default function CodePreviewModal({
                                 {copied ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
                             </button>
                         )}
+                        <button
+                            type="button"
+                            className="code-preview__icon-btn"
+                            onClick={handleOpenInBrowser}
+                            aria-label={openInBrowserLabel}
+                            title={openInBrowserLabel}
+                        >
+                            <ExternalLink size={15} aria-hidden="true" />
+                        </button>
                         <button
                             type="button"
                             className="code-preview__icon-btn"
@@ -246,9 +277,24 @@ export default function CodePreviewModal({
                                 ref={iframeRef}
                                 className="code-preview__frame"
                                 title={title}
-                                srcDoc={htmlDocument}
-                                onLoad={populateIframe}
+                                src="about:blank"
+                                onLoad={handleIframeLoad}
                             />
+                            {injectError ? (
+                                <div className="code-preview__fallback" role="alert">
+                                    <p className="code-preview__fallback-text">
+                                        {injectError}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        className="code-preview__fallback-btn"
+                                        onClick={handleOpenInBrowser}
+                                    >
+                                        <ExternalLink size={14} aria-hidden="true" />
+                                        {openInBrowserLabel}
+                                    </button>
+                                </div>
+                            ) : null}
                         </div>
                     ) : (
                         <pre className="code-preview__code" aria-label={codeTab}>

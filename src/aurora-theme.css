@@ -1907,3 +1907,288 @@ html[data-tg-layout='desktop-full'] .referral-page__row {
   outline: none;
   box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.35);
 }
+
+
+/* ==========================================================================
+   28. AI CHAT — Sep 2026 radical redesign
+   User asked for a fully distinct chat surface: different background,
+   different parameter/model selector, different bubbles, different
+   composer. Everything below is scoped to `.ai-chat-screen--concept` so
+   image/video/audio screens keep their existing look.
+   ========================================================================== */
+
+/* --- Page background: dim the aurora orbs, replace with a focused
+   vertical gradient + one soft glow at the top, so the chat feels
+   like its own calm surface instead of the busy home page. --- */
+:root:not([data-theme='light']) .app-shell[data-page='chat'],
+:root:not([data-theme='light']) .app-shell[data-page='ai-chat'] {
+  background:
+    radial-gradient(
+      ellipse 120% 55% at 50% -10%,
+      rgba(125, 211, 252, 0.14) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 90% 40% at 50% 110%,
+      rgba(167, 139, 250, 0.10) 0%,
+      transparent 60%
+    ),
+    linear-gradient(180deg, #080b1e 0%, #04061a 55%, #030412 100%);
+  background-attachment: fixed, fixed, fixed;
+}
+
+/* Kill the noisy floating orbs on chat — the chat surface should feel
+   uncluttered and reading-focused, unlike the home/catalog pages. */
+.app-shell[data-page='chat'] .app-shell__orb,
+.app-shell[data-page='ai-chat'] .app-shell__orb {
+  display: none;
+}
+
+:root[data-theme='light'] .app-shell[data-page='chat'],
+:root[data-theme='light'] .app-shell[data-page='ai-chat'] {
+  background:
+    radial-gradient(
+      ellipse 120% 55% at 50% -10%,
+      rgba(125, 211, 252, 0.16) 0%,
+      transparent 60%
+    ),
+    linear-gradient(180deg, #f7f8ff 0%, #eef1fb 100%);
+  background-attachment: fixed, fixed;
+}
+
+/* --- Header: promote it into a real "model chip" card at the top,
+   with a subtle glass fill and thicker gradient rule underneath. --- */
+.ai-chat-screen--concept .app-page-header {
+  padding: 12px 16px 10px !important;
+  border-bottom: 0.5px solid rgba(125, 211, 252, 0.12);
+}
+
+.ai-chat-screen--concept .app-page-header__title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 55%, #5eead4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.ai-chat-screen--concept .app-page-header__subtitle {
+  font-size: 11px;
+  color: var(--cm-text-soft);
+  opacity: 0.85;
+}
+
+/* --- Variant selector: bigger pills, chunkier active glow, softer
+   rest state so it reads as a real "tab bar" not a hint strip. --- */
+.ai-chat-screen--concept .ai-variant-select__label {
+  font-size: 10px;
+  padding-left: 12px;
+  opacity: 0.7;
+}
+
+.ai-chat-screen--concept .ai-variant-select__pill {
+  padding: 10px 16px;
+  font-size: 13px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #0e1330 62%, transparent);
+  border-color: rgba(125, 211, 252, 0.18);
+}
+
+.ai-chat-screen--concept .ai-variant-select__pill--active {
+  box-shadow:
+    0 10px 28px rgba(60, 40, 200, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.32) inset,
+    0 -1px 0 rgba(255, 255, 255, 0.28) inset;
+  transform: translateY(-1px);
+}
+
+/* --- Messages area: tighter horizontal padding, wider bubbles, more
+   vertical breathing room. --- */
+.ai-chat-screen--concept .ai-chat__messages {
+  padding: 12px 12px 20px;
+  gap: 18px;
+}
+
+.ai-chat-screen--concept .ai-chat__row {
+  gap: 10px;
+}
+
+.ai-chat-screen--concept .ai-chat__avatar {
+  width: 34px;
+  height: 34px;
+}
+
+.ai-chat-screen--concept .ai-chat__avatar-img {
+  width: 26px;
+  height: 26px;
+}
+
+.ai-chat-screen--concept .ai-chat__bubble-stack {
+  max-width: calc(100% - 44px);
+  gap: 8px;
+}
+
+.ai-chat-screen--concept .ai-chat__bubble {
+  padding: 14px 16px;
+  border-radius: 22px;
+  font-size: 15px;
+  line-height: 1.55;
+  box-shadow: 0 14px 34px rgba(3, 5, 20, 0.32);
+}
+
+.ai-chat-screen--concept .ai-chat__bubble--user {
+  border-bottom-right-radius: 8px;
+  /* Slightly warmer accent than the aurora default so user messages
+     "pop" more distinctly against the calmer chat page background. */
+  background: linear-gradient(135deg,
+    #7dd3fc 0%,
+    #a78bfa 55%,
+    #f472b6 100%);
+  color: #ffffff;
+  border: 0.5px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 14px 34px rgba(120, 60, 200, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.28) inset;
+}
+
+.ai-chat-screen--concept .ai-chat__bubble--assistant {
+  border-bottom-left-radius: 8px;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, #171b36 80%, transparent),
+    color-mix(in srgb, #0d1128 82%, transparent)
+  );
+  border: 0.5px solid rgba(125, 211, 252, 0.14);
+}
+
+.ai-chat-screen--concept .ai-chat__bubble--assistant::before {
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #7dd3fc 0%, #a78bfa 50%, #5eead4 100%);
+  opacity: 0.9;
+  box-shadow: 0 0 12px rgba(125, 211, 252, 0.45);
+}
+
+.ai-chat-screen--concept .ai-chat__bubble-actions {
+  padding: 4px;
+  border-radius: 999px;
+}
+
+.ai-chat-screen--concept .ai-chat__bubble-copy {
+  width: 30px;
+  height: 30px;
+}
+
+/* --- Composer: bigger, warmer, more presence. Send button becomes a
+   gradient circle with a distinctive glow. --- */
+.ai-chat-screen--concept .ai-chat__composer {
+  gap: 10px;
+  padding-top: 12px;
+  padding-bottom: calc(14px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
+  background: linear-gradient(180deg, transparent 0%, rgba(4, 6, 20, 0.8) 60%, rgba(4, 6, 20, 0.95) 100%);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.ai-chat-screen--concept .ai-chat__composer-field {
+  padding: 6px 14px;
+  border-radius: 26px;
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  background: color-mix(in srgb, #0a0d24 68%, transparent);
+  box-shadow:
+    0 12px 34px rgba(3, 5, 20, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
+}
+
+.ai-chat-screen--concept .ai-chat__composer-field:focus-within {
+  border-color: color-mix(in srgb, var(--cm-accent) 70%, transparent);
+  box-shadow:
+    0 12px 34px rgba(3, 5, 20, 0.5),
+    0 0 0 4px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+}
+
+.ai-chat-screen--concept .ai-chat__input {
+  min-height: 44px;
+  padding: 12px 4px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.ai-chat-screen--concept .ai-chat__attach {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.28);
+}
+
+.ai-chat-screen--concept .ai-chat__send {
+  width: 50px;
+  height: 50px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 10px 28px rgba(180, 100, 220, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.32) inset;
+}
+
+.ai-chat-screen--concept .ai-chat__send--stop {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  box-shadow:
+    0 10px 28px rgba(239, 68, 68, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.28) inset;
+}
+
+/* --- Empty-state hero card: promote it as the visual anchor when the
+   thread is fresh. --- */
+.ai-chat-screen--concept .ai-chat__welcome {
+  margin: 32px 4px;
+  padding: 40px 22px;
+  border-radius: 30px;
+  background:
+    radial-gradient(ellipse at 30% 0%, rgba(125, 211, 252, 0.20) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 100%, rgba(244, 114, 182, 0.14) 0%, transparent 60%),
+    linear-gradient(160deg, rgba(20, 24, 48, 0.7), rgba(10, 13, 36, 0.7));
+  border: 0.5px solid rgba(125, 211, 252, 0.24);
+  box-shadow: 0 30px 60px rgba(3, 5, 20, 0.42);
+}
+
+.ai-chat-screen--concept .ai-chat__welcome-mark {
+  width: 74px;
+  height: 74px;
+}
+
+.ai-chat-screen--concept .ai-chat__welcome-title {
+  font-size: 22px;
+}
+
+.ai-chat-screen--concept .ai-chat__welcome-hint {
+  font-size: 14px;
+  max-width: 340px;
+}
+
+.ai-chat-screen--concept .ai-chat__welcome-chip {
+  padding: 10px 16px;
+  font-size: 13px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #0a0d24 62%, transparent);
+  border-color: rgba(125, 211, 252, 0.32);
+}
+
+/* Light-theme parity for the chat surfaces. */
+:root[data-theme='light'] .ai-chat-screen--concept .ai-chat__bubble--assistant {
+  background: #ffffff;
+  border-color: rgba(30, 40, 80, 0.14);
+  box-shadow: 0 10px 26px rgba(20, 24, 36, 0.08);
+}
+:root[data-theme='light'] .ai-chat-screen--concept .ai-chat__composer-field {
+  background: #ffffff;
+  border-color: rgba(30, 40, 80, 0.14);
+}
+:root[data-theme='light'] .ai-chat-screen--concept .ai-chat__composer {
+  background: linear-gradient(180deg, transparent 0%, rgba(247, 248, 255, 0.85) 60%, rgba(247, 248, 255, 0.98) 100%);
+}

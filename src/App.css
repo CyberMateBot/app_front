@@ -6389,6 +6389,7 @@
 }
 
 .code-preview__frame-wrap {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: stretch;
@@ -6420,6 +6421,48 @@
   min-height: 320px;
   border: 0;
   background: #ffffff;
+}
+
+/* Rendered on top of the iframe when doc.write throws (some exotic
+   WebViews block cross-frame document access). Gives the user a
+   clear "Open in browser" fallback instead of an unexplained blank. */
+.code-preview__fallback {
+  position: absolute;
+  inset: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 14px;
+  background: rgba(10, 13, 36, 0.94);
+  color: var(--cm-text);
+  text-align: center;
+}
+
+.code-preview__fallback-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--cm-text-soft);
+  max-width: 320px;
+}
+
+.code-preview__fallback-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, var(--cm-accent), var(--cm-accent-violet));
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(60, 40, 200, 0.35);
 }
 
 .code-preview__code {

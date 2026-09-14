@@ -925,6 +925,7 @@ const translations = {
         chatPreviewClose: 'Закрыть',
         chatPreviewDeviceMobile: 'Телефон',
         chatPreviewDeviceDesktop: 'Десктоп',
+        chatPreviewOpenInBrowser: 'Открыть в браузере',
         audioVoiceGeneratedNote: 'Озвучка готова.',
         audioMusicGeneratedNote: 'Музыка сгенерирована.',
         historyDeleteConfirm: 'Удалить всю историю промтов? Это действие нельзя отменить.',
@@ -1601,6 +1602,7 @@ const translations = {
         chatPreviewClose: 'Close',
         chatPreviewDeviceMobile: 'Phone',
         chatPreviewDeviceDesktop: 'Desktop',
+        chatPreviewOpenInBrowser: 'Open in browser',
         audioVoiceGeneratedNote: 'Voice generated.',
         audioMusicGeneratedNote: 'Music generated.',
         historyDeleteConfirm: 'Delete all prompt history? This cannot be undone.',
@@ -6709,6 +6711,7 @@ function App() {
                                 closeLabel: text.chatPreviewClose,
                                 deviceMobile: text.chatPreviewDeviceMobile,
                                 deviceDesktop: text.chatPreviewDeviceDesktop,
+                                openInBrowserLabel: text.chatPreviewOpenInBrowser,
                             }}
                         />
                     ))}
