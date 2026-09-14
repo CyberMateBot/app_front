@@ -814,8 +814,8 @@
 .ai-image-screen--concept .ai-video__composer {
   margin-left: 0 !important;
   margin-right: 0 !important;
-  padding: 6px calc(var(--page-pad-x, 14px) + 4px)
-           calc(8px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)))
+  padding: 4px calc(var(--page-pad-x, 14px) + 4px)
+           calc(6px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)))
            calc(var(--page-pad-x, 14px) + 4px) !important;
   background: linear-gradient(180deg,
     transparent 0%,
@@ -830,12 +830,18 @@
    button embedded inside on the left), then a wide gradient send
    button. This is a big compaction win — no separate row for the
    paperclip, so we save ~50px of vertical space and the paperclip
-   feels attached to the field instead of orphaned next to it. */
+   feels attached to the field instead of orphaned next to it.
+   NOTE: `align-items: stretch` is critical — the base .ai-chat__composer
+   rule in App.css uses `align-items: flex-end`, which under a column
+   flex-direction pushes children to the right edge instead of
+   stretching them to full width. Without this override the textarea
+   collapsed to its intrinsic width in the top-right corner. */
 .ai-chat-screen--concept .ai-chat__composer,
 .ai-image-screen--concept .ai-chat__composer,
 .ai-image-screen--concept .ai-video__composer {
   display: flex !important;
   flex-direction: column !important;
+  align-items: stretch !important;
   gap: 6px !important;
 }
 .ai-chat-screen--concept .ai-chat__composer > .ai-chat__file-input,
@@ -850,17 +856,21 @@
   display: none !important;
 }
 
-/* Composer input pill — flat rounded rect with the attach button
-   embedded inside on the left. Aligning attach + textarea inside a
-   single field keeps both anchored to the same border, which is
-   what users asked for after seeing the paperclip floating loose. */
+/* Composer input pill — flat rounded rect, laid out as a HORIZONTAL
+   row so the attach button sits inline on the left of the textarea.
+   `flex-direction: row` + `width: 100%` explicitly override the base
+   `App.css` rule which uses `flex-direction: column`; without those
+   the textarea collapsed to intrinsic size and the whole field
+   floated to the right of the composer. */
 .ai-chat-screen--concept .ai-chat__composer-field,
 .ai-image-screen--concept .ai-chat__composer-field,
 .ai-image-screen--concept .ai-video__composer-field {
   position: relative;
   display: flex !important;
+  flex-direction: row !important;
   align-items: center !important;
   gap: 6px !important;
+  width: 100% !important;
   padding: 2px 12px !important;
   border-radius: 18px !important;
   border: 1px solid rgba(125, 211, 252, 0.28) !important;
@@ -906,10 +916,12 @@
 .ai-image-screen--concept .ai-chat__input,
 .ai-image-screen--concept .ai-video__prompt {
   flex: 1 1 auto !important;
-  min-height: 38px !important;
-  padding: 6px 4px !important;
-  font-size: 14.5px !important;
-  line-height: 1.4 !important;
+  width: 100% !important;
+  min-height: 30px !important;
+  max-height: 96px !important;
+  padding: 5px 4px !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
   color: #fff !important;
   border: none !important;
   background: transparent !important;
@@ -974,21 +986,22 @@
   opacity: 0.5;
 }
 
-/* Send button — wide gradient pill on its own row (matches the
-   video screen). Icon + label together, compact vertical padding
-   so the whole bottom panel stays under ~110px on mobile. */
+/* Send button — wide gradient pill under the field. Kept tight so
+   the whole bottom panel fits under ~90px on mobile. */
 .ai-chat-screen--concept .ai-chat__send,
 .ai-image-screen--concept .ai-chat__send {
   position: relative !important;
   width: 100% !important;
-  min-height: 38px !important;
-  padding: 8px 16px !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  padding: 4px 14px !important;
   border-radius: 999px !important;
   background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
   border: none !important;
   color: #fff !important;
-  font-size: 13.5px !important;
+  font-size: 13px !important;
   font-weight: 700 !important;
+  line-height: 1 !important;
   letter-spacing: 0.005em !important;
   box-shadow: none !important;
   overflow: hidden !important;
@@ -1061,16 +1074,23 @@
 .ai-image-screen--concept .ai-video__submit {
   position: relative !important;
   width: 100% !important;
-  min-height: 48px !important;
-  padding: 12px 20px !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  padding: 4px 14px !important;
   border-radius: 999px !important;
   border: none !important;
   background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
   color: #fff !important;
+  font-size: 13px !important;
   font-weight: 700 !important;
+  line-height: 1 !important;
   letter-spacing: 0.005em !important;
   box-shadow: none !important;
   overflow: hidden !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
   transition: filter 0.16s ease !important;
 }
 .ai-image-screen--concept .ai-video__submit:hover:not(:disabled) {
