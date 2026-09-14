@@ -832,6 +832,8 @@ const translations = {
         mediaReferenceVideoUrlPlaceholder: 'https://example.com/video.mp4',
         videoOptionalImageLabel: 'Стартовое изображение',
         videoOptionalImageHint: 'Необязательно — анимирует фото в видео (image-to-video)',
+        videoEditReferenceImageLabel: 'Фото-референс',
+        videoEditReferenceImageHint: 'Необязательно — например, фото человека или объекта, которым нужно что-то заменить на видео',
         videoFirstFrameLabel: 'Первый кадр',
         videoLastFrameLabel: 'Последний кадр',
         videoSessionVideoHint: 'Если не загрузить новое видео, будет использовано последнее из сессии',
@@ -1520,6 +1522,8 @@ const translations = {
         mediaReferenceVideoUrlPlaceholder: 'https://example.com/video.mp4',
         videoOptionalImageLabel: 'Start image',
         videoOptionalImageHint: 'Optional — animates the photo into video (image-to-video)',
+        videoEditReferenceImageLabel: 'Reference photo',
+        videoEditReferenceImageHint: 'Optional — e.g. a photo of a person or object to swap into the video',
         videoFirstFrameLabel: 'First frame',
         videoLastFrameLabel: 'Last frame',
         videoSessionVideoHint: 'If you skip upload, the last video from this session will be used',
@@ -7253,8 +7257,8 @@ function App() {
                 {supportsOptionalImage ? (
                     <MediaReferenceField
                         kind="image"
-                        label={text.videoOptionalImageLabel}
-                        hint={text.videoOptionalImageHint}
+                        label={requiresVideo ? text.videoEditReferenceImageLabel : text.videoOptionalImageLabel}
+                        hint={requiresVideo ? text.videoEditReferenceImageHint : text.videoOptionalImageHint}
                         url={videoSourceImageUrl}
                         onUrlChange={setVideoSourceImageUrl}
                         attachment={videoSourceImageAttachment}

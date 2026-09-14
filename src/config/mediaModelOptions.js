@@ -332,6 +332,10 @@ export const VIDEO_MODEL_CAPABILITIES = {
     },
     'seedance-v2-video-edit': {
         requiresVideo: true,
+        // Model supports an optional reference photo alongside the source
+        // video (WaveSpeed's `reference_images` param) — e.g. "replace the
+        // person in the video with the person in this photo".
+        supportsOptionalImage: true,
         options: {
             aspectRatio: { values: SEEDANCE_V2_ASPECT, default: '16:9' },
             duration: { values: [4, 5, 8, 10, 12, 15], default: 5 },
@@ -363,12 +367,16 @@ export const VIDEO_MODEL_CAPABILITIES = {
         options: { duration: { values: [5, 10], default: 5 } },
     },
     'wan-2.7-grid': { requiresImage: true, options: { duration: { values: [5, 10], default: 5 } } },
-    'wan-2.7-edit': { requiresVideo: true, options: {} },
+    // Supports an optional reference photo alongside the source video
+    // (WaveSpeed's `images` param) for style/character/object guidance.
+    'wan-2.7-edit': { requiresVideo: true, supportsOptionalImage: true, options: {} },
     'wan-2.2-spicy-i2v': { requiresImage: true, options: { duration: { values: [5, 8], default: 5 }, resolution: { values: ['480p', '720p'], default: '720p' } } },
     'happyhorse-t2v': { supportsOptionalImage: true, options: { aspectRatio: { values: ['16:9', '9:16', '1:1', '4:3', '3:4'], default: '16:9' }, duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
     'happyhorse-i2v': { requiresImage: true, options: { duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
     'happyhorse-ref2v': { requiresImage: true, options: { duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
-    'happyhorse-video-edit': { requiresVideo: true, options: {} },
+    // Supports an optional reference photo alongside the source video
+    // (WaveSpeed's `images` param) for style/character/object guidance.
+    'happyhorse-video-edit': { requiresVideo: true, supportsOptionalImage: true, options: {} },
     'happyhorse-video-extend': { requiresVideo: true, options: { duration: { values: [3, 5, 10], default: 5 } } },
     'sora-2-t2v': { supportsOptionalImage: true, options: { duration: { values: [5, 10], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
     'sora-2-i2v': { requiresImage: true, options: { duration: { values: [5, 10], default: 5 } } },
