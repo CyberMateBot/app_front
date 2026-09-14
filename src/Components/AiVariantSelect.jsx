@@ -16,8 +16,12 @@ import CoinIcon from './CoinIcon.jsx';
  *   - Model label
  *   - Coin price on the right (small pill)
  *   - Crown icon + plan name if locked behind a higher subscription
- *   - "Редактирование" badge if the model is edit-only (image /
- *      video edit models — flagged via `option.editing`)
+ *   - "Редактирование" badge if the model can edit an EXISTING
+ *      image/video (flagged via `option.editing`)
+ *   - "По фото" badge if the model needs a photo to seed a brand
+ *      new generation, e.g. image-to-video (flagged via
+ *      `option.photoSeed`) — distinct from real editing, so users
+ *      don't expect to upload/edit a video on these.
  */
 export default function AiVariantSelect({
     id,
@@ -55,6 +59,7 @@ export default function AiVariantSelect({
     const triggerId = id ? `${id}-trigger` : undefined;
     const labelId = id ? `${id}-label` : undefined;
     const editingLabel = text.mediaModelEditingBadge ?? 'Редактирование';
+    const photoSeedLabel = text.mediaModelPhotoBadge ?? 'По фото';
 
     return (
         <div className={`ai-variant-select ${open ? 'ai-variant-select--open' : ''}`} role="group" aria-label={label}>
@@ -77,6 +82,10 @@ export default function AiVariantSelect({
                     {activeOption?.editing ? (
                         <span className="ai-variant-select__edit-badge">
                             {editingLabel}
+                        </span>
+                    ) : activeOption?.photoSeed ? (
+                        <span className="ai-variant-select__photo-badge">
+                            {photoSeedLabel}
                         </span>
                     ) : null}
                     {activeOption?.locked ? (
@@ -129,6 +138,10 @@ export default function AiVariantSelect({
                                     {option.editing ? (
                                         <span className="ai-variant-select__option-badge">
                                             {editingLabel}
+                                        </span>
+                                    ) : option.photoSeed ? (
+                                        <span className="ai-variant-select__option-badge ai-variant-select__option-badge--photo">
+                                            {photoSeedLabel}
                                         </span>
                                     ) : null}
                                 </span>

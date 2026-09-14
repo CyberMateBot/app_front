@@ -543,6 +543,29 @@
   text-transform: uppercase !important;
 }
 
+/* "По фото" badge on models that need a source PHOTO to seed a
+   brand-new generation (image-to-video etc.) — amber, to visually
+   read as a different category from the emerald "Редактирование"
+   badge above. These models can't take/modify an existing video,
+   they just start from a still image. */
+.ai-chat-screen--concept .ai-variant-select__photo-badge,
+.ai-image-screen--concept .ai-variant-select__photo-badge,
+.ai-chat-screen--concept .ai-variant-select__option-badge--photo,
+.ai-image-screen--concept .ai-variant-select__option-badge--photo {
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, #fbbf24 20%, transparent) !important;
+  border: 1px solid color-mix(in srgb, #fbbf24 50%, transparent) !important;
+  color: #fbbf24 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase !important;
+}
+
 /* Explicitly nuke every possible decorator on the (now-deprecated)
    pill classes and their track/scroll parents, just in case some
    consumer still renders them: no ::before/::after, no box-shadow,

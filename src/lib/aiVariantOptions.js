@@ -21,26 +21,48 @@ const KIND_BY_SELECTOR = {
 
 /**
  * Decide whether a model is "edit-oriented" for the badge in the
- * variant picker. Video: any model that requires a source image or
- * source video is edit-only (i2v, video-edit, video-extend, first/
- * last-frame). Image: models whose id spells "edit" — these are the
- * pure editing/inpainting SKUs, not the generalists that support
- * both edit and text-to-image.
+ * variant picker. This is strictly about models that take an
+ * EXISTING video (or image, for the image kind) and modify it —
+ * NOT models that merely accept a photo as a generation seed.
+ * Video: only genuine video-edit / video-extend models (they
+ * require a *source video* upload). i2v models (image → video)
+ * are a different thing entirely — they generate a brand-new video
+ * from a still photo, they don't edit anything — so they get the
+ * separate "from photo" badge via `isPhotoSeedModel` instead.
+ * Image: models whose id spells "edit" — these are the pure
+ * editing/inpainting SKUs, not the generalists that support both
+ * edit and text-to-image.
  */
 function isEditingModel(modelId, kind) {
     if (!modelId) return false;
     const id = String(modelId).toLowerCase();
     if (kind === 'video') {
-        if (videoModelRequiresImage(modelId) || videoModelRequiresVideo(modelId)) {
+        if (videoModelRequiresVideo(modelId)) {
             return true;
         }
-        return /-i2v(-|$)|-edit(-|$)|-extend(-|$)|-ref2v(-|$)/.test(id);
+        return /-edit(-|$)|-extend(-|$)/.test(id);
     }
     if (kind === 'media' || kind === 'image') {
         if (!imageModelSupportsEdit(modelId)) return false;
         return /-edit(-|$)|edit-|inpaint|outpaint|remove-bg/.test(id);
     }
     return false;
+}
+
+/**
+ * Video-only: flags models that require a source PHOTO to seed the
+ * generation (i2v / ref2v / first-last-frame). These are NOT edit
+ * models — they can't take an existing video and modify it, they
+ * generate a new video from a still image. Surfaced as a distinct
+ * "from photo" badge so users don't confuse them with true video
+ * editing (which needs a video upload, not a photo).
+ */
+function isPhotoSeedModel(modelId, kind) {
+    if (!modelId || kind !== 'video') return false;
+    if (isEditingModel(modelId, kind)) return false;
+    if (videoModelRequiresImage(modelId)) return true;
+    const id = String(modelId).toLowerCase();
+    return /-i2v(-|$)|-ref2v(-|$)|-flf(-|$)/.test(id);
 }
 
 function resolveMediaVariantPrice(modelId, mediaModelsCatalog, kind, priceResolver) {
@@ -92,6 +114,7 @@ export function getAiVariantOptions(
             label: text[model.nameKey] ?? model.id,
             priceCoins: resolveMediaVariantPrice(model.id, catalog, mediaKind, priceResolver),
             editing: isEditingModel(model.id, kind),
+            photoSeed: isPhotoSeedModel(model.id, kind),
         }, planId, category)];
     }
 
@@ -108,6 +131,7 @@ export function getAiVariantOptions(
         label: text[variant.nameKey] ?? variant.id,
         priceCoins: resolveMediaVariantPrice(variant.id, catalog, mediaKind, priceResolver),
         editing: isEditingModel(variant.id, kind),
+        photoSeed: isPhotoSeedModel(variant.id, kind),
     }, planId, category));
 }
 
