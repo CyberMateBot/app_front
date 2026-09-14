@@ -459,6 +459,12 @@ export async function generateText({
         throw await errorFromResponse(res, 'Failed to generate text.');
     }
 
+    // The backend now streams whitespace heartbeats (server-side
+    // keep-alive so reverse proxies don't drop the connection during
+    // long LLM completions) before emitting the final JSON payload.
+    // Because status is committed as 200 up-front, error conditions
+    // are reported inside the JSON body as `{ "error": "..." }` — we
+    // must inspect that even on 2xx responses.
     let payload;
     try {
         payload = await res.json();
@@ -466,6 +472,9 @@ export async function generateText({
         throw new Error('API вернул не-JSON ответ. Проверьте VITE_API_BASE_URL (должен указывать на бэкенд, не на фронт).');
     }
     const data = payload?.data ?? payload;
+    if (data?.error) {
+        throw new Error(String(data.error));
+    }
 
     return {
         text: data?.text ?? data?.result ?? data?.content ?? '',

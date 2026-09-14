@@ -514,17 +514,20 @@
   width: 48px;
   height: 48px;
   object-fit: contain;
-  filter: drop-shadow(0 6px 16px rgba(125, 211, 252, 0.45));
-  transition: transform 0.25s ease, filter 0.25s ease;
+  /* Removed the coloured drop-shadow — users flagged it as visible
+     "glow" around the logo on the home page. The PNG already ships
+     with its own subtle inner shadow so it reads fine on dark. */
+  transition: transform 0.25s ease;
 }
 
 .brand-logo:hover .brand-logo__mark {
   transform: translateY(-0.5px);
-  filter: drop-shadow(0 8px 20px rgba(167, 139, 250, 0.55));
 }
 
 :root[data-theme='light'] .brand-logo__mark {
-  filter: drop-shadow(0 2px 8px rgba(20, 24, 36, 0.22));
+  /* A very subtle contrast shadow on light theme only, so the logo
+     doesn't blend into the pastel background. */
+  filter: drop-shadow(0 1px 2px rgba(20, 24, 36, 0.16));
 }
 
 .brand-logo__wordmark {

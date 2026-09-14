@@ -1,6 +1,29 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Crown } from 'lucide-react';
 import CoinIcon from './CoinIcon.jsx';
+
+// Desktop mice only emit vertical wheel deltas, so this horizontally
+// scrollable strip of model pills is otherwise unreachable on PC without a
+// trackpad. Convert vertical wheel intent into horizontal scroll when the
+// strip actually overflows horizontally. Mirrors the helper used for the
+// catalog/subscription plan strips.
+function useHorizontalWheelScroll(ref) {
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return undefined;
+
+        const onWheel = (event) => {
+            if (el.scrollWidth <= el.clientWidth) return;
+            if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+            event.preventDefault();
+            el.scrollBy({ left: event.deltaY, behavior: 'smooth' });
+        };
+
+        el.addEventListener('wheel', onWheel, { passive: false });
+        return () => el.removeEventListener('wheel', onWheel);
+    }, [ref]);
+}
 
 /**
  * Inline segmented pill control for picking a model variant / tier.
@@ -26,6 +49,9 @@ export default function AiVariantSelect({
     text = {},
     activePriceCoins,
 }) {
+    const scrollRef = useRef(null);
+    useHorizontalWheelScroll(scrollRef);
+
     if (!options.length) {
         return null;
     }
@@ -48,7 +74,7 @@ export default function AiVariantSelect({
                     {label}
                 </span>
             ) : null}
-            <div className="ai-variant-select__scroll">
+            <div className="ai-variant-select__scroll" ref={scrollRef}>
                 <div className="ai-variant-select__track" aria-labelledby={id ? `${id}-label` : undefined}>
                     {options.map((option) => {
                         const isActive = option.id === value;

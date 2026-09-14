@@ -72,9 +72,18 @@
   overflow-x: hidden;
 }
 
-/* Two very-blurred animated orbs behind the content, one cyan / one
-   violet. They drift slowly with distinct phases so the surface never
-   feels static.  `pointer-events:none` so they never eat taps. */
+/* Two soft radial glows behind the content, one cyan / one violet.
+   They drift slowly with distinct phases so the surface never feels
+   static.  `pointer-events:none` so they never eat taps.
+
+   Perf notes: we deliberately DO NOT use `filter: blur(...)` on these
+   elements — that forces a fullscreen re-blur every frame while the
+   orbs animate, which is what tanked FPS on mid-range Android. A soft
+   radial-gradient already has a soft edge, so the visual difference
+   from a blurred solid is imperceptible while the cost drops ~10×.
+   `will-change: transform` promotes the orb to its own compositor
+   layer so the drift animation runs on the GPU without invalidating
+   surrounding paint. */
 .app-shell[data-page='ai-chat']::before,
 .app-shell[data-page='ai-image']::before,
 .app-shell[data-page='ai-video']::before,
@@ -86,16 +95,16 @@
   left: -14vw;
   width: 70vw;
   height: 70vw;
-  max-width: 720px;
-  max-height: 720px;
+  max-width: 640px;
+  max-height: 640px;
   background: radial-gradient(circle,
-    rgba(125, 211, 252, 0.42) 0%,
-    rgba(125, 211, 252, 0.12) 42%,
-    transparent 66%);
-  filter: blur(60px);
+    rgba(125, 211, 252, 0.34) 0%,
+    rgba(125, 211, 252, 0.10) 40%,
+    transparent 68%);
   z-index: -1;
   pointer-events: none;
-  animation: ai-lab-orb-drift-a 22s ease-in-out infinite;
+  will-change: transform;
+  animation: ai-lab-orb-drift-a 24s ease-in-out infinite;
 }
 
 .app-shell[data-page='ai-chat']::after,
@@ -107,18 +116,18 @@
   position: fixed;
   bottom: -22vh;
   right: -18vw;
-  width: 80vw;
-  height: 80vw;
-  max-width: 780px;
-  max-height: 780px;
+  width: 78vw;
+  height: 78vw;
+  max-width: 700px;
+  max-height: 700px;
   background: radial-gradient(circle,
-    rgba(167, 139, 250, 0.36) 0%,
-    rgba(244, 114, 182, 0.14) 40%,
+    rgba(167, 139, 250, 0.30) 0%,
+    rgba(244, 114, 182, 0.12) 38%,
     transparent 66%);
-  filter: blur(70px);
   z-index: -1;
   pointer-events: none;
-  animation: ai-lab-orb-drift-b 26s ease-in-out infinite;
+  will-change: transform;
+  animation: ai-lab-orb-drift-b 28s ease-in-out infinite;
 }
 
 /* Kill the default aurora orbs on AI pages — they clash with ours. */
@@ -148,22 +157,63 @@
    1. Page header — gradient shimmer title, thin animated rule.
    ================================================================ */
 
+/* Edge-to-edge layout for AI screens. Instead of using negative
+   margins (which get clipped by `.ai-image-screen--concept`'s
+   `overflow: hidden`), we zero out the horizontal padding on the
+   shell + screen root on AI pages, then hand-add padding to the
+   internal sections that used to inherit it. This lets the header
+   and composer be full-viewport-width while regular content still
+   respects the safe reading margin. */
+.app-shell[data-page='ai-chat'],
+.app-shell[data-page='ai-image'],
+.app-shell[data-page='ai-video'],
+.app-shell[data-page='ai-voice'],
+.app-shell[data-page='ai-3d'] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.app-shell[data-page='ai-chat'] .ai-chat-screen--concept,
+.app-shell[data-page='ai-image'] .ai-image-screen--concept,
+.app-shell[data-page='ai-video'] .ai-image-screen--concept,
+.app-shell[data-page='ai-voice'] .ai-image-screen--concept,
+.app-shell[data-page='ai-3d'] .ai-image-screen--concept {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Re-introduce reading padding for the message stream + content
+   surfaces that used to inherit it from the screen root. `.ai-video
+   __main` is the actual container class used on image/video/voice/
+   3D screens (media screens share a JSX template). */
+.app-shell[data-page='ai-chat'] .ai-chat__messages,
+.app-shell[data-page='ai-image'] .ai-video__main,
+.app-shell[data-page='ai-image'] .ai-image__content,
+.app-shell[data-page='ai-video'] .ai-video__main,
+.app-shell[data-page='ai-video'] .ai-image__content,
+.app-shell[data-page='ai-voice'] .ai-video__main,
+.app-shell[data-page='ai-voice'] .ai-image__content,
+.app-shell[data-page='ai-3d'] .ai-video__main,
+.app-shell[data-page='ai-3d'] .ai-image__content {
+  padding-left: var(--page-pad-x, 14px) !important;
+  padding-right: var(--page-pad-x, 14px) !important;
+}
+
+/* Header — full-viewport-width glass strip. No more negative margins
+   (previous approach was clipped by the section's overflow-hidden). */
 .ai-chat-screen--concept .app-page-header,
 .ai-image-screen--concept .app-page-header {
-  padding: 14px 16px 12px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding: 14px calc(var(--page-pad-x, 14px) + 4px) 12px !important;
   background: linear-gradient(180deg,
-    rgba(10, 14, 40, 0.66) 0%,
-    rgba(10, 14, 40, 0.22) 60%,
+    rgba(10, 14, 40, 0.62) 0%,
+    rgba(10, 14, 40, 0.18) 60%,
     transparent 100%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
-  backdrop-filter: blur(18px) saturate(160%) !important;
-  border-bottom: 1px solid transparent !important;
-  border-image: linear-gradient(90deg,
-    transparent 0%,
-    rgba(125, 211, 252, 0.4) 40%,
-    rgba(167, 139, 250, 0.5) 50%,
-    rgba(244, 114, 182, 0.4) 60%,
-    transparent 100%) 1 !important;
+  /* Reduced blur radius (18 → 10) to cut mobile GPU load without
+     losing the glass feel. */
+  -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
+  backdrop-filter: blur(10px) saturate(140%) !important;
+  border-bottom: 1px solid rgba(167, 139, 250, 0.24) !important;
   position: relative !important;
   z-index: 3 !important;
 }
@@ -175,12 +225,13 @@
   letter-spacing: 0.005em !important;
   background: linear-gradient(120deg,
     #7dd3fc 0%, #a78bfa 42%, #f472b6 78%, #fbbf24 100%) !important;
-  background-size: 220% 100% !important;
   -webkit-background-clip: text !important;
           background-clip: text !important;
   color: transparent !important;
   -webkit-text-fill-color: transparent !important;
-  animation: ai-lab-title-glow 4.5s ease-in-out infinite;
+  /* No animated filter: drop-shadow — text repaints every frame with
+     it, which was hitching noticeably on mobile. Static gradient is
+     just as striking. */
 }
 
 .ai-chat-screen--concept .app-page-header__subtitle,
@@ -252,10 +303,20 @@
   animation: ai-lab-card-in 0.5s cubic-bezier(0.22, 0.9, 0.3, 1) both;
 }
 
+/* Kill the fade-out mask from the base stylesheet — it clipped the
+   active pill's glow and drop shadow to the container box, which
+   looked like invisible top/bottom walls. Give the scroll container
+   enough vertical padding so the shadow can render without being
+   clipped by any parent's overflow. */
 .ai-chat-screen--concept .ai-variant-select__scroll,
 .ai-image-screen--concept .ai-variant-select__scroll {
-  padding: 4px 2px 6px !important;
+  padding: 16px 2px 18px !important;
+  margin: -12px 0 !important;
   gap: 10px !important;
+  -webkit-mask-image: none !important;
+          mask-image: none !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
 }
 
 .ai-chat-screen--concept .ai-variant-select__pill,
@@ -282,33 +343,29 @@
   box-shadow: 0 6px 22px rgba(125, 211, 252, 0.18);
 }
 
+/* Active model pill — deliberately understated. User asked to
+   remove the glow/shimmer entirely: no box-shadow halo, no ::after
+   sheen. The gradient background is enough to signal the active
+   state without lighting up the whole strip. */
 .ai-chat-screen--concept .ai-variant-select__pill--active,
 .ai-image-screen--concept .ai-variant-select__pill--active {
   position: relative;
-  overflow: hidden;
   background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
   color: #fff !important;
   border-color: transparent !important;
-  box-shadow:
-    0 12px 34px rgba(180, 100, 220, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.32) inset !important;
-  transform: translateY(-1px);
+  box-shadow: none !important;
+  transform: none !important;
 }
-/* Shimmer sweep across active pill */
+/* Explicitly wipe any inherited ::after decoration so nothing sweeps
+   across the pill (this was the source of the diagonal streak users
+   spotted). */
 .ai-chat-screen--concept .ai-variant-select__pill--active::after,
-.ai-image-screen--concept .ai-variant-select__pill--active::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    100deg,
-    transparent 25%,
-    rgba(255, 255, 255, 0.45) 50%,
-    transparent 75%
-  );
-  transform: translateX(-140%);
-  animation: ai-lab-shimmer 2.6s ease-in-out infinite;
-  pointer-events: none;
+.ai-image-screen--concept .ai-variant-select__pill--active::after,
+.ai-chat-screen--concept .ai-variant-select__pill--active::before,
+.ai-image-screen--concept .ai-variant-select__pill--active::before {
+  display: none !important;
+  content: none !important;
+  animation: none !important;
 }
 
 /* ================================================================
@@ -324,51 +381,57 @@
   margin-top: 4px !important;
 }
 
+/* Perf: keep parameter cards fast on mobile. Multiple stacked cards
+   with `backdrop-filter: blur(...)` was a major FPS killer on Android;
+   we swap that for an opaque-enough rgba() so the visual stays glass-y
+   without repeatedly re-sampling the composited backdrop. `contain`
+   isolates paint/layout to the card so hover on one card no longer
+   invalidates its neighbours. */
 .ai-image-screen--concept .media-picker {
   position: relative !important;
   border-radius: 16px !important;
   border: 1px solid rgba(125, 211, 252, 0.16) !important;
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, #0e1330 65%, transparent) 0%,
-    color-mix(in srgb, #131940 55%, transparent) 100%
+    rgba(14, 19, 48, 0.9) 0%,
+    rgba(19, 25, 64, 0.85) 100%
   ) !important;
   overflow: visible !important;
-  -webkit-backdrop-filter: blur(14px) !important;
-  backdrop-filter: blur(14px) !important;
+  contain: layout paint;
   transition:
-    border-color 0.24s ease,
-    box-shadow 0.24s ease,
-    transform 0.24s cubic-bezier(0.22, 0.9, 0.3, 1) !important;
-  animation: ai-lab-card-in 0.45s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+    border-color 0.22s ease,
+    box-shadow 0.22s ease !important;
 }
 .ai-image-screen--concept .media-picker:hover {
   border-color: rgba(125, 211, 252, 0.4) !important;
   box-shadow:
-    0 12px 34px rgba(3, 5, 20, 0.4),
-    0 0 0 1px rgba(125, 211, 252, 0.2) inset !important;
-  transform: translateY(-1px);
+    0 8px 24px rgba(3, 5, 20, 0.35),
+    0 0 0 1px rgba(125, 211, 252, 0.18) inset !important;
 }
 .ai-image-screen--concept .media-picker--open {
   border-color: rgba(167, 139, 250, 0.5) !important;
   box-shadow:
-    0 16px 42px rgba(3, 5, 20, 0.5),
-    0 0 0 1px rgba(167, 139, 250, 0.28) inset !important;
+    0 10px 30px rgba(3, 5, 20, 0.42),
+    0 0 0 1px rgba(167, 139, 250, 0.25) inset !important;
 }
 
-/* Left accent dot on every picker tile — different hue per row via
-   :nth-child so the eye can distinguish parameters at a glance. */
+/* Left accent dot on every picker tile — anchored to the FIRST row
+   (the trigger). Previously used `top: 50%` on the whole picker box:
+   when the panel expanded the box, the dot slid down onto the panel
+   contents. Anchoring by absolute pixel value from the top keeps it
+   next to the label at all times. */
 .ai-image-screen--concept .media-picker::before {
   content: '';
   position: absolute;
-  left: 10px;
-  top: 50%;
+  left: 12px;
+  top: 26px;
   transform: translateY(-50%);
   width: 8px;
   height: 8px;
   border-radius: 999px;
   background: #7dd3fc;
-  box-shadow: 0 0 12px currentColor;
+  box-shadow: 0 0 8px currentColor;
+  pointer-events: none;
 }
 .ai-image-screen--concept .media-picker:nth-child(3n+2)::before { color: #a78bfa; background: #a78bfa; }
 .ai-image-screen--concept .media-picker:nth-child(3n)::before   { color: #f472b6; background: #f472b6; }
@@ -442,6 +505,56 @@
               0 0 0 1px rgba(255, 255, 255, 0.28) inset !important;
 }
 
+/* Chip-shaped input for user-entered custom values — sits alongside
+   the preset chips. Uses the same pill geometry so it never looks
+   like a foreign field, but with a dashed border so it's obviously
+   editable. */
+.ai-image-screen--concept .media-options__custom {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px !important;
+  border-radius: 999px !important;
+  border: 1px dashed rgba(125, 211, 252, 0.5) !important;
+  background: color-mix(in srgb, #0a0d24 55%, transparent) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+  cursor: text;
+}
+.ai-image-screen--concept .media-options__custom:focus-within {
+  border-style: solid !important;
+  border-color: rgba(167, 139, 250, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+}
+.ai-image-screen--concept .media-options__custom--active {
+  border-style: solid !important;
+  background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 60%, #f472b6 100%) !important;
+  border-color: transparent !important;
+  box-shadow: 0 8px 22px rgba(180, 100, 220, 0.45),
+              0 0 0 1px rgba(255, 255, 255, 0.28) inset !important;
+}
+.ai-image-screen--concept .media-options__custom-input {
+  width: 80px;
+  min-width: 60px;
+  padding: 2px 4px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #fff !important;
+  font: inherit !important;
+  font-size: 12.5px !important;
+  outline: none !important;
+  box-shadow: none !important;
+  text-align: center;
+}
+.ai-image-screen--concept .media-options__custom-input::placeholder {
+  color: rgba(255, 255, 255, 0.42) !important;
+}
+.ai-image-screen--concept .media-options__custom--active .media-options__custom-input {
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+.ai-image-screen--concept .media-options__custom--active .media-options__custom-input::placeholder {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
 /* ================================================================
    5. Reference image — turn it into a proper card, redesign the URL
    row into a big glass pill, redesign the dropzone with animated
@@ -490,6 +603,10 @@
    pulses when hovered.  Because CSS can't animate dashed strokes, we
    fake it with four moving gradient background layers (top/bottom/
    left/right) that shift position over time. */
+/* Dropzone — dashed border marches (background-position keyframe) but
+   we removed the backdrop-filter (was compositing on every march
+   frame). Solid rgba inner keeps the glass look at a fraction of the
+   GPU cost. */
 .ai-image-screen--concept .media-reference-field__dropzone {
   position: relative;
   padding: 18px !important;
@@ -503,18 +620,17 @@
     linear-gradient(180deg, rgba(167, 139, 250, 0.55) 50%, transparent 50%) top right / 2px 22px repeat-y,
     /* inner surface */
     linear-gradient(160deg,
-      color-mix(in srgb, #0e1330 55%, transparent),
-      color-mix(in srgb, #16204a 42%, transparent)) content-box !important;
+      rgba(14, 19, 48, 0.9),
+      rgba(22, 32, 74, 0.85)) content-box !important;
   background-clip: border-box, border-box, border-box, border-box, content-box !important;
   animation: ai-lab-dashed-march 4s linear infinite;
-  transition: box-shadow 0.24s ease, transform 0.24s ease !important;
-  -webkit-backdrop-filter: blur(10px) !important;
-  backdrop-filter: blur(10px) !important;
+  will-change: background-position;
+  transition: box-shadow 0.22s ease !important;
+  contain: layout paint;
 }
 .ai-image-screen--concept .media-reference-field__dropzone:hover {
-  box-shadow: 0 14px 36px rgba(125, 211, 252, 0.18),
+  box-shadow: 0 12px 30px rgba(125, 211, 252, 0.16),
               0 0 0 1px rgba(125, 211, 252, 0.28) inset;
-  transform: translateY(-1px);
 }
 @media (prefers-reduced-motion: reduce) {
   .ai-image-screen--concept .media-reference-field__dropzone { animation: none; }
@@ -545,49 +661,70 @@
    at rest so users can't miss it.
    ================================================================ */
 
+/* Composer — edge-to-edge (matching the header) + kinder to mobile
+   GPUs. blur(20 → 10), removed `border-image` (rendered as a
+   straight-cornered strip that clashed with rounded content). */
 .ai-chat-screen--concept .ai-chat__composer,
 .ai-image-screen--concept .ai-chat__composer,
 .ai-image-screen--concept .ai-video__composer {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
   gap: 12px !important;
-  padding: 14px 14px calc(16px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px))) !important;
+  padding: 14px calc(var(--page-pad-x, 14px) + 4px)
+           calc(16px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)))
+           calc(var(--page-pad-x, 14px) + 4px) !important;
   background: linear-gradient(180deg,
     transparent 0%,
-    rgba(4, 6, 20, 0.72) 40%,
-    rgba(4, 6, 20, 0.94) 100%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-  backdrop-filter: blur(20px) saturate(160%) !important;
-  border-top: 1px solid transparent !important;
-  border-image: linear-gradient(90deg,
-    transparent 0%,
-    rgba(125, 211, 252, 0.32) 30%,
-    rgba(167, 139, 250, 0.5) 50%,
-    rgba(244, 114, 182, 0.32) 70%,
-    transparent 100%) 1 !important;
+    rgba(4, 6, 20, 0.82) 45%,
+    rgba(4, 6, 20, 0.96) 100%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
+  backdrop-filter: blur(10px) saturate(140%) !important;
+  border-top: 1px solid rgba(167, 139, 250, 0.22) !important;
 }
 
+/* Composer input pill — flat background (no 135deg gradient that
+   might look like a diagonal streak on some GPU pipelines), no
+   pseudo elements at all. Just a soft rounded rect with a thin
+   focus ring. */
 .ai-chat-screen--concept .ai-chat__composer-field,
 .ai-image-screen--concept .ai-chat__composer-field,
 .ai-image-screen--concept .ai-video__composer-field {
+  position: relative;
   padding: 4px 16px !important;
   border-radius: 28px !important;
-  border: 1px solid rgba(125, 211, 252, 0.3) !important;
-  background:
-    linear-gradient(135deg,
-      rgba(14, 19, 48, 0.75) 0%,
-      rgba(20, 26, 68, 0.7) 100%) !important;
-  box-shadow:
-    0 14px 38px rgba(3, 5, 20, 0.5),
-    0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
-  transition: border-color 0.22s ease, box-shadow 0.22s ease !important;
+  border: 1px solid rgba(125, 211, 252, 0.28) !important;
+  background: rgba(14, 19, 48, 0.72) !important;
+  box-shadow: none !important;
+  transition: border-color 0.22s ease !important;
 }
 .ai-chat-screen--concept .ai-chat__composer-field:focus-within,
 .ai-image-screen--concept .ai-chat__composer-field:focus-within,
 .ai-image-screen--concept .ai-video__composer-field:focus-within {
-  border-color: rgba(167, 139, 250, 0.7) !important;
-  box-shadow:
-    0 16px 42px rgba(3, 5, 20, 0.55),
-    0 0 0 4px rgba(167, 139, 250, 0.22),
-    0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
+  border-color: rgba(167, 139, 250, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18) !important;
+}
+/* Kill any inherited decorative pseudo on the field, the textarea
+   itself, and the attach button. Previously users reported a stray
+   diagonal streak near the send button which turned out to be a
+   webkit-drawn textarea resize handle bleeding through the border-
+   radius clip. Multi-pronged shutdown here so it can't come back. */
+.ai-chat-screen--concept .ai-chat__composer-field::before,
+.ai-chat-screen--concept .ai-chat__composer-field::after,
+.ai-image-screen--concept .ai-chat__composer-field::before,
+.ai-image-screen--concept .ai-chat__composer-field::after,
+.ai-image-screen--concept .ai-video__composer-field::before,
+.ai-image-screen--concept .ai-video__composer-field::after,
+.ai-chat-screen--concept .ai-chat__input::before,
+.ai-chat-screen--concept .ai-chat__input::after,
+.ai-image-screen--concept .ai-chat__input::before,
+.ai-image-screen--concept .ai-chat__input::after,
+.ai-chat-screen--concept .ai-chat__attach::before,
+.ai-chat-screen--concept .ai-chat__attach::after,
+.ai-image-screen--concept .ai-chat__attach::before,
+.ai-image-screen--concept .ai-chat__attach::after {
+  display: none !important;
+  content: none !important;
+  animation: none !important;
 }
 
 .ai-chat-screen--concept .ai-chat__input,
@@ -603,6 +740,28 @@
   box-shadow: none !important;
   outline: none !important;
   resize: none !important;
+  overflow: hidden !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+/* Kill every webkit-drawn decoration on textareas that could look
+   like the diagonal "//" strip users kept spotting. `resize:none`
+   alone doesn't always suffice on Telegram WebView; here we also
+   nuke the scrollbar corner + the scrollbar itself. */
+.ai-chat-screen--concept .ai-chat__input::-webkit-resizer,
+.ai-image-screen--concept .ai-chat__input::-webkit-resizer,
+.ai-image-screen--concept .ai-video__prompt::-webkit-resizer,
+.ai-chat-screen--concept .ai-chat__input::-webkit-scrollbar-corner,
+.ai-image-screen--concept .ai-chat__input::-webkit-scrollbar-corner,
+.ai-image-screen--concept .ai-video__prompt::-webkit-scrollbar-corner,
+.ai-chat-screen--concept .ai-chat__input::-webkit-scrollbar,
+.ai-image-screen--concept .ai-chat__input::-webkit-scrollbar,
+.ai-image-screen--concept .ai-video__prompt::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none !important;
 }
 .ai-chat-screen--concept .ai-chat__input::placeholder,
 .ai-image-screen--concept .ai-chat__input::placeholder,
@@ -628,32 +787,40 @@
   box-shadow: 0 8px 22px rgba(125, 211, 252, 0.22);
 }
 
+/* Send button — flat gradient circle, no dropshadow halo (was
+   visually spilling into neighbouring elements as faint transparent
+   corners; user reported these as "прозрачные квадраты по бокам"). */
 .ai-chat-screen--concept .ai-chat__send,
 .ai-image-screen--concept .ai-chat__send {
   position: relative !important;
-  width: 52px !important;
-  height: 52px !important;
+  width: 48px !important;
+  height: 48px !important;
   border-radius: 999px !important;
   background: linear-gradient(135deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.32) !important;
+  border: none !important;
   color: #fff !important;
-  box-shadow:
-    0 12px 30px rgba(180, 100, 220, 0.55),
-    0 1px 0 rgba(255, 255, 255, 0.32) inset !important;
-  overflow: visible !important;
-  transition: transform 0.18s ease, box-shadow 0.22s ease !important;
-  animation: ai-lab-pulse-ring 2.6s ease-out infinite;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  transition: transform 0.16s ease, filter 0.16s ease !important;
 }
+.ai-chat-screen--concept .ai-chat__send::before,
+.ai-chat-screen--concept .ai-chat__send::after,
+.ai-image-screen--concept .ai-chat__send::before,
+.ai-image-screen--concept .ai-chat__send::after {
+  display: none !important;
+  content: none !important;
+  animation: none !important;
+}
+/* Hover on the send button is intentionally muted — a slight
+   brightness change only, no scale/translate that could look like a
+   moving diagonal streak (see the previous bug report). */
 .ai-chat-screen--concept .ai-chat__send:hover:not(:disabled),
 .ai-image-screen--concept .ai-chat__send:hover:not(:disabled) {
-  transform: translateY(-1px) scale(1.03);
-  box-shadow:
-    0 16px 36px rgba(180, 100, 220, 0.65),
-    0 1px 0 rgba(255, 255, 255, 0.35) inset !important;
+  filter: brightness(1.06);
 }
 .ai-chat-screen--concept .ai-chat__send:active:not(:disabled),
 .ai-image-screen--concept .ai-chat__send:active:not(:disabled) {
-  transform: translateY(0) scale(0.97);
+  filter: brightness(0.95);
 }
 .ai-chat-screen--concept .ai-chat__send--stop,
 .ai-image-screen--concept .ai-chat__send--stop {
@@ -672,42 +839,36 @@
   .ai-image-screen--concept .ai-chat__send { animation: none; }
 }
 
-/* Video / 3D submit button — wide gradient pill, not a circle. */
+/* Video / 3D submit button — wide gradient pill, not a circle. Flat
+   shadow, no shimmer (see the `::after` block below). */
 .ai-image-screen--concept .ai-video__submit {
   position: relative !important;
   width: 100% !important;
-  min-height: 52px !important;
-  padding: 14px 22px !important;
+  min-height: 48px !important;
+  padding: 12px 20px !important;
   border-radius: 999px !important;
-  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  border: none !important;
   background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
   color: #fff !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.01em !important;
-  box-shadow:
-    0 14px 34px rgba(180, 100, 220, 0.55),
-    0 1px 0 rgba(255, 255, 255, 0.32) inset !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.005em !important;
+  box-shadow: none !important;
   overflow: hidden !important;
-  transition: transform 0.18s ease, box-shadow 0.22s ease, filter 0.22s ease !important;
+  transition: filter 0.16s ease !important;
 }
 .ai-image-screen--concept .ai-video__submit:hover:not(:disabled) {
-  transform: translateY(-1px) scale(1.01);
-  filter: brightness(1.05);
+  filter: brightness(1.06);
 }
 .ai-image-screen--concept .ai-video__submit:active:not(:disabled) {
-  transform: translateY(0) scale(0.99);
+  filter: brightness(0.95);
 }
+/* No shimmer sweep on the submit button either — user asked for
+   glow off. Keep the pill flat with just the gradient background. */
+.ai-image-screen--concept .ai-video__submit::before,
 .ai-image-screen--concept .ai-video__submit::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.35) 50%,
-    transparent 70%);
-  transform: translateX(-140%);
-  animation: ai-lab-shimmer 3.4s ease-in-out infinite;
-  pointer-events: none;
+  display: none !important;
+  content: none !important;
+  animation: none !important;
 }
 .ai-image-screen--concept .ai-video__submit.ai-video__submit--insufficient {
   background: rgba(120, 120, 130, 0.42) !important;
@@ -715,19 +876,19 @@
   border-color: rgba(255, 255, 255, 0.08) !important;
   color: rgba(255, 255, 255, 0.72) !important;
 }
-.ai-image-screen--concept .ai-video__submit.ai-video__submit--insufficient::after {
-  display: none !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-image-screen--concept .ai-video__submit::after { animation: none; }
-}
 
 /* ================================================================
    7. Welcome hero card — softer, more prominent, drop-shadow glow.
    ================================================================ */
 
+/* Welcome hero card. Uses a mask-composite pseudo-overlay to render
+   the gradient border — that way the border follows border-radius
+   properly (a plain `border-image` renders square corners even when
+   the element itself is rounded, which is what caused the "double
+   corners" bug the user reported). */
 .ai-chat-screen--concept .ai-chat__welcome,
 .ai-image-screen--concept .ai-chat__welcome {
+  position: relative;
   margin: 24px 12px !important;
   padding: 36px 22px !important;
   border-radius: 32px !important;
@@ -735,25 +896,40 @@
     radial-gradient(ellipse at 30% 0%, rgba(125, 211, 252, 0.28) 0%, transparent 65%),
     radial-gradient(ellipse at 70% 100%, rgba(244, 114, 182, 0.18) 0%, transparent 65%),
     linear-gradient(160deg,
-      rgba(20, 24, 48, 0.72),
-      rgba(10, 13, 36, 0.72)) !important;
-  border: 1px solid transparent !important;
-  border-image: linear-gradient(135deg,
-    rgba(125, 211, 252, 0.6),
-    rgba(167, 139, 250, 0.5),
-    rgba(244, 114, 182, 0.55)) 1 !important;
-  box-shadow: 0 30px 66px rgba(3, 5, 20, 0.48) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-  backdrop-filter: blur(20px) saturate(160%) !important;
+      rgba(20, 24, 48, 0.82),
+      rgba(10, 13, 36, 0.82)) !important;
+  border: none !important;
+  box-shadow: 0 24px 54px rgba(3, 5, 20, 0.42) !important;
   animation: ai-lab-card-in 0.55s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+.ai-chat-screen--concept .ai-chat__welcome::before,
+.ai-image-screen--concept .ai-chat__welcome::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(125, 211, 252, 0.55),
+    rgba(167, 139, 250, 0.45),
+    rgba(244, 114, 182, 0.5));
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+          mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
 }
 .ai-chat-screen--concept .ai-chat__welcome-mark,
 .ai-image-screen--concept .ai-chat__welcome-mark {
   width: 84px !important;
   height: 84px !important;
-  filter: drop-shadow(0 8px 22px rgba(125, 211, 252, 0.5))
-          drop-shadow(0 8px 22px rgba(167, 139, 250, 0.35));
-  animation: ai-lab-title-glow 4.5s ease-in-out infinite;
+  /* No drop-shadow — user asked for glow off everywhere. The gradient
+     border on the welcome card frame is enough visual weight. */
+  filter: none !important;
 }
 .ai-chat-screen--concept .ai-chat__welcome-title,
 .ai-image-screen--concept .ai-chat__welcome-title {

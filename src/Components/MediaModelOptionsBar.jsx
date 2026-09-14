@@ -1,6 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronDown, ArrowLeftRight } from 'lucide-react';
 import CoinIcon from './CoinIcon.jsx';
+
+// A subset of chip-group parameters where user-entered custom values
+// make sense (aspect ratios, sizes, resolutions, counts…). Non-numeric
+// enums like `voice` or `quality` stay preset-only. This centralises
+// which pickers get the "custom" input row.
+const CUSTOM_INPUT_KEYS = new Set([
+    'aspectRatio',
+    'aspect-ratio',
+    'resolution',
+    'size',
+    'num-images',
+    'numImages',
+    'duration',
+    'num-inference-steps',
+    'numberOfSongs',
+    'number-of-songs',
+    'faceCount',
+    'face-count',
+]);
 
 function OptionChipGroup({
     label,
@@ -13,12 +32,63 @@ function OptionChipGroup({
     formatOptionDelta,
     idPrefix,
     optionKey,
+    allowCustom,
+    customPlaceholder,
 }) {
+    // Track any user-entered custom value separately from the preset
+    // list. If the incoming `value` isn't in `values`, we treat it as
+    // custom-input. This lets the user type "3:2" for aspect ratio,
+    // "1080p" for resolution, "7" for a duration between the presets,
+    // etc. The parent's `onChange` is only called on Enter/blur so
+    // the app doesn't flicker while the user is typing.
+    const stringValues = React.useMemo(
+        () => (values ?? []).map((item) => String(item)),
+        [values],
+    );
+    const currentStr = value == null ? '' : String(value);
+    const isCurrentPreset = stringValues.includes(currentStr);
+    const shouldOfferCustom = allowCustom ?? CUSTOM_INPUT_KEYS.has(optionKey);
+
+    const [customDraft, setCustomDraft] = useState(
+        !isCurrentPreset && currentStr && shouldOfferCustom ? currentStr : '',
+    );
+
+    // Keep the draft in sync when the parent changes the value from
+    // elsewhere (e.g. switching models resets defaults). Otherwise the
+    // custom box could show a stale value from a previous session.
+    useEffect(() => {
+        if (!shouldOfferCustom) return;
+        if (isCurrentPreset) {
+            setCustomDraft('');
+        } else if (currentStr) {
+            setCustomDraft(currentStr);
+        }
+    }, [currentStr, isCurrentPreset, shouldOfferCustom]);
+
     if (!values?.length) {
         return null;
     }
 
     const labelId = `${idPrefix}-${optionKey}-label`;
+
+    const commitCustom = () => {
+        const trimmed = customDraft.trim();
+        if (!trimmed) return;
+        if (trimmed === currentStr) return;
+        onChange(trimmed);
+    };
+
+    const handleCustomKeyDown = (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            commitCustom();
+            event.currentTarget.blur();
+        }
+    };
+
+    const customInputActive = shouldOfferCustom
+        && !isCurrentPreset
+        && Boolean(currentStr);
 
     return (
         <div className="media-options__group">
@@ -30,7 +100,7 @@ function OptionChipGroup({
             >
                 {values.map((item) => {
                     const optionValue = String(item);
-                    const isActive = String(value ?? '') === optionValue;
+                    const isActive = currentStr === optionValue;
                     const baseLabel = formatValue ? formatValue(optionValue) : optionValue;
                     const deltaSuffix = formatOptionDelta?.(optionKey, optionValue);
                     const optionLabel = deltaSuffix ? `${baseLabel} ${deltaSuffix}` : baseLabel;
@@ -57,6 +127,26 @@ function OptionChipGroup({
                         </button>
                     );
                 })}
+
+                {shouldOfferCustom ? (
+                    <label
+                        className={`media-options__custom${customInputActive ? ' media-options__custom--active' : ''}`}
+                        aria-label={customPlaceholder ?? 'Custom value'}
+                    >
+                        <input
+                            type="text"
+                            className="media-options__custom-input"
+                            value={customDraft}
+                            onChange={(event) => setCustomDraft(event.target.value)}
+                            onBlur={commitCustom}
+                            onKeyDown={handleCustomKeyDown}
+                            placeholder={customPlaceholder ?? '…'}
+                            disabled={disabled}
+                            spellCheck={false}
+                            autoComplete="off"
+                        />
+                    </label>
+                ) : null}
             </div>
         </div>
     );
