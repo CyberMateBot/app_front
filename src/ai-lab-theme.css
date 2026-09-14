@@ -201,20 +201,47 @@
 /* Header — compact glass strip. Height was called out as "eating"
    too much of the reading area, so we tightened the vertical padding
    (14→8 top, 12→8 bottom) and dropped the subtitle a level. */
+/* --- PINNING: fixed, not sticky ------------------------------------
+   This codebase has prior, documented evidence (see the catalog page
+   in aurora-theme.css) that `position: sticky` is unreliable inside
+   Telegram's embedded WebView — something between the sticky element
+   and its scroll ancestor silently breaks pinning (leading suspects:
+   the `.app-page-transition` mount animation using `transform`, and
+   flex containers). The catalog page worked around this by switching
+   to `position: fixed`, which pins straight to the viewport and
+   ignores all of that. We apply the exact same fix here for the
+   header + model picker, which is why users kept seeing the picker
+   "follow the scroll" no matter how the sticky rule was tuned.
+
+   Fixed elements are pulled out of flow, so `.ai-chat__messages` /
+   `.ai-video__main` get compensating `padding-top` further below. */
+.app-shell[data-page='ai-chat'] .app-page-transition,
+.app-shell[data-page='ai-image'] .app-page-transition,
+.app-shell[data-page='ai-video'] .app-page-transition,
+.app-shell[data-page='ai-voice'] .app-page-transition,
+.app-shell[data-page='ai-3d'] .app-page-transition {
+  animation: none !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
 .ai-chat-screen--concept .app-page-header,
 .ai-image-screen--concept .app-page-header {
+  position: fixed !important;
+  top: var(--page-pad-top, 0px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 30 !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
   padding: 8px calc(var(--page-pad-x, 14px) + 4px) 8px !important;
   background: linear-gradient(180deg,
-    rgba(10, 14, 40, 0.62) 0%,
-    rgba(10, 14, 40, 0.18) 60%,
-    transparent 100%) !important;
+    rgba(6, 8, 26, 0.96) 0%,
+    rgba(6, 8, 26, 0.9) 70%,
+    rgba(6, 8, 26, 0.86) 100%) !important;
   -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
   backdrop-filter: blur(10px) saturate(140%) !important;
   border-bottom: 1px solid rgba(167, 139, 250, 0.22) !important;
-  position: relative !important;
-  z-index: 3 !important;
 }
 
 .ai-chat-screen--concept .app-page-header__title,
@@ -268,32 +295,47 @@
    on the active one.
    ================================================================ */
 
-/* Collapsible model picker — now rendered as the FIRST CHILD inside
-   the screen's real scroll container (`.ai-chat__messages` for text
-   chat, `.ai-video__main` for image/video/audio/3D). It used to sit
-   as a *sibling* of that scroll container, at the section level —
-   section itself is `overflow: hidden` and never scrolls, so
-   `position: sticky` had nothing to stick to and the picker just
-   scrolled away with the rest of the section on some mobile
-   WebViews. Now that it's inside the actual `overflow-y: auto`
-   container, `top: 0` sticks it to the top of THAT scrollport,
-   which is the fix. Background stays fully opaque so content
-   scrolling under it is cleanly occluded. */
+/* Collapsible model picker — pinned right under the fixed header,
+   using the same `position: fixed` trick (see the big comment above
+   `.app-page-header`). Sits back at the section level as a sibling
+   of the scroll container in the JSX; being `position: fixed` means
+   its DOM position no longer matters for layout — it renders pinned
+   to the viewport at `top: header-height` regardless of scrolling.
+   Background stays fully opaque so content scrolling under it is
+   cleanly occluded. When the panel opens, it just grows downward
+   from this fixed anchor, like a proper dropdown. */
 .ai-chat-screen--concept .ai-variant-select,
 .ai-image-screen--concept .ai-variant-select {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 15 !important;
-  padding: 6px 12px 6px !important;
-  margin: 0 0 4px !important;
+  position: fixed !important;
+  top: calc(var(--page-pad-top, 0px) + 52px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 29 !important;
+  padding: 6px calc(var(--page-pad-x, 14px) + 4px) 6px !important;
+  margin: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
+  max-height: calc(100dvh - var(--page-pad-top, 0px) - 52px - 12px);
+  overflow-y: auto !important;
   background: linear-gradient(180deg,
-    rgba(4, 6, 20, 0.96) 0%,
-    rgba(4, 6, 20, 0.92) 100%) !important;
+    rgba(4, 6, 20, 0.98) 0%,
+    rgba(4, 6, 20, 0.95) 100%) !important;
   -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
   backdrop-filter: blur(12px) saturate(140%) !important;
+  box-shadow: 0 8px 20px rgba(2, 3, 12, 0.4) !important;
+}
+
+/* Reserve space at the top of each screen's scroll container so
+   real content starts below the fixed header + picker instead of
+   being hidden underneath them. ~52px header + ~48px collapsed
+   picker + a little breathing room. NOTE: no `--page-pad-top` term
+   here — the container's own box already starts below that offset
+   (the section it lives in is itself positioned after page-pad-top),
+   so adding it again would double-count and leave too big a gap. */
+.ai-chat-screen--concept .ai-chat__messages,
+.ai-image-screen--concept .ai-video__main {
+  padding-top: 108px !important;
 }
 
 .ai-chat-screen--concept .ai-variant-select__trigger,

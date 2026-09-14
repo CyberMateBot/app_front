@@ -6698,19 +6698,20 @@ function App() {
                     newDialogDisabled: isGeneratingText,
                 })}
 
+                {variantOptions.length > 1 ? (
+                    <AiVariantSelect
+                        id="ai-chat-variant"
+                        label={text.mediaModelVariantLabel}
+                        value={textModel}
+                        options={variantOptions}
+                        onChange={handleTextModelChange}
+                        onLockedSelect={handleLockedModelSelect}
+                        text={text}
+                        disabled={isGeneratingText}
+                    />
+                ) : null}
+
                 <div className="ai-chat__messages" aria-live="polite">
-                    {variantOptions.length > 1 ? (
-                        <AiVariantSelect
-                            id="ai-chat-variant"
-                            label={text.mediaModelVariantLabel}
-                            value={textModel}
-                            options={variantOptions}
-                            onChange={handleTextModelChange}
-                            onLockedSelect={handleLockedModelSelect}
-                            text={text}
-                            disabled={isGeneratingText}
-                        />
-                    ) : null}
                     {chatMessages.length === 0 && !isGeneratingText ? (
                         <div className="ai-chat__welcome" role="status" aria-live="polite">
                             <img
@@ -6887,18 +6888,19 @@ function App() {
                     newDialogDisabled: isGeneratingImage,
                 })}
 
+                <AiVariantSelect
+                    id="ai-image-variant"
+                    label={text.mediaModelVariantLabel}
+                    value={imageModel}
+                    options={variantOptions}
+                    onChange={handleImageModelChange}
+                    onLockedSelect={handleLockedModelSelect}
+                    text={text}
+                    disabled={isGeneratingImage}
+                    activePriceCoins={imageGenerationPrice}
+                />
+
                 <div className="ai-video__main">
-                    <AiVariantSelect
-                        id="ai-image-variant"
-                        label={text.mediaModelVariantLabel}
-                        value={imageModel}
-                        options={variantOptions}
-                        onChange={handleImageModelChange}
-                        onLockedSelect={handleLockedModelSelect}
-                        text={text}
-                        disabled={isGeneratingImage}
-                        activePriceCoins={imageGenerationPrice}
-                    />
                     <MediaModelOptionsBar
                         capabilities={imageCapabilities}
                         values={imageBarValues}
@@ -7163,7 +7165,6 @@ function App() {
                     newDialogDisabled: isGeneratingVideo,
                 })}
 
-                <div className="ai-video__main">
                 <AiVariantSelect
                     id="ai-video-variant"
                     label={text.mediaModelVariantLabel}
@@ -7175,6 +7176,8 @@ function App() {
                     disabled={isGeneratingVideo}
                     activePriceCoins={videoGenerationPrice}
                 />
+
+                <div className="ai-video__main">
                 <MediaModelOptionsBar
                     capabilities={getVideoModelCapabilities(videoModel)}
                     values={{
@@ -7485,18 +7488,19 @@ function App() {
                     newDialogDisabled: isGeneratingAudio,
                 })}
 
+                <AiVariantSelect
+                    id="ai-voice-variant"
+                    label={text.mediaModelVariantLabel}
+                    value={audioModel}
+                    options={variantOptions}
+                    onChange={handleAudioModelChange}
+                    onLockedSelect={handleLockedModelSelect}
+                    text={text}
+                    disabled={isGeneratingAudio}
+                    activePriceCoins={audioGenerationPrice}
+                />
+
                 <div className="ai-video__main">
-                    <AiVariantSelect
-                        id="ai-voice-variant"
-                        label={text.mediaModelVariantLabel}
-                        value={audioModel}
-                        options={variantOptions}
-                        onChange={handleAudioModelChange}
-                        onLockedSelect={handleLockedModelSelect}
-                        text={text}
-                        disabled={isGeneratingAudio}
-                        activePriceCoins={audioGenerationPrice}
-                    />
                     <MediaModelOptionsBar
                         capabilities={getAudioModelCapabilities(audioModel)}
                         values={{
@@ -7745,18 +7749,19 @@ function App() {
                     newDialogDisabled: isGeneratingThreeD,
                 })}
 
+                <AiVariantSelect
+                    id="ai-3d-variant"
+                    label={text.mediaModelVariantLabel}
+                    value={threeDModel}
+                    options={variantOptions}
+                    onChange={handleThreeDModelChange}
+                    onLockedSelect={handleLockedModelSelect}
+                    text={text}
+                    disabled={isGeneratingThreeD}
+                    activePriceCoins={threeDGenerationPrice}
+                />
+
                 <div className="ai-video__main">
-                    <AiVariantSelect
-                        id="ai-3d-variant"
-                        label={text.mediaModelVariantLabel}
-                        value={threeDModel}
-                        options={variantOptions}
-                        onChange={handleThreeDModelChange}
-                        onLockedSelect={handleLockedModelSelect}
-                        text={text}
-                        disabled={isGeneratingThreeD}
-                        activePriceCoins={threeDGenerationPrice}
-                    />
                     <MediaModelOptionsBar
                         capabilities={getThreeDModelCapabilities(threeDModel)}
                         values={{
