@@ -791,6 +791,14 @@ const translations = {
         modelHailuo23I2vProName: 'Hailuo 2.3 Pro I2V',
         modelHailuo23I2vProSub: 'Pro image-to-video 1080p',
         imageGenerateTitle: 'Генерация фото',
+        imageEmptyTitle: 'Готово к генерации',
+        imageEmptyHint: 'Опишите картинку в поле ниже — модель сгенерирует её здесь.',
+        videoEmptyTitle: 'Готово к генерации',
+        videoEmptyHint: 'Опишите видео в поле ниже — модель отрендерит его здесь.',
+        audioEmptyTitle: 'Готово к озвучке',
+        audioEmptyHint: 'Введите текст, который надо озвучить или превратить в музыку.',
+        threeDEmptyTitle: 'Готово к 3D',
+        threeDEmptyHint: 'Опишите модель или прикрепите картинку — сгенерирую 3D-объект.',
         imagePromptLabel: 'Описание',
         imagePromptPlaceholder: 'Опишите изображение, которое нужно создать...',
         imageEditPlaceholder: 'Опишите, что изменить на последнем изображении...',
@@ -1468,6 +1476,14 @@ const translations = {
         modelHailuo23I2vProName: 'Hailuo 2.3 Pro I2V',
         modelHailuo23I2vProSub: 'Pro image-to-video 1080p',
         imageGenerateTitle: 'Image generation',
+        imageEmptyTitle: 'Ready to generate',
+        imageEmptyHint: 'Describe your image below — the model will render it here.',
+        videoEmptyTitle: 'Ready to generate',
+        videoEmptyHint: 'Describe your video below — the model will render it here.',
+        audioEmptyTitle: 'Ready to voice',
+        audioEmptyHint: 'Enter the text to be voiced or turned into music.',
+        threeDEmptyTitle: 'Ready for 3D',
+        threeDEmptyHint: 'Describe a model or attach an image — I will generate a 3D asset.',
         imagePromptLabel: 'Description',
         imagePromptPlaceholder: 'Describe the image you want to create...',
         imageEditPlaceholder: 'Describe what to change in the last image...',
@@ -6973,7 +6989,17 @@ function App() {
                                 )}
                             </section>
                         ) : (
-                            <p className="ai-chat__empty">{text.imagePromptPlaceholder}</p>
+                            <div className="ai-chat__welcome" role="status">
+                                <img
+                                    className="ai-chat__welcome-mark"
+                                    src="/brand-mark.png"
+                                    alt=""
+                                    aria-hidden="true"
+                                    draggable={false}
+                                />
+                                <h3 className="ai-chat__welcome-title">{text.imageEmptyTitle}</h3>
+                                <p className="ai-chat__welcome-hint">{text.imageEmptyHint}</p>
+                            </div>
                         )}
                     </div>
 
@@ -7324,7 +7350,17 @@ function App() {
                             />
                         </section>
                     ) : (
-                        <p className="ai-chat__empty">{text.videoPromptPlaceholder}</p>
+                        <div className="ai-chat__welcome" role="status">
+                            <img
+                                className="ai-chat__welcome-mark"
+                                src="/brand-mark.png"
+                                alt=""
+                                aria-hidden="true"
+                                draggable={false}
+                            />
+                            <h3 className="ai-chat__welcome-title">{text.videoEmptyTitle}</h3>
+                            <p className="ai-chat__welcome-hint">{text.videoEmptyHint}</p>
+                        </div>
                     )}
                 </div>
                 </div>
@@ -7539,7 +7575,17 @@ function App() {
                                 />
                         </section>
                         ) : (
-                            <p className="ai-chat__empty">{promptPlaceholder}</p>
+                            <div className="ai-chat__welcome" role="status">
+                                <img
+                                    className="ai-chat__welcome-mark"
+                                    src="/brand-mark.png"
+                                    alt=""
+                                    aria-hidden="true"
+                                    draggable={false}
+                                />
+                                <h3 className="ai-chat__welcome-title">{text.audioEmptyTitle}</h3>
+                                <p className="ai-chat__welcome-hint">{text.audioEmptyHint}</p>
+                            </div>
                         )}
                     </div>
 
@@ -7745,7 +7791,17 @@ function App() {
                                 <p className="ai-chat__empty">{generatedThreeDUrl}</p>
                             </section>
                         ) : (
-                            <p className="ai-chat__empty">{text.threeDPromptPlaceholder}</p>
+                            <div className="ai-chat__welcome" role="status">
+                                <img
+                                    className="ai-chat__welcome-mark"
+                                    src="/brand-mark.png"
+                                    alt=""
+                                    aria-hidden="true"
+                                    draggable={false}
+                                />
+                                <h3 className="ai-chat__welcome-title">{text.threeDEmptyTitle}</h3>
+                                <p className="ai-chat__welcome-hint">{text.threeDEmptyHint}</p>
+                            </div>
                         )}
                     </div>
 
