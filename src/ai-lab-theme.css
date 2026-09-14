@@ -921,6 +921,13 @@
   background: rgba(14, 19, 48, 0.72) !important;
   box-shadow: none !important;
   transition: border-color 0.22s ease !important;
+  /* Clip anything that could poke past the rounded corners — the
+     browser's own textarea resize-notch / scroll-edge glow render
+     outside normal CSS painting rules and don't always respect
+     `resize:none` or `::-webkit-scrollbar{display:none}` alone on
+     Telegram's Android WebView. Clipping the whole pill is the only
+     way to guarantee nothing pokes through. */
+  overflow: hidden !important;
 }
 .ai-chat-screen--concept .ai-chat__composer-field--with-attach,
 .ai-image-screen--concept .ai-chat__composer-field--with-attach {
@@ -975,6 +982,10 @@
   overflow: hidden !important;
   appearance: none !important;
   -webkit-appearance: none !important;
+  scrollbar-width: none !important;
+  -webkit-overflow-scrolling: auto !important;
+  touch-action: manipulation !important;
+  overscroll-behavior: contain !important;
 }
 /* Kill every webkit-drawn decoration on textareas that could look
    like the diagonal "//" strip users kept spotting. `resize:none`
