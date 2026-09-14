@@ -1,0 +1,802 @@
+/* ==========================================================================
+   AI LAB THEME — Sep 2026 radical redesign
+   Scope: chat / image / video / voice / 3D generation screens.
+   Goal: give AI screens a distinctly different visual language from the
+   home/catalog/history pages — animated ambient background, glass cards
+   with glow, big model chips with shimmer, animated dropzone, glowing
+   composer. Loaded LAST so it wins the cascade.
+   Every rule is scoped to `.app-shell[data-page='ai-*']` or the screen
+   root class so nothing here leaks to the home/catalog surfaces.
+   ========================================================================== */
+
+/* ---- Shared keyframes (defined once, used across the sheet) ---- */
+@keyframes ai-lab-orb-drift-a {
+  0%   { transform: translate3d(-4%, -2%, 0) scale(1);    opacity: 0.55; }
+  50%  { transform: translate3d(6%, 4%, 0) scale(1.08);   opacity: 0.7;  }
+  100% { transform: translate3d(-4%, -2%, 0) scale(1);    opacity: 0.55; }
+}
+@keyframes ai-lab-orb-drift-b {
+  0%   { transform: translate3d(4%, 3%, 0) scale(1);      opacity: 0.5;  }
+  50%  { transform: translate3d(-6%, -4%, 0) scale(1.12); opacity: 0.7;  }
+  100% { transform: translate3d(4%, 3%, 0) scale(1);      opacity: 0.5;  }
+}
+@keyframes ai-lab-shimmer {
+  0%   { transform: translateX(-140%); }
+  100% { transform: translateX(140%); }
+}
+@keyframes ai-lab-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.45); }
+  70%  { box-shadow: 0 0 0 14px rgba(125, 211, 252, 0);  }
+  100% { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0);     }
+}
+@keyframes ai-lab-dashed-march {
+  0%   { background-position: 0 0, 0 0, 0 0, 0 0; }
+  100% { background-position: 22px 0, -22px 0, 0 22px, 0 -22px; }
+}
+@keyframes ai-lab-card-in {
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0);    }
+}
+@keyframes ai-lab-title-glow {
+  0%   { filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.28)); }
+  50%  { filter: drop-shadow(0 0 14px rgba(167, 139, 250, 0.42)); }
+  100% { filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.28)); }
+}
+
+/* ================================================================
+   0. Ambient background — soft animated aurora orbs behind
+   everything. Zero JS: pure CSS ::before/::after on the shell.
+   ================================================================ */
+
+:root:not([data-theme='light']) .app-shell[data-page='ai-chat'],
+:root:not([data-theme='light']) .app-shell[data-page='ai-image'],
+:root:not([data-theme='light']) .app-shell[data-page='ai-video'],
+:root:not([data-theme='light']) .app-shell[data-page='ai-voice'],
+:root:not([data-theme='light']) .app-shell[data-page='ai-3d'] {
+  /* Base surface — deep space with a very subtle top-lit vignette. */
+  background:
+    radial-gradient(
+      ellipse 140% 60% at 50% -12%,
+      rgba(125, 211, 252, 0.16) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 110% 40% at 50% 115%,
+      rgba(244, 114, 182, 0.10) 0%,
+      transparent 62%
+    ),
+    linear-gradient(180deg, #060820 0%, #04061a 55%, #02030f 100%) !important;
+  background-attachment: fixed, fixed, fixed !important;
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+}
+
+/* Two very-blurred animated orbs behind the content, one cyan / one
+   violet. They drift slowly with distinct phases so the surface never
+   feels static.  `pointer-events:none` so they never eat taps. */
+.app-shell[data-page='ai-chat']::before,
+.app-shell[data-page='ai-image']::before,
+.app-shell[data-page='ai-video']::before,
+.app-shell[data-page='ai-voice']::before,
+.app-shell[data-page='ai-3d']::before {
+  content: '';
+  position: fixed;
+  top: -18vh;
+  left: -14vw;
+  width: 70vw;
+  height: 70vw;
+  max-width: 720px;
+  max-height: 720px;
+  background: radial-gradient(circle,
+    rgba(125, 211, 252, 0.42) 0%,
+    rgba(125, 211, 252, 0.12) 42%,
+    transparent 66%);
+  filter: blur(60px);
+  z-index: -1;
+  pointer-events: none;
+  animation: ai-lab-orb-drift-a 22s ease-in-out infinite;
+}
+
+.app-shell[data-page='ai-chat']::after,
+.app-shell[data-page='ai-image']::after,
+.app-shell[data-page='ai-video']::after,
+.app-shell[data-page='ai-voice']::after,
+.app-shell[data-page='ai-3d']::after {
+  content: '';
+  position: fixed;
+  bottom: -22vh;
+  right: -18vw;
+  width: 80vw;
+  height: 80vw;
+  max-width: 780px;
+  max-height: 780px;
+  background: radial-gradient(circle,
+    rgba(167, 139, 250, 0.36) 0%,
+    rgba(244, 114, 182, 0.14) 40%,
+    transparent 66%);
+  filter: blur(70px);
+  z-index: -1;
+  pointer-events: none;
+  animation: ai-lab-orb-drift-b 26s ease-in-out infinite;
+}
+
+/* Kill the default aurora orbs on AI pages — they clash with ours. */
+.app-shell[data-page='ai-chat'] .app-shell__orb,
+.app-shell[data-page='ai-image'] .app-shell__orb,
+.app-shell[data-page='ai-video'] .app-shell__orb,
+.app-shell[data-page='ai-voice'] .app-shell__orb,
+.app-shell[data-page='ai-3d'] .app-shell__orb { display: none !important; }
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell[data-page='ai-chat']::before,
+  .app-shell[data-page='ai-chat']::after,
+  .app-shell[data-page='ai-image']::before,
+  .app-shell[data-page='ai-image']::after,
+  .app-shell[data-page='ai-video']::before,
+  .app-shell[data-page='ai-video']::after,
+  .app-shell[data-page='ai-voice']::before,
+  .app-shell[data-page='ai-voice']::after,
+  .app-shell[data-page='ai-3d']::before,
+  .app-shell[data-page='ai-3d']::after {
+    animation: none;
+  }
+}
+
+/* ================================================================
+   1. Page header — gradient shimmer title, thin animated rule.
+   ================================================================ */
+
+.ai-chat-screen--concept .app-page-header,
+.ai-image-screen--concept .app-page-header {
+  padding: 14px 16px 12px !important;
+  background: linear-gradient(180deg,
+    rgba(10, 14, 40, 0.66) 0%,
+    rgba(10, 14, 40, 0.22) 60%,
+    transparent 100%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  border-bottom: 1px solid transparent !important;
+  border-image: linear-gradient(90deg,
+    transparent 0%,
+    rgba(125, 211, 252, 0.4) 40%,
+    rgba(167, 139, 250, 0.5) 50%,
+    rgba(244, 114, 182, 0.4) 60%,
+    transparent 100%) 1 !important;
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+.ai-chat-screen--concept .app-page-header__title,
+.ai-image-screen--concept .app-page-header__title {
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.005em !important;
+  background: linear-gradient(120deg,
+    #7dd3fc 0%, #a78bfa 42%, #f472b6 78%, #fbbf24 100%) !important;
+  background-size: 220% 100% !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  animation: ai-lab-title-glow 4.5s ease-in-out infinite;
+}
+
+.ai-chat-screen--concept .app-page-header__subtitle,
+.ai-image-screen--concept .app-page-header__subtitle {
+  font-size: 11px !important;
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+/* ================================================================
+   2. Section headings — replace tiny caps "MODEL", "REFERENCE IMAGE"
+   labels with prominent gradient text + a subtle glow line.
+   ================================================================ */
+
+.ai-chat-screen--concept .ai-variant-select__label,
+.ai-image-screen--concept .ai-variant-select__label {
+  display: block !important;
+  padding: 0 !important;
+  margin: 4px 0 10px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+  opacity: 1 !important;
+  color: transparent !important;
+  background: linear-gradient(90deg, #7dd3fc, #a78bfa 55%, #f472b6) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  position: relative;
+}
+.ai-chat-screen--concept .ai-variant-select__label::after,
+.ai-image-screen--concept .ai-variant-select__label::after {
+  content: '';
+  display: block;
+  width: 26px;
+  height: 2px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #7dd3fc, #a78bfa, #f472b6);
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.55);
+}
+
+/* Same treatment for the reference-image section heading. */
+.ai-image-screen--concept .media-reference-field__label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+  background: linear-gradient(90deg, #7dd3fc, #a78bfa 55%, #f472b6) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+.ai-image-screen--concept .media-reference-field__hint {
+  font-size: 11.5px !important;
+  color: rgba(255, 255, 255, 0.65) !important;
+  margin: 0 !important;
+}
+
+/* ================================================================
+   3. Variant selector (model picker) — big pills with shimmer sweep
+   on the active one.
+   ================================================================ */
+
+.ai-chat-screen--concept .ai-variant-select,
+.ai-image-screen--concept .ai-variant-select {
+  padding: 12px 12px 6px !important;
+  margin-top: 4px !important;
+  animation: ai-lab-card-in 0.5s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+.ai-chat-screen--concept .ai-variant-select__scroll,
+.ai-image-screen--concept .ai-variant-select__scroll {
+  padding: 4px 2px 6px !important;
+  gap: 10px !important;
+}
+
+.ai-chat-screen--concept .ai-variant-select__pill,
+.ai-image-screen--concept .ai-variant-select__pill {
+  padding: 12px 18px !important;
+  border-radius: 999px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.005em !important;
+  background: color-mix(in srgb, #0e1330 62%, transparent) !important;
+  border: 1px solid rgba(125, 211, 252, 0.22) !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+  transition:
+    transform 0.22s cubic-bezier(0.22, 0.9, 0.3, 1),
+    box-shadow 0.22s ease,
+    border-color 0.22s ease,
+    background 0.22s ease !important;
+}
+
+.ai-chat-screen--concept .ai-variant-select__pill:hover:not(:disabled):not(.ai-variant-select__pill--active),
+.ai-image-screen--concept .ai-variant-select__pill:hover:not(:disabled):not(.ai-variant-select__pill--active) {
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.42) !important;
+  box-shadow: 0 6px 22px rgba(125, 211, 252, 0.18);
+}
+
+.ai-chat-screen--concept .ai-variant-select__pill--active,
+.ai-image-screen--concept .ai-variant-select__pill--active {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow:
+    0 12px 34px rgba(180, 100, 220, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.32) inset !important;
+  transform: translateY(-1px);
+}
+/* Shimmer sweep across active pill */
+.ai-chat-screen--concept .ai-variant-select__pill--active::after,
+.ai-image-screen--concept .ai-variant-select__pill--active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 75%
+  );
+  transform: translateX(-140%);
+  animation: ai-lab-shimmer 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ================================================================
+   4. Parameter picker rows (`.media-picker`) — glass tiles with
+   left "activity dot", animated chevron, hover glow.
+   ================================================================ */
+
+.ai-image-screen--concept .media-options {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  padding: 0 12px !important;
+  margin-top: 4px !important;
+}
+
+.ai-image-screen--concept .media-picker {
+  position: relative !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(125, 211, 252, 0.16) !important;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #0e1330 65%, transparent) 0%,
+    color-mix(in srgb, #131940 55%, transparent) 100%
+  ) !important;
+  overflow: visible !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  backdrop-filter: blur(14px) !important;
+  transition:
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    transform 0.24s cubic-bezier(0.22, 0.9, 0.3, 1) !important;
+  animation: ai-lab-card-in 0.45s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+.ai-image-screen--concept .media-picker:hover {
+  border-color: rgba(125, 211, 252, 0.4) !important;
+  box-shadow:
+    0 12px 34px rgba(3, 5, 20, 0.4),
+    0 0 0 1px rgba(125, 211, 252, 0.2) inset !important;
+  transform: translateY(-1px);
+}
+.ai-image-screen--concept .media-picker--open {
+  border-color: rgba(167, 139, 250, 0.5) !important;
+  box-shadow:
+    0 16px 42px rgba(3, 5, 20, 0.5),
+    0 0 0 1px rgba(167, 139, 250, 0.28) inset !important;
+}
+
+/* Left accent dot on every picker tile — different hue per row via
+   :nth-child so the eye can distinguish parameters at a glance. */
+.ai-image-screen--concept .media-picker::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #7dd3fc;
+  box-shadow: 0 0 12px currentColor;
+}
+.ai-image-screen--concept .media-picker:nth-child(3n+2)::before { color: #a78bfa; background: #a78bfa; }
+.ai-image-screen--concept .media-picker:nth-child(3n)::before   { color: #f472b6; background: #f472b6; }
+
+.ai-image-screen--concept .media-picker__trigger {
+  padding: 14px 16px 14px 30px !important;
+  gap: 10px !important;
+  grid-template-columns: 1fr auto auto !important;
+}
+
+.ai-image-screen--concept .media-picker__label {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.18em !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.ai-image-screen--concept .media-picker__summary {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-image-screen--concept .media-picker__chevron {
+  width: 26px !important;
+  height: 26px !important;
+  padding: 5px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, #0a0d24 55%, transparent) !important;
+  border: 1px solid rgba(125, 211, 252, 0.28) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  transition: transform 0.28s cubic-bezier(0.22, 0.9, 0.3, 1),
+              background 0.24s ease, border-color 0.24s ease !important;
+}
+.ai-image-screen--concept .media-picker--open .media-picker__chevron {
+  background: linear-gradient(135deg, #7dd3fc, #a78bfa) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  transform: rotate(180deg) !important;
+}
+
+/* Panel inside an opened picker — soft inner glass, no harsh border. */
+.ai-image-screen--concept .media-picker__panel {
+  padding: 4px 14px 14px !important;
+  border-top: 1px solid rgba(125, 211, 252, 0.14) !important;
+  background: color-mix(in srgb, #050818 30%, transparent) !important;
+}
+
+/* Chips inside a panel: bigger, rounder, with active gradient. */
+.ai-image-screen--concept .media-options__chip {
+  padding: 8px 14px !important;
+  border-radius: 999px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  background: color-mix(in srgb, #0a0d24 55%, transparent) !important;
+  border: 1px solid rgba(125, 211, 252, 0.24) !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+  transition: transform 0.18s ease, box-shadow 0.22s ease,
+              border-color 0.22s ease, background 0.22s ease !important;
+}
+.ai-image-screen--concept .media-options__chip:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.5) !important;
+}
+.ai-image-screen--concept .media-options__chip--active {
+  background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 60%, #f472b6 100%) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 8px 22px rgba(180, 100, 220, 0.45),
+              0 0 0 1px rgba(255, 255, 255, 0.28) inset !important;
+}
+
+/* ================================================================
+   5. Reference image — turn it into a proper card, redesign the URL
+   row into a big glass pill, redesign the dropzone with animated
+   dashed border.
+   ================================================================ */
+
+.ai-image-screen--concept .media-reference-field {
+  gap: 10px !important;
+  padding: 12px 12px 4px !important;
+  margin-top: 6px !important;
+  animation: ai-lab-card-in 0.55s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+.ai-image-screen--concept .media-reference-field__url-row {
+  padding: 6px 14px !important;
+  gap: 10px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(125, 211, 252, 0.28) !important;
+  background: color-mix(in srgb, #0a0d24 65%, transparent) !important;
+  box-shadow:
+    0 8px 26px rgba(3, 5, 20, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease !important;
+}
+.ai-image-screen--concept .media-reference-field__url-row:focus-within {
+  border-color: rgba(167, 139, 250, 0.6) !important;
+  box-shadow:
+    0 10px 32px rgba(3, 5, 20, 0.55),
+    0 0 0 4px rgba(167, 139, 250, 0.2) !important;
+}
+.ai-image-screen--concept .media-reference-field__url-icon {
+  color: #7dd3fc !important;
+}
+.ai-image-screen--concept .media-reference-field__url-input {
+  border: none !important;
+  background: transparent !important;
+  padding: 8px 0 !important;
+  font-size: 14px !important;
+  color: #fff !important;
+}
+.ai-image-screen--concept .media-reference-field__url-input::placeholder {
+  color: rgba(255, 255, 255, 0.42) !important;
+}
+
+/* Animated dropzone — dashed border marches around the box, glow
+   pulses when hovered.  Because CSS can't animate dashed strokes, we
+   fake it with four moving gradient background layers (top/bottom/
+   left/right) that shift position over time. */
+.ai-image-screen--concept .media-reference-field__dropzone {
+  position: relative;
+  padding: 18px !important;
+  border-radius: 20px !important;
+  border: none !important;
+  background:
+    /* dashed pattern layers */
+    linear-gradient(90deg, rgba(125, 211, 252, 0.55) 50%, transparent 50%) top left / 22px 2px repeat-x,
+    linear-gradient(90deg, rgba(167, 139, 250, 0.55) 50%, transparent 50%) bottom left / 22px 2px repeat-x,
+    linear-gradient(180deg, rgba(125, 211, 252, 0.55) 50%, transparent 50%) top left / 2px 22px repeat-y,
+    linear-gradient(180deg, rgba(167, 139, 250, 0.55) 50%, transparent 50%) top right / 2px 22px repeat-y,
+    /* inner surface */
+    linear-gradient(160deg,
+      color-mix(in srgb, #0e1330 55%, transparent),
+      color-mix(in srgb, #16204a 42%, transparent)) content-box !important;
+  background-clip: border-box, border-box, border-box, border-box, content-box !important;
+  animation: ai-lab-dashed-march 4s linear infinite;
+  transition: box-shadow 0.24s ease, transform 0.24s ease !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  backdrop-filter: blur(10px) !important;
+}
+.ai-image-screen--concept .media-reference-field__dropzone:hover {
+  box-shadow: 0 14px 36px rgba(125, 211, 252, 0.18),
+              0 0 0 1px rgba(125, 211, 252, 0.28) inset;
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-image-screen--concept .media-reference-field__dropzone { animation: none; }
+}
+
+/* Upload button inside dropzone. */
+.ai-image-screen--concept .media-reference-field__upload-btn {
+  min-height: 110px !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.005em !important;
+  gap: 8px !important;
+}
+.ai-image-screen--concept .media-reference-field__upload-btn > svg,
+.ai-image-screen--concept .media-reference-field__upload-btn [class*='icon'] {
+  padding: 10px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, #7dd3fc, #a78bfa) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 22px rgba(180, 100, 220, 0.45);
+  width: 40px !important;
+  height: 40px !important;
+}
+
+/* ================================================================
+   6. Composer — big glowing pill.  Send button gets a pulse ring
+   at rest so users can't miss it.
+   ================================================================ */
+
+.ai-chat-screen--concept .ai-chat__composer,
+.ai-image-screen--concept .ai-chat__composer,
+.ai-image-screen--concept .ai-video__composer {
+  gap: 12px !important;
+  padding: 14px 14px calc(16px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px))) !important;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(4, 6, 20, 0.72) 40%,
+    rgba(4, 6, 20, 0.94) 100%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  border-top: 1px solid transparent !important;
+  border-image: linear-gradient(90deg,
+    transparent 0%,
+    rgba(125, 211, 252, 0.32) 30%,
+    rgba(167, 139, 250, 0.5) 50%,
+    rgba(244, 114, 182, 0.32) 70%,
+    transparent 100%) 1 !important;
+}
+
+.ai-chat-screen--concept .ai-chat__composer-field,
+.ai-image-screen--concept .ai-chat__composer-field,
+.ai-image-screen--concept .ai-video__composer-field {
+  padding: 4px 16px !important;
+  border-radius: 28px !important;
+  border: 1px solid rgba(125, 211, 252, 0.3) !important;
+  background:
+    linear-gradient(135deg,
+      rgba(14, 19, 48, 0.75) 0%,
+      rgba(20, 26, 68, 0.7) 100%) !important;
+  box-shadow:
+    0 14px 38px rgba(3, 5, 20, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease !important;
+}
+.ai-chat-screen--concept .ai-chat__composer-field:focus-within,
+.ai-image-screen--concept .ai-chat__composer-field:focus-within,
+.ai-image-screen--concept .ai-video__composer-field:focus-within {
+  border-color: rgba(167, 139, 250, 0.7) !important;
+  box-shadow:
+    0 16px 42px rgba(3, 5, 20, 0.55),
+    0 0 0 4px rgba(167, 139, 250, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
+}
+
+.ai-chat-screen--concept .ai-chat__input,
+.ai-image-screen--concept .ai-chat__input,
+.ai-image-screen--concept .ai-video__prompt {
+  min-height: 48px !important;
+  padding: 12px 4px !important;
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+  color: #fff !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  resize: none !important;
+}
+.ai-chat-screen--concept .ai-chat__input::placeholder,
+.ai-image-screen--concept .ai-chat__input::placeholder,
+.ai-image-screen--concept .ai-video__prompt::placeholder {
+  color: rgba(255, 255, 255, 0.42) !important;
+}
+
+.ai-chat-screen--concept .ai-chat__attach,
+.ai-image-screen--concept .ai-chat__attach {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(125, 211, 252, 0.3) !important;
+  background: color-mix(in srgb, #0a0d24 60%, transparent) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  transition: transform 0.18s ease, box-shadow 0.22s ease,
+              border-color 0.22s ease, background 0.22s ease !important;
+}
+.ai-chat-screen--concept .ai-chat__attach:hover:not(:disabled),
+.ai-image-screen--concept .ai-chat__attach:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.6) !important;
+  box-shadow: 0 8px 22px rgba(125, 211, 252, 0.22);
+}
+
+.ai-chat-screen--concept .ai-chat__send,
+.ai-image-screen--concept .ai-chat__send {
+  position: relative !important;
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.32) !important;
+  color: #fff !important;
+  box-shadow:
+    0 12px 30px rgba(180, 100, 220, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.32) inset !important;
+  overflow: visible !important;
+  transition: transform 0.18s ease, box-shadow 0.22s ease !important;
+  animation: ai-lab-pulse-ring 2.6s ease-out infinite;
+}
+.ai-chat-screen--concept .ai-chat__send:hover:not(:disabled),
+.ai-image-screen--concept .ai-chat__send:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow:
+    0 16px 36px rgba(180, 100, 220, 0.65),
+    0 1px 0 rgba(255, 255, 255, 0.35) inset !important;
+}
+.ai-chat-screen--concept .ai-chat__send:active:not(:disabled),
+.ai-image-screen--concept .ai-chat__send:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+.ai-chat-screen--concept .ai-chat__send--stop,
+.ai-image-screen--concept .ai-chat__send--stop {
+  background: linear-gradient(135deg, #ef4444, #f87171) !important;
+  animation: none !important;
+}
+.ai-chat-screen--concept .ai-chat__send--insufficient,
+.ai-image-screen--concept .ai-chat__send--insufficient {
+  animation: none !important;
+  background: rgba(120, 120, 130, 0.42) !important;
+  box-shadow: none !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-chat-screen--concept .ai-chat__send,
+  .ai-image-screen--concept .ai-chat__send { animation: none; }
+}
+
+/* Video / 3D submit button — wide gradient pill, not a circle. */
+.ai-image-screen--concept .ai-video__submit {
+  position: relative !important;
+  width: 100% !important;
+  min-height: 52px !important;
+  padding: 14px 22px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.01em !important;
+  box-shadow:
+    0 14px 34px rgba(180, 100, 220, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.32) inset !important;
+  overflow: hidden !important;
+  transition: transform 0.18s ease, box-shadow 0.22s ease, filter 0.22s ease !important;
+}
+.ai-image-screen--concept .ai-video__submit:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.01);
+  filter: brightness(1.05);
+}
+.ai-image-screen--concept .ai-video__submit:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+}
+.ai-image-screen--concept .ai-video__submit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 70%);
+  transform: translateX(-140%);
+  animation: ai-lab-shimmer 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.ai-image-screen--concept .ai-video__submit.ai-video__submit--insufficient {
+  background: rgba(120, 120, 130, 0.42) !important;
+  box-shadow: none !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+.ai-image-screen--concept .ai-video__submit.ai-video__submit--insufficient::after {
+  display: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-image-screen--concept .ai-video__submit::after { animation: none; }
+}
+
+/* ================================================================
+   7. Welcome hero card — softer, more prominent, drop-shadow glow.
+   ================================================================ */
+
+.ai-chat-screen--concept .ai-chat__welcome,
+.ai-image-screen--concept .ai-chat__welcome {
+  margin: 24px 12px !important;
+  padding: 36px 22px !important;
+  border-radius: 32px !important;
+  background:
+    radial-gradient(ellipse at 30% 0%, rgba(125, 211, 252, 0.28) 0%, transparent 65%),
+    radial-gradient(ellipse at 70% 100%, rgba(244, 114, 182, 0.18) 0%, transparent 65%),
+    linear-gradient(160deg,
+      rgba(20, 24, 48, 0.72),
+      rgba(10, 13, 36, 0.72)) !important;
+  border: 1px solid transparent !important;
+  border-image: linear-gradient(135deg,
+    rgba(125, 211, 252, 0.6),
+    rgba(167, 139, 250, 0.5),
+    rgba(244, 114, 182, 0.55)) 1 !important;
+  box-shadow: 0 30px 66px rgba(3, 5, 20, 0.48) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  animation: ai-lab-card-in 0.55s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+.ai-chat-screen--concept .ai-chat__welcome-mark,
+.ai-image-screen--concept .ai-chat__welcome-mark {
+  width: 84px !important;
+  height: 84px !important;
+  filter: drop-shadow(0 8px 22px rgba(125, 211, 252, 0.5))
+          drop-shadow(0 8px 22px rgba(167, 139, 250, 0.35));
+  animation: ai-lab-title-glow 4.5s ease-in-out infinite;
+}
+.ai-chat-screen--concept .ai-chat__welcome-title,
+.ai-image-screen--concept .ai-chat__welcome-title {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  background: linear-gradient(120deg, #7dd3fc, #a78bfa 60%, #f472b6) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+.ai-chat-screen--concept .ai-chat__welcome-hint,
+.ai-image-screen--concept .ai-chat__welcome-hint {
+  font-size: 14px !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  max-width: 340px;
+}
+
+/* ================================================================
+   8. Light-theme safety — keep the light theme readable when someone
+   swaps modes.  We soften the neon accents but keep the geometry.
+   ================================================================ */
+
+:root[data-theme='light'] .app-shell[data-page='ai-chat']::before,
+:root[data-theme='light'] .app-shell[data-page='ai-chat']::after,
+:root[data-theme='light'] .app-shell[data-page='ai-image']::before,
+:root[data-theme='light'] .app-shell[data-page='ai-image']::after,
+:root[data-theme='light'] .app-shell[data-page='ai-video']::before,
+:root[data-theme='light'] .app-shell[data-page='ai-video']::after,
+:root[data-theme='light'] .app-shell[data-page='ai-voice']::before,
+:root[data-theme='light'] .app-shell[data-page='ai-voice']::after,
+:root[data-theme='light'] .app-shell[data-page='ai-3d']::before,
+:root[data-theme='light'] .app-shell[data-page='ai-3d']::after {
+  opacity: 0.35;
+}
+
+:root[data-theme='light'] .app-shell[data-page='ai-chat'],
+:root[data-theme='light'] .app-shell[data-page='ai-image'],
+:root[data-theme='light'] .app-shell[data-page='ai-video'],
+:root[data-theme='light'] .app-shell[data-page='ai-voice'],
+:root[data-theme='light'] .app-shell[data-page='ai-3d'] {
+  background:
+    radial-gradient(ellipse 120% 55% at 50% -10%,
+      rgba(125, 211, 252, 0.16) 0%, transparent 62%),
+    linear-gradient(180deg, #f7f8ff 0%, #eef1fb 100%) !important;
+}

@@ -245,6 +245,7 @@ import './compact-ui.css';
 import './modern-polish.css';
 import './design-refresh.css';
 import './aurora-theme.css';
+import './ai-lab-theme.css';
 import { formatUserFacingError } from './api/apiError.js';
 import { resolveGenerationTokenBalance } from './lib/walletBalance.js';
 import { APP_NAME, ENABLE_TELEGRAM_MOCK } from './config/env.js';
