@@ -360,6 +360,23 @@ function formatTemplate(template, values) {
     );
 }
 
+// Russian nouns after numerals decline: `1 реферал`, `2/3/4 реферала`,
+// `0/5/…/20 рефералов`. English is much simpler — singular / plural.
+// Used by the profile tile subtitle so we can write `{count} {word}`
+// instead of the previous grammatically-broken `{count} друга`.
+function pluralReferralWord(count, language) {
+    const n = Math.abs(Number(count) || 0);
+    if (language === 'ru') {
+        const mod100 = n % 100;
+        const mod10 = n % 10;
+        if (mod100 >= 11 && mod100 <= 14) return 'рефералов';
+        if (mod10 === 1) return 'реферал';
+        if (mod10 >= 2 && mod10 <= 4) return 'реферала';
+        return 'рефералов';
+    }
+    return n === 1 ? 'referral' : 'referrals';
+}
+
 // `child.offsetLeft` is relative to `child.offsetParent` — the nearest
 // positioned ancestor, which is *not* necessarily `container` (containers
 // here are plain `position: static` flex rows). Using it directly to compute
@@ -992,7 +1009,8 @@ const translations = {
         subscriptionRenewHint: 'Продлить подписку',
         modelLockedNotice: 'Модель «{model}» доступна с плана «{plan}»',
         referralProgramTitle: 'Реферальная программа',
-        referralIntro: 'Приглашайте друзей в CyberMate и получайте CyberCoins за каждого активного пользователя.',
+        referralIntro: 'Приглашайте друзей в CyberMate — за каждого активного реферала вы получаете +300 CyberCoins на баланс.',
+        referralBonusAmount: 300,
         referralStatFriends: 'Рефералы',
         referralStatEarned: 'Заработано',
         referralHowTitle: 'Как это работает',
@@ -1064,8 +1082,8 @@ const translations = {
         profileMenuHistory: 'История запросов',
         profileMenuHistorySub: '{count} генераций',
         profileMenuReferrals: 'Рефералы',
-        profileMenuReferralsSub: '{count} друга · +{bonus} монет',
-        profileReferralBonusTag: '+бонус',
+        profileMenuReferralsSub: '{count} {word} · +{bonus} монет за каждого',
+        profileReferralBonusTag: '+300',
         profileMenuSupport: 'Поддержка',
         profileMenuSupportSub: 'Напишите нам в Telegram',
         profileMenuLanguage: 'Язык',
@@ -1677,7 +1695,8 @@ const translations = {
         subscriptionRenewHint: 'Renew subscription',
         modelLockedNotice: 'Model "{model}" requires the "{plan}" plan',
         referralProgramTitle: 'Referral program',
-        referralIntro: 'Invite friends to CyberMate and earn CyberCoins for every active user.',
+        referralIntro: 'Invite friends to CyberMate — earn +300 CyberCoins for every active referral.',
+        referralBonusAmount: 300,
         referralStatFriends: 'Referrals',
         referralStatEarned: 'Earned',
         referralHowTitle: 'How it works',
@@ -1749,8 +1768,8 @@ const translations = {
         profileMenuHistory: 'Request history',
         profileMenuHistorySub: '{count} generations',
         profileMenuReferrals: 'Referrals',
-        profileMenuReferralsSub: '{count} friends · +{bonus} coins',
-        profileReferralBonusTag: '+bonus',
+        profileMenuReferralsSub: '{count} {word} · +{bonus} coins each',
+        profileReferralBonusTag: '+300',
         profileMenuSupport: 'Support',
         profileMenuSupportSub: 'Message us on Telegram',
         profileMenuLanguage: 'Language',
@@ -6792,9 +6811,15 @@ function App() {
                         onClick={isGeneratingText ? handleStopChatGeneration : handleSendChatMessage}
                     >
                         {isGeneratingText ? (
-                            <Square size={16} aria-hidden="true" fill="currentColor" />
+                            <>
+                                <Square size={16} aria-hidden="true" fill="currentColor" />
+                                <span className="ai-chat__send-label">{text.chatStop}</span>
+                            </>
                         ) : (
-                            <Send size={18} aria-hidden="true" />
+                            <>
+                                <Send size={18} aria-hidden="true" />
+                                <span className="ai-chat__send-label">{text.chatSend}</span>
+                            </>
                         )}
                     </button>
                 </footer>
@@ -7070,6 +7095,7 @@ function App() {
                         ) : (
                             <>
                                 <Send size={18} aria-hidden="true" />
+                                <span className="ai-chat__send-label">{text.imageGenerateButton}</span>
                                 <span className="ai-chat__send-price" aria-hidden="true">
                                     <CoinIcon size={14} />
                                     {imageGenerationPrice}
@@ -7368,10 +7394,10 @@ function App() {
 
                 <footer className="ai-video__composer">
                     <div className="ai-video__composer-field">
-                        <label className="ai-video__label" htmlFor="ai-video-prompt">{text.videoPromptLabel}</label>
                         <textarea
                             id="ai-video-prompt"
                             className="ai-video__prompt"
+                            aria-label={text.videoPromptLabel}
                             value={videoPrompt}
                             onChange={(event) => setVideoPrompt(event.target.value)}
                             placeholder={promptPlaceholder}
@@ -7655,6 +7681,7 @@ function App() {
                         ) : (
                             <>
                                 <Send size={18} aria-hidden="true" />
+                                <span className="ai-chat__send-label">{generateLabel}</span>
                                 <span className="ai-chat__send-price" aria-hidden="true">
                                     <CoinIcon size={14} />
                                     {audioGenerationPrice}
@@ -7867,12 +7894,10 @@ function App() {
                             </div>
                         ) : null}
 
-                        <label className="ai-video__label" htmlFor="ai-3d-prompt">
-                            {promptOptional ? `${text.threeDPromptLabel} (${language === 'ru' ? 'опционально' : 'optional'})` : text.threeDPromptLabel}
-                        </label>
                         <textarea
                             id="ai-3d-prompt"
                             className="ai-video__prompt"
+                            aria-label={promptOptional ? `${text.threeDPromptLabel} (${language === 'ru' ? 'опционально' : 'optional'})` : text.threeDPromptLabel}
                             value={threeDPrompt}
                             onChange={(event) => setThreeDPrompt(event.target.value)}
                             placeholder={text.threeDPromptPlaceholder}
@@ -8041,7 +8066,11 @@ function App() {
                         <span className="profile-hub__tile-ico profile-hub__tile-ico--green"><Users size={18} /></span>
                         <span className="profile-hub__tile-title">{text.profileMenuReferrals}</span>
                         <span className="profile-hub__tile-sub">
-                            {formatTemplate(text.profileMenuReferralsSub, { count: referralsCount, bonus: referralBonus || 300 })}
+                            {formatTemplate(text.profileMenuReferralsSub, {
+                                count: referralsCount,
+                                word: pluralReferralWord(referralsCount, language),
+                                bonus: text.referralBonusAmount || referralBonus || 300,
+                            })}
                         </span>
                         <span className="profile-hub__tile-tag">{text.profileReferralBonusTag}</span>
                     </button>
@@ -8080,6 +8109,15 @@ function App() {
                 <article className="referral-concept__hero">
                     <div className="referral-concept__hero-icon">
                         <Users size={22} aria-hidden="true" />
+                    </div>
+                    <div className="referral-concept__hero-bonus">
+                        <CoinIcon size={18} />
+                        <span className="referral-concept__hero-bonus-val">
+                            +{text.referralBonusAmount || 300}
+                        </span>
+                        <span className="referral-concept__hero-bonus-label">
+                            {language === 'ru' ? 'за каждого реферала' : 'per referral'}
+                        </span>
                     </div>
                     <p className="referral-concept__hero-text">{text.referralIntro}</p>
                     <div className="referral-concept__stats">

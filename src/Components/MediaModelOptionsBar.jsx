@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ArrowLeftRight } from 'lucide-react';
 import CoinIcon from './CoinIcon.jsx';
 
@@ -35,12 +35,12 @@ function OptionChipGroup({
     allowCustom,
     customPlaceholder,
 }) {
-    // Track any user-entered custom value separately from the preset
-    // list. If the incoming `value` isn't in `values`, we treat it as
-    // custom-input. This lets the user type "3:2" for aspect ratio,
-    // "1080p" for resolution, "7" for a duration between the presets,
-    // etc. The parent's `onChange` is only called on Enter/blur so
-    // the app doesn't flicker while the user is typing.
+    // Preset chips are the primary UI. If a custom value is allowed
+    // for this option (e.g. resolution, aspect ratio), we show a
+    // small "Своё" chip toggle at the end — clicking it reveals a
+    // text input row so the user can type an arbitrary value. This
+    // keeps the default view clean (users originally complained the
+    // input was replacing the preset chips).
     const stringValues = React.useMemo(
         () => (values ?? []).map((item) => String(item)),
         [values],
@@ -48,20 +48,22 @@ function OptionChipGroup({
     const currentStr = value == null ? '' : String(value);
     const isCurrentPreset = stringValues.includes(currentStr);
     const shouldOfferCustom = allowCustom ?? CUSTOM_INPUT_KEYS.has(optionKey);
+    const customIsActive = shouldOfferCustom && !isCurrentPreset && Boolean(currentStr);
 
-    const [customDraft, setCustomDraft] = useState(
-        !isCurrentPreset && currentStr && shouldOfferCustom ? currentStr : '',
-    );
+    // Auto-expand when the current value is already a custom one
+    // (e.g. after reloading, or switching between models). Otherwise
+    // start collapsed so the presets get all the screen space.
+    const [customOpen, setCustomOpen] = useState(customIsActive);
+    const [customDraft, setCustomDraft] = useState(customIsActive ? currentStr : '');
+    const customInputRef = useRef(null);
 
-    // Keep the draft in sync when the parent changes the value from
-    // elsewhere (e.g. switching models resets defaults). Otherwise the
-    // custom box could show a stale value from a previous session.
     useEffect(() => {
         if (!shouldOfferCustom) return;
         if (isCurrentPreset) {
             setCustomDraft('');
         } else if (currentStr) {
             setCustomDraft(currentStr);
+            setCustomOpen(true);
         }
     }, [currentStr, isCurrentPreset, shouldOfferCustom]);
 
@@ -83,12 +85,22 @@ function OptionChipGroup({
             event.preventDefault();
             commitCustom();
             event.currentTarget.blur();
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            setCustomOpen(false);
         }
     };
 
-    const customInputActive = shouldOfferCustom
-        && !isCurrentPreset
-        && Boolean(currentStr);
+    const handleToggleCustom = () => {
+        setCustomOpen((prev) => {
+            const next = !prev;
+            if (next) {
+                // Focus the input on the next tick after it mounts.
+                setTimeout(() => customInputRef.current?.focus(), 0);
+            }
+            return next;
+        });
+    };
 
     return (
         <div className="media-options__group">
@@ -129,25 +141,36 @@ function OptionChipGroup({
                 })}
 
                 {shouldOfferCustom ? (
-                    <label
-                        className={`media-options__custom${customInputActive ? ' media-options__custom--active' : ''}`}
-                        aria-label={customPlaceholder ?? 'Custom value'}
+                    <button
+                        type="button"
+                        className={`media-options__chip media-options__chip--custom-toggle${customIsActive ? ' media-options__chip--active' : ''}`}
+                        onClick={handleToggleCustom}
+                        disabled={disabled}
+                        aria-pressed={customOpen || customIsActive}
+                        aria-expanded={customOpen}
                     >
-                        <input
-                            type="text"
-                            className="media-options__custom-input"
-                            value={customDraft}
-                            onChange={(event) => setCustomDraft(event.target.value)}
-                            onBlur={commitCustom}
-                            onKeyDown={handleCustomKeyDown}
-                            placeholder={customPlaceholder ?? '…'}
-                            disabled={disabled}
-                            spellCheck={false}
-                            autoComplete="off"
-                        />
-                    </label>
+                        {customIsActive ? currentStr : (customPlaceholder ? '✎ Своё' : '✎ Custom')}
+                    </button>
                 ) : null}
             </div>
+
+            {shouldOfferCustom && customOpen ? (
+                <label className="media-options__custom" aria-label={customPlaceholder ?? 'Custom value'}>
+                    <input
+                        ref={customInputRef}
+                        type="text"
+                        className="media-options__custom-input"
+                        value={customDraft}
+                        onChange={(event) => setCustomDraft(event.target.value)}
+                        onBlur={commitCustom}
+                        onKeyDown={handleCustomKeyDown}
+                        placeholder={customPlaceholder ?? '…'}
+                        disabled={disabled}
+                        spellCheck={false}
+                        autoComplete="off"
+                    />
+                </label>
+            ) : null}
         </div>
     );
 }

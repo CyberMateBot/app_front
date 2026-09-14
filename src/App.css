@@ -3448,6 +3448,35 @@
   justify-content: center;
 }
 
+/* Prominent "+300 per referral" chip in the referral hero. Users
+   asked for the bonus amount to be spelled out on this screen. */
+.referral-concept__hero-bonus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: linear-gradient(120deg,
+    color-mix(in srgb, #fbbf24 22%, transparent),
+    color-mix(in srgb, #f59e0b 22%, transparent));
+  border: 0.5px solid color-mix(in srgb, #fbbf24 55%, transparent);
+  color: #fbbf24;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.005em;
+}
+.referral-concept__hero-bonus-val {
+  font-size: 15px;
+  color: #fbbf24;
+}
+.referral-concept__hero-bonus-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cm-text-soft);
+  text-transform: none;
+}
+
 .referral-concept__hero-text {
   margin: 0 0 14px;
   font-size: 12px;
@@ -4795,8 +4824,15 @@
   gap: 8px;
   margin-bottom: 10px;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  /* Restrict touch gestures to horizontal pan only. Without this, a
+     vertical drag started on a filter chip was being handed off to
+     the page scroller and yanked the whole content up/down while the
+     user was just trying to swipe through categories. */
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
 }
 
 .catalog-concept__tabs::-webkit-scrollbar {
