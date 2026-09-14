@@ -268,43 +268,12 @@
    on the active one.
    ================================================================ */
 
-/* --- SCROLL RE-WIRING ----------------------------------------------
-   Base layout had section: overflow: hidden, and the internal scroll
-   living on `.ai-chat__messages` (or `.ai-video__main`). That made
-   the model-picker's `position: sticky` inert — the sticky element
-   was a *sibling* of the scroll container, not a child, so it could
-   never pin. Users reported the picker drifting with the scroll.
-
-   Fix: hoist the scroll onto the section itself, then let the header
-   (top:0), picker (top: header-height) and composer (bottom:0) all
-   stick relative to that scroll. Inner containers lose their own
-   overflow-y so scroll delegation to the section is clean. */
-.ai-chat-screen--concept,
-.ai-image-screen--concept {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  scrollbar-width: thin !important;
-  -webkit-overflow-scrolling: touch !important;
-}
-.ai-chat-screen--concept .ai-chat__messages,
-.ai-image-screen--concept .ai-video__main,
-.ai-image-screen--concept .ai-image__content {
-  overflow: visible !important;
-  min-height: 0 !important;
-  flex: 1 1 auto !important;
-}
-
-.ai-chat-screen--concept .ai-chat__composer,
-.ai-image-screen--concept .ai-chat__composer,
-.ai-image-screen--concept .ai-video__composer {
-  position: sticky !important;
-  bottom: 0 !important;
-  z-index: 14 !important;
-}
-
-/* Collapsible model picker — sticks right under the header as the
-   section scrolls. Background is fully opaque so chat messages
-   scrolling under it are cleanly occluded. */
+/* Collapsible model picker — sticky under the header. Sticks
+   relative to the internal scroll container (`.ai-chat__messages`
+   / `.ai-video__main`) that already exists in the base layout, so
+   the section itself stays `overflow: hidden` and its inner flex
+   children keep their own overflow-y. Background is fully opaque
+   so the chat messages scrolling under it are cleanly occluded. */
 .ai-chat-screen--concept .ai-variant-select,
 .ai-image-screen--concept .ai-variant-select {
   position: sticky !important;
