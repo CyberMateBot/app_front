@@ -268,19 +268,24 @@
    on the active one.
    ================================================================ */
 
-/* Collapsible model picker — sticky under the header. Sticks
-   relative to the internal scroll container (`.ai-chat__messages`
-   / `.ai-video__main`) that already exists in the base layout, so
-   the section itself stays `overflow: hidden` and its inner flex
-   children keep their own overflow-y. Background is fully opaque
-   so the chat messages scrolling under it are cleanly occluded. */
+/* Collapsible model picker — now rendered as the FIRST CHILD inside
+   the screen's real scroll container (`.ai-chat__messages` for text
+   chat, `.ai-video__main` for image/video/audio/3D). It used to sit
+   as a *sibling* of that scroll container, at the section level —
+   section itself is `overflow: hidden` and never scrolls, so
+   `position: sticky` had nothing to stick to and the picker just
+   scrolled away with the rest of the section on some mobile
+   WebViews. Now that it's inside the actual `overflow-y: auto`
+   container, `top: 0` sticks it to the top of THAT scrollport,
+   which is the fix. Background stays fully opaque so content
+   scrolling under it is cleanly occluded. */
 .ai-chat-screen--concept .ai-variant-select,
 .ai-image-screen--concept .ai-variant-select {
   position: sticky !important;
-  top: 54px !important;
+  top: 0 !important;
   z-index: 15 !important;
   padding: 6px 12px 6px !important;
-  margin-top: 2px !important;
+  margin: 0 0 4px !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
