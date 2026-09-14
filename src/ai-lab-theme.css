@@ -288,8 +288,8 @@
   align-items: center !important;
   gap: 10px !important;
   width: 100% !important;
-  padding: 10px 14px !important;
-  border-radius: 16px !important;
+  padding: 8px 14px !important;
+  border-radius: 14px !important;
   border: 1px solid rgba(125, 211, 252, 0.24) !important;
   background: linear-gradient(160deg,
     rgba(14, 19, 48, 0.85),
@@ -300,12 +300,20 @@
   font-weight: 600 !important;
   text-align: left !important;
   cursor: pointer !important;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  transition: border-color 0.2s ease !important;
+}
+.ai-chat-screen--concept .ai-variant-select__trigger::before,
+.ai-image-screen--concept .ai-variant-select__trigger::before,
+.ai-chat-screen--concept .ai-variant-select__trigger::after,
+.ai-image-screen--concept .ai-variant-select__trigger::after {
+  display: none !important;
+  content: none !important;
 }
 .ai-chat-screen--concept .ai-variant-select__trigger:hover:not(:disabled),
 .ai-image-screen--concept .ai-variant-select__trigger:hover:not(:disabled) {
   border-color: rgba(167, 139, 250, 0.55) !important;
-  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.12) !important;
 }
 .ai-chat-screen--concept .ai-variant-select__label,
 .ai-image-screen--concept .ai-variant-select__label {
@@ -367,73 +375,146 @@
   transform: rotate(180deg) !important;
 }
 
+/* Panel — vertical list of options. Rendered as a compact drop-down
+   below the trigger, styled like a solid card so it clearly reads
+   as a "window" of choices. Users complained about tiny dark dots
+   flanking the active pill in the previous horizontal-strip design;
+   those were adjacent pills peeking past the scroll — going full-
+   vertical-list removes the entire class of artifacts. */
 .ai-chat-screen--concept .ai-variant-select__panel,
 .ai-image-screen--concept .ai-variant-select__panel {
-  padding: 4px 0 2px !important;
-  animation: ai-lab-card-in 0.35s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  padding: 6px !important;
+  margin-top: 4px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(125, 211, 252, 0.22) !important;
+  background: linear-gradient(160deg,
+    rgba(14, 19, 48, 0.94),
+    rgba(20, 26, 68, 0.88)) !important;
+  box-shadow: 0 12px 34px rgba(3, 5, 20, 0.55) !important;
+  max-height: 40vh !important;
+  overflow-y: auto !important;
+  animation: ai-lab-card-in 0.24s cubic-bezier(0.22, 0.9, 0.3, 1) both;
 }
 
-/* Kill the fade-out mask from the base stylesheet + give the scroll
-   container enough vertical breathing room for the active pill's
-   subtle box-shadow. */
+.ai-chat-screen--concept .ai-variant-select__option,
+.ai-image-screen--concept .ai-variant-select__option {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 10px 14px !important;
+  border-radius: 12px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  transition: background 0.16s ease, border-color 0.16s ease !important;
+}
+.ai-chat-screen--concept .ai-variant-select__option:hover:not(:disabled):not(.ai-variant-select__option--active),
+.ai-image-screen--concept .ai-variant-select__option:hover:not(:disabled):not(.ai-variant-select__option--active) {
+  background: rgba(125, 211, 252, 0.08) !important;
+  border-color: rgba(125, 211, 252, 0.22) !important;
+}
+.ai-chat-screen--concept .ai-variant-select__option--active,
+.ai-image-screen--concept .ai-variant-select__option--active {
+  background: linear-gradient(120deg,
+    rgba(125, 211, 252, 0.22),
+    rgba(167, 139, 250, 0.22),
+    rgba(244, 114, 182, 0.22)) !important;
+  border-color: rgba(167, 139, 250, 0.55) !important;
+  color: #fff !important;
+}
+.ai-chat-screen--concept .ai-variant-select__option:disabled,
+.ai-image-screen--concept .ai-variant-select__option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.ai-chat-screen--concept .ai-variant-select__option-label,
+.ai-image-screen--concept .ai-variant-select__option-label {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+.ai-chat-screen--concept .ai-variant-select__option-price,
+.ai-image-screen--concept .ai-variant-select__option-price {
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 3px 8px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+}
+.ai-chat-screen--concept .ai-variant-select__option--active .ai-variant-select__option-price,
+.ai-image-screen--concept .ai-variant-select__option--active .ai-variant-select__option-price {
+  background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 60%, #f472b6 100%) !important;
+  color: #fff !important;
+}
+
+/* "Редактирование" badge on edit-only models. Emerald so it's
+   visually distinct from the standard variant chips. */
+.ai-chat-screen--concept .ai-variant-select__edit-badge,
+.ai-image-screen--concept .ai-variant-select__edit-badge,
+.ai-chat-screen--concept .ai-variant-select__option-badge,
+.ai-image-screen--concept .ai-variant-select__option-badge {
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, #34d399 22%, transparent) !important;
+  border: 1px solid color-mix(in srgb, #34d399 55%, transparent) !important;
+  color: #34d399 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase !important;
+}
+
+/* Explicitly nuke every possible decorator on the (now-deprecated)
+   pill classes and their track/scroll parents, just in case some
+   consumer still renders them: no ::before/::after, no box-shadow,
+   no outline, no focus ring. This is what was drawing the tiny
+   "red/dark dots" flanking the previously-active pill. */
+.ai-chat-screen--concept .ai-variant-select__pill,
+.ai-image-screen--concept .ai-variant-select__pill,
+.ai-chat-screen--concept .ai-variant-select__pill::before,
+.ai-image-screen--concept .ai-variant-select__pill::before,
+.ai-chat-screen--concept .ai-variant-select__pill::after,
+.ai-image-screen--concept .ai-variant-select__pill::after,
+.ai-chat-screen--concept .ai-variant-select__pill--active,
+.ai-image-screen--concept .ai-variant-select__pill--active,
+.ai-chat-screen--concept .ai-variant-select__track,
+.ai-image-screen--concept .ai-variant-select__track,
 .ai-chat-screen--concept .ai-variant-select__scroll,
 .ai-image-screen--concept .ai-variant-select__scroll {
-  padding: 4px 2px 4px !important;
-  margin: 0 !important;
-  gap: 8px !important;
-  -webkit-mask-image: none !important;
-          mask-image: none !important;
-  overflow-x: auto !important;
-  overflow-y: visible !important;
-}
-
-.ai-chat-screen--concept .ai-variant-select__pill,
-.ai-image-screen--concept .ai-variant-select__pill {
-  padding: 8px 14px !important;
-  border-radius: 999px !important;
-  font-size: 12.5px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.005em !important;
-  background: color-mix(in srgb, #0e1330 62%, transparent) !important;
-  border: 1px solid rgba(125, 211, 252, 0.22) !important;
-  color: rgba(255, 255, 255, 0.88) !important;
-  transition:
-    transform 0.22s cubic-bezier(0.22, 0.9, 0.3, 1),
-    box-shadow 0.22s ease,
-    border-color 0.22s ease,
-    background 0.22s ease !important;
-}
-
-.ai-chat-screen--concept .ai-variant-select__pill:hover:not(:disabled):not(.ai-variant-select__pill--active),
-.ai-image-screen--concept .ai-variant-select__pill:hover:not(:disabled):not(.ai-variant-select__pill--active) {
-  transform: translateY(-1px);
-  border-color: rgba(125, 211, 252, 0.42) !important;
-  box-shadow: 0 6px 22px rgba(125, 211, 252, 0.18);
-}
-
-/* Active model pill — deliberately understated. User asked to
-   remove the glow/shimmer entirely: no box-shadow halo, no ::after
-   sheen. The gradient background is enough to signal the active
-   state without lighting up the whole strip. */
-.ai-chat-screen--concept .ai-variant-select__pill--active,
-.ai-image-screen--concept .ai-variant-select__pill--active {
-  position: relative;
-  background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
-  color: #fff !important;
-  border-color: transparent !important;
   box-shadow: none !important;
-  transform: none !important;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  animation: none !important;
 }
-/* Explicitly wipe any inherited ::after decoration so nothing sweeps
-   across the pill (this was the source of the diagonal streak users
-   spotted). */
-.ai-chat-screen--concept .ai-variant-select__pill--active::after,
-.ai-image-screen--concept .ai-variant-select__pill--active::after,
-.ai-chat-screen--concept .ai-variant-select__pill--active::before,
-.ai-image-screen--concept .ai-variant-select__pill--active::before {
+.ai-chat-screen--concept .ai-variant-select__pill::before,
+.ai-image-screen--concept .ai-variant-select__pill::before,
+.ai-chat-screen--concept .ai-variant-select__pill::after,
+.ai-image-screen--concept .ai-variant-select__pill::after {
   display: none !important;
   content: none !important;
-  animation: none !important;
 }
 
 /* ================================================================
@@ -733,8 +814,8 @@
 .ai-image-screen--concept .ai-video__composer {
   margin-left: 0 !important;
   margin-right: 0 !important;
-  padding: 8px calc(var(--page-pad-x, 14px) + 4px)
-           calc(10px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)))
+  padding: 6px calc(var(--page-pad-x, 14px) + 4px)
+           calc(8px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)))
            calc(var(--page-pad-x, 14px) + 4px) !important;
   background: linear-gradient(180deg,
     transparent 0%,
@@ -745,81 +826,51 @@
   border-top: 1px solid rgba(167, 139, 250, 0.22) !important;
 }
 
-/* Grid layout — chat / image / audio composers have three siblings
-   (attach button, composer field, send button). Attach + field
-   share the top row, send button gets its own full-width row below,
-   errors go on a third row. Video / 3D use a separate flex-column
-   below since they don't have an attach button. */
+/* All AI composers now stack vertically: field on top (with attach
+   button embedded inside on the left), then a wide gradient send
+   button. This is a big compaction win — no separate row for the
+   paperclip, so we save ~50px of vertical space and the paperclip
+   feels attached to the field instead of orphaned next to it. */
 .ai-chat-screen--concept .ai-chat__composer,
-.ai-image-screen--concept .ai-chat__composer {
-  display: grid !important;
-  grid-template-columns: auto 1fr !important;
-  grid-template-areas:
-    "attach field"
-    "send   send"
-    "error  error" !important;
-  gap: 8px !important;
-}
+.ai-image-screen--concept .ai-chat__composer,
 .ai-image-screen--concept .ai-video__composer {
   display: flex !important;
   flex-direction: column !important;
-  gap: 8px !important;
+  gap: 6px !important;
 }
 .ai-chat-screen--concept .ai-chat__composer > .ai-chat__file-input,
 .ai-image-screen--concept .ai-chat__composer > .ai-chat__file-input {
   display: none !important;
 }
+/* The (legacy) sibling attach button — should never render in the
+   new JSX since we moved it inside the field, but keep the rule
+   in case an old build variant slips through. */
 .ai-chat-screen--concept .ai-chat__composer > .ai-chat__attach,
 .ai-image-screen--concept .ai-chat__composer > .ai-chat__attach {
-  grid-area: attach !important;
-  align-self: end !important;
-}
-.ai-chat-screen--concept .ai-chat__composer > .ai-chat__composer-field,
-.ai-image-screen--concept .ai-chat__composer > .ai-chat__composer-field {
-  grid-area: field !important;
-  min-width: 0 !important;
-}
-/* When there is no attach button the composer collapses to just
-   field + send. */
-.ai-chat-screen--concept .ai-chat__composer.ai-chat__composer--no-attach,
-.ai-image-screen--concept .ai-chat__composer.ai-chat__composer--no-attach {
-  grid-template-columns: 1fr !important;
-  grid-template-areas:
-    "field"
-    "send"
-    "error" !important;
-}
-.ai-chat-screen--concept .ai-chat__composer.ai-chat__composer--no-attach
-  > .ai-chat__composer-field,
-.ai-image-screen--concept .ai-chat__composer.ai-chat__composer--no-attach
-  > .ai-chat__composer-field {
-  grid-area: field !important;
-}
-.ai-chat-screen--concept .ai-chat__composer > .ai-chat__send,
-.ai-image-screen--concept .ai-chat__composer > .ai-chat__send {
-  grid-area: send !important;
-  justify-self: stretch !important;
-}
-.ai-chat-screen--concept .ai-chat__composer > .ai-chat__inline-error,
-.ai-image-screen--concept .ai-chat__composer > .ai-chat__inline-error {
-  grid-area: error !important;
-  margin: 0 !important;
+  display: none !important;
 }
 
-/* Composer input pill — flat background (no 135deg gradient that
-   might look like a diagonal streak on some GPU pipelines), no
-   pseudo elements at all. Just a soft rounded rect with a thin
-   focus ring. */
+/* Composer input pill — flat rounded rect with the attach button
+   embedded inside on the left. Aligning attach + textarea inside a
+   single field keeps both anchored to the same border, which is
+   what users asked for after seeing the paperclip floating loose. */
 .ai-chat-screen--concept .ai-chat__composer-field,
 .ai-image-screen--concept .ai-chat__composer-field,
 .ai-image-screen--concept .ai-video__composer-field {
   position: relative;
-  padding: 4px 14px !important;
-  border-radius: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 2px 12px !important;
+  border-radius: 18px !important;
   border: 1px solid rgba(125, 211, 252, 0.28) !important;
   background: rgba(14, 19, 48, 0.72) !important;
   box-shadow: none !important;
   transition: border-color 0.22s ease !important;
+}
+.ai-chat-screen--concept .ai-chat__composer-field--with-attach,
+.ai-image-screen--concept .ai-chat__composer-field--with-attach {
+  padding-left: 4px !important;
 }
 .ai-chat-screen--concept .ai-chat__composer-field:focus-within,
 .ai-image-screen--concept .ai-chat__composer-field:focus-within,
@@ -854,10 +905,11 @@
 .ai-chat-screen--concept .ai-chat__input,
 .ai-image-screen--concept .ai-chat__input,
 .ai-image-screen--concept .ai-video__prompt {
-  min-height: 42px !important;
-  padding: 8px 4px !important;
-  font-size: 15px !important;
-  line-height: 1.45 !important;
+  flex: 1 1 auto !important;
+  min-height: 38px !important;
+  padding: 6px 4px !important;
+  font-size: 14.5px !important;
+  line-height: 1.4 !important;
   color: #fff !important;
   border: none !important;
   background: transparent !important;
@@ -893,38 +945,49 @@
   color: rgba(255, 255, 255, 0.42) !important;
 }
 
+/* Attach button (paperclip) — now embedded inside the composer
+   field on the left, so it looks like part of the input rather
+   than a stand-alone tile. Smaller, borderless, subtle. */
 .ai-chat-screen--concept .ai-chat__attach,
 .ai-image-screen--concept .ai-chat__attach {
-  width: 42px !important;
-  height: 42px !important;
-  border-radius: 14px !important;
-  border: 1px solid rgba(125, 211, 252, 0.3) !important;
-  background: color-mix(in srgb, #0a0d24 60%, transparent) !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+  flex-shrink: 0 !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.65) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: border-color 0.2s ease, background 0.2s ease !important;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  transition: color 0.16s ease, background 0.16s ease !important;
 }
 .ai-chat-screen--concept .ai-chat__attach:hover:not(:disabled),
 .ai-image-screen--concept .ai-chat__attach:hover:not(:disabled) {
-  border-color: rgba(125, 211, 252, 0.6) !important;
-  background: color-mix(in srgb, #0e1330 65%, transparent) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  background: rgba(125, 211, 252, 0.12) !important;
+}
+.ai-chat-screen--concept .ai-chat__attach:disabled,
+.ai-image-screen--concept .ai-chat__attach:disabled {
+  opacity: 0.5;
 }
 
 /* Send button — wide gradient pill on its own row (matches the
-   video screen). Icon + optional label + coin price fit together
-   with plenty of padding so mobile taps are comfortable. */
+   video screen). Icon + label together, compact vertical padding
+   so the whole bottom panel stays under ~110px on mobile. */
 .ai-chat-screen--concept .ai-chat__send,
 .ai-image-screen--concept .ai-chat__send {
   position: relative !important;
   width: 100% !important;
-  min-height: 44px !important;
-  padding: 10px 18px !important;
+  min-height: 38px !important;
+  padding: 8px 16px !important;
   border-radius: 999px !important;
   background: linear-gradient(120deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
   border: none !important;
   color: #fff !important;
+  font-size: 13.5px !important;
   font-weight: 700 !important;
   letter-spacing: 0.005em !important;
   box-shadow: none !important;

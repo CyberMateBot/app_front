@@ -852,6 +852,7 @@ const translations = {
         imageContentPolicy: 'Модель отклонила запрос. Попробуйте другую формулировку без запрещённых тем.',
         mediaOptionsGroup: 'Параметры генерации',
         mediaModelVariantLabel: 'Модель',
+        mediaModelEditingBadge: 'Редакт.',
         mediaModelGroupLabel: 'Нейросеть',
         mediaOptionAspectRatio: 'Формат',
         mediaOptionDimensions: 'Размер',
@@ -1538,6 +1539,7 @@ const translations = {
         imageContentPolicy: 'The model rejected this prompt. Try a different wording.',
         mediaOptionsGroup: 'Generation settings',
         mediaModelVariantLabel: 'Model',
+        mediaModelEditingBadge: 'Edit',
         mediaModelGroupLabel: 'Provider',
         mediaOptionAspectRatio: 'Aspect ratio',
         mediaOptionDimensions: 'Size',
@@ -1933,7 +1935,19 @@ function attachHorizontalWheelScroll(el) {
 }
 
 function App() {
-    const [currentPage, setCurrentPage] = useState('home');
+    const [currentPage, setCurrentPageRaw] = useState('home');
+    // Wrap page transitions in `startTransition` so heavy re-renders
+    // (catalog, history, referrals) stop blocking the paint of the
+    // outgoing screen. This is what caused the small "jank" users
+    // felt when tapping nav items: React would freeze mid-tap while
+    // it computed the new tree. Marking the update as non-urgent
+    // lets React commit the tap feedback first and stream the new
+    // page in on the next frame.
+    const setCurrentPage = useCallback((next) => {
+        startTransition(() => {
+            setCurrentPageRaw(next);
+        });
+    }, []);
     const [walletReturnPage, setWalletReturnPage] = useState('profile');
     const [profile, setProfile] = useState(null);
     const [homeWidgetSlides, setHomeWidgetSlides] = useState(null);
@@ -6757,7 +6771,7 @@ function App() {
                     <p className="ai-chat__inline-error" role="alert">{chatError}</p>
                 ) : null}
 
-                <footer className={`ai-chat__composer ${supportsChatImage ? '' : 'ai-chat__composer--no-attach'}`}>
+                <footer className="ai-chat__composer ai-chat__composer--no-attach">
                     {supportsChatImage ? (
                         <input
                             ref={chatPhotoInputRef}
@@ -6769,18 +6783,18 @@ function App() {
                             onChange={handleChatPhotoSelect}
                         />
                     ) : null}
-                    {supportsChatImage ? (
-                        <button
-                            type="button"
-                            className="ai-chat__attach"
-                            aria-label={text.chatAttachPhoto}
-                            disabled={isGeneratingText}
-                            onClick={() => chatPhotoInputRef.current?.click()}
-                        >
-                            <Paperclip size={18} aria-hidden="true" />
-                        </button>
-                    ) : null}
-                    <div className="ai-chat__composer-field">
+                    <div className={`ai-chat__composer-field ${supportsChatImage ? 'ai-chat__composer-field--with-attach' : ''}`}>
+                        {supportsChatImage ? (
+                            <button
+                                type="button"
+                                className="ai-chat__attach ai-chat__attach--inline"
+                                aria-label={text.chatAttachPhoto}
+                                disabled={isGeneratingText}
+                                onClick={() => chatPhotoInputRef.current?.click()}
+                            >
+                                <Paperclip size={16} aria-hidden="true" />
+                            </button>
+                        ) : null}
                         {supportsChatImage && chatAttachment ? (
                             <div className="ai-chat__attachment-preview">
                                 <img src={chatAttachment.previewUrl} alt="" />

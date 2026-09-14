@@ -1,6 +1,8 @@
 import { getModelPrice } from './modelPrices.js';
 import { annotateModelOption } from './planGating.js';
 import { getMediaModelMinPrice } from './mediaGenerationPrice.js';
+import { videoModelRequiresImage, videoModelRequiresVideo } from './videoModels.js';
+import { imageModelSupportsEdit } from '../config/mediaModelOptions.js';
 
 const CATEGORY_BY_KIND = {
     text: 'text',
@@ -16,6 +18,30 @@ const KIND_BY_SELECTOR = {
     audio: 'audio',
     '3d': '3d',
 };
+
+/**
+ * Decide whether a model is "edit-oriented" for the badge in the
+ * variant picker. Video: any model that requires a source image or
+ * source video is edit-only (i2v, video-edit, video-extend, first/
+ * last-frame). Image: models whose id spells "edit" — these are the
+ * pure editing/inpainting SKUs, not the generalists that support
+ * both edit and text-to-image.
+ */
+function isEditingModel(modelId, kind) {
+    if (!modelId) return false;
+    const id = String(modelId).toLowerCase();
+    if (kind === 'video') {
+        if (videoModelRequiresImage(modelId) || videoModelRequiresVideo(modelId)) {
+            return true;
+        }
+        return /-i2v(-|$)|-edit(-|$)|-extend(-|$)|-ref2v(-|$)/.test(id);
+    }
+    if (kind === 'media' || kind === 'image') {
+        if (!imageModelSupportsEdit(modelId)) return false;
+        return /-edit(-|$)|edit-|inpaint|outpaint|remove-bg/.test(id);
+    }
+    return false;
+}
 
 function resolveMediaVariantPrice(modelId, mediaModelsCatalog, kind, priceResolver) {
     if (priceResolver) {
@@ -65,6 +91,7 @@ export function getAiVariantOptions(
             id: model.id,
             label: text[model.nameKey] ?? model.id,
             priceCoins: resolveMediaVariantPrice(model.id, catalog, mediaKind, priceResolver),
+            editing: isEditingModel(model.id, kind),
         }, planId, category)];
     }
 
@@ -80,6 +107,7 @@ export function getAiVariantOptions(
         id: variant.id,
         label: text[variant.nameKey] ?? variant.id,
         priceCoins: resolveMediaVariantPrice(variant.id, catalog, mediaKind, priceResolver),
+        editing: isEditingModel(variant.id, kind),
     }, planId, category));
 }
 

@@ -1,49 +1,23 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Crown, ChevronDown } from 'lucide-react';
 import CoinIcon from './CoinIcon.jsx';
-
-// Desktop mice only emit vertical wheel deltas, so this horizontally
-// scrollable strip of model pills is otherwise unreachable on PC without a
-// trackpad. Convert vertical wheel intent into horizontal scroll when the
-// strip actually overflows horizontally. Mirrors the helper used for the
-// catalog/subscription plan strips.
-function useHorizontalWheelScroll(ref) {
-    useEffect(() => {
-        const el = ref.current;
-        if (!el) return undefined;
-
-        const onWheel = (event) => {
-            if (el.scrollWidth <= el.clientWidth) return;
-            if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-
-            event.preventDefault();
-            el.scrollBy({ left: event.deltaY, behavior: 'smooth' });
-        };
-
-        el.addEventListener('wheel', onWheel, { passive: false });
-        return () => el.removeEventListener('wheel', onWheel);
-    }, [ref]);
-}
 
 /**
  * Model / tier picker for AI screens.
  *
- * The Sep 2026 redesign turned this into a collapsible dropdown (like
- * the parameter cards) so the top panel of AI chats can shrink — the
- * previous inline horizontal strip ate ~64px vertically all the time.
+ * Renders as a collapsible drop-down "window" — a trigger row with
+ * the currently-selected model on it, and (when open) a full panel
+ * listing every option vertically. This mirrors the parameter card
+ * UX so the top panel of AI chats stays compact and the picker
+ * doesn't rely on a horizontal scroll (which used to leave adjacent
+ * pills peeking as tiny dark dots at the strip edges).
  *
- * Closed state: a single trigger row with the label ("Модель") on
- * the left and the current variant's name + coin price on the right,
- * plus a chevron. Clicking anywhere on the row expands the panel.
- *
- * Open state: horizontally-scrollable strip of pills, one per
- * option. Each pill shows:
- *   - Variant label
- *   - Coin price on the right (small pill inside the pill)
- *   - Crown icon + plan name if locked behind a higher subscription tier
- *
- * `defaultOpen` lets consumers keep the strip open on wide/tablet
- * layouts if they ever want; the default is collapsed.
+ * Each option in the open panel shows:
+ *   - Model label
+ *   - Coin price on the right (small pill)
+ *   - Crown icon + plan name if locked behind a higher subscription
+ *   - "Редактирование" badge if the model is edit-only (image /
+ *      video edit models — flagged via `option.editing`)
  */
 export default function AiVariantSelect({
     id,
@@ -57,9 +31,6 @@ export default function AiVariantSelect({
     activePriceCoins,
     defaultOpen = false,
 }) {
-    const scrollRef = useRef(null);
-    useHorizontalWheelScroll(scrollRef);
-
     const [open, setOpen] = useState(defaultOpen);
 
     if (!options.length) {
@@ -78,13 +49,12 @@ export default function AiVariantSelect({
         if (option?.id !== value) {
             onChange?.(option.id);
         }
-        // Auto-collapse after a selection so the reading area comes
-        // back — mirrors the parameter card UX.
         setOpen(false);
     };
 
     const triggerId = id ? `${id}-trigger` : undefined;
     const labelId = id ? `${id}-label` : undefined;
+    const editingLabel = text.mediaModelEditingBadge ?? 'Редактирование';
 
     return (
         <div className={`ai-variant-select ${open ? 'ai-variant-select--open' : ''}`} role="group" aria-label={label}>
@@ -104,6 +74,11 @@ export default function AiVariantSelect({
                     <span className="ai-variant-select__current-label">
                         {activeOption?.label ?? ''}
                     </span>
+                    {activeOption?.editing ? (
+                        <span className="ai-variant-select__edit-badge">
+                            {editingLabel}
+                        </span>
+                    ) : null}
                     {activeOption?.locked ? (
                         <span className="ai-variant-select__pill-lock">
                             <Crown size={9} aria-hidden="true" />
@@ -127,49 +102,50 @@ export default function AiVariantSelect({
                 <div
                     id={id ? `${id}-panel` : undefined}
                     className="ai-variant-select__panel"
-                    role="tablist"
+                    role="listbox"
                     aria-labelledby={labelId}
                 >
-                    <div className="ai-variant-select__scroll" ref={scrollRef}>
-                        <div className="ai-variant-select__track">
-                            {options.map((option) => {
-                                const isActive = option.id === value;
-                                const priceCoins = isActive
-                                    ? (activePriceCoins ?? option.priceCoins)
-                                    : option.priceCoins;
-                                return (
-                                    <button
-                                        key={option.id}
-                                        type="button"
-                                        role="tab"
-                                        aria-selected={isActive}
-                                        className={
-                                            'ai-variant-select__pill'
-                                            + (isActive ? ' ai-variant-select__pill--active' : '')
-                                            + (option.locked ? ' ai-variant-select__pill--locked' : '')
-                                        }
-                                        onClick={() => handleSelect(option)}
-                                        disabled={disabled && !isActive}
-                                    >
-                                        <span className="ai-variant-select__pill-label">
-                                            {option.label}
+                    {options.map((option) => {
+                        const isActive = option.id === value;
+                        const priceCoins = isActive
+                            ? (activePriceCoins ?? option.priceCoins)
+                            : option.priceCoins;
+                        return (
+                            <button
+                                key={option.id}
+                                type="button"
+                                role="option"
+                                aria-selected={isActive}
+                                className={
+                                    'ai-variant-select__option'
+                                    + (isActive ? ' ai-variant-select__option--active' : '')
+                                    + (option.locked ? ' ai-variant-select__option--locked' : '')
+                                }
+                                onClick={() => handleSelect(option)}
+                                disabled={disabled && !isActive}
+                            >
+                                <span className="ai-variant-select__option-label">
+                                    {option.label}
+                                    {option.editing ? (
+                                        <span className="ai-variant-select__option-badge">
+                                            {editingLabel}
                                         </span>
-                                        {option.locked ? (
-                                            <span className="ai-variant-select__pill-lock">
-                                                <Crown size={9} aria-hidden="true" />
-                                                {text[option.requiredPlanLabelKey] ?? option.requiredPlan}
-                                            </span>
-                                        ) : priceCoins ? (
-                                            <span className="ai-variant-select__pill-price">
-                                                <CoinIcon size={11} />
-                                                {priceCoins}
-                                            </span>
-                                        ) : null}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
+                                    ) : null}
+                                </span>
+                                {option.locked ? (
+                                    <span className="ai-variant-select__pill-lock">
+                                        <Crown size={9} aria-hidden="true" />
+                                        {text[option.requiredPlanLabelKey] ?? option.requiredPlan}
+                                    </span>
+                                ) : priceCoins ? (
+                                    <span className="ai-variant-select__option-price">
+                                        <CoinIcon size={12} />
+                                        {priceCoins}
+                                    </span>
+                                ) : null}
+                            </button>
+                        );
+                    })}
                 </div>
             ) : null}
         </div>
