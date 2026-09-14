@@ -7416,7 +7416,7 @@ function App() {
                             value={videoPrompt}
                             onChange={(event) => setVideoPrompt(event.target.value)}
                             placeholder={promptPlaceholder}
-                            rows={3}
+                            rows={2}
                             disabled={isGeneratingVideo}
                         />
                     </div>
@@ -7917,7 +7917,7 @@ function App() {
                             value={threeDPrompt}
                             onChange={(event) => setThreeDPrompt(event.target.value)}
                             placeholder={text.threeDPromptPlaceholder}
-                            rows={3}
+                            rows={2}
                             disabled={isGeneratingThreeD}
                         />
                     </div>
