@@ -2171,8 +2171,7 @@ html[data-tg-layout='desktop-full'] .referral-page__row {
   border: 1px solid rgba(125, 211, 252, 0.28) !important;
 }
 
-.ai-chat__send,
-.ai-video__submit {
+.ai-chat__send {
   width: 50px !important;
   height: 50px !important;
   border-radius: 999px !important;
@@ -2181,6 +2180,21 @@ html[data-tg-layout='desktop-full'] .referral-page__row {
   box-shadow:
     0 10px 28px rgba(180, 100, 220, 0.5),
     0 1px 0 rgba(255, 255, 255, 0.32) inset !important;
+}
+
+/* Video/3D screens use a wider full-text submit button (text + coin
+   price). Keep it a rounded pill but let it stretch — don't force
+   50×50 circular like the chat send button. */
+.ai-video__submit {
+  border-radius: 999px !important;
+  padding: 14px 20px !important;
+  background: linear-gradient(135deg, #7dd3fc 0%, #a78bfa 55%, #f472b6 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow:
+    0 10px 28px rgba(180, 100, 220, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.32) inset !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
 }
 
 .ai-chat__send--stop {
@@ -2197,6 +2211,7 @@ html[data-tg-layout='desktop-full'] .referral-page__row {
   background: rgba(120, 120, 130, 0.42) !important;
   box-shadow: none !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.72) !important;
 }
 
 /* --- Empty-state hero card: promote it as the visual anchor when the
