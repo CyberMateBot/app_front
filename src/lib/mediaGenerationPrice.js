@@ -286,6 +286,8 @@ const KLING_PER_SECOND_USD = {
     'kling-v3-4k': 0.168,
 };
 
+const KLING_AUDIO_PER_SECOND_USD = 0.02;
+
 const WAN_PER_SECOND_USD = {
     '480p': 0.05,
     '480P': 0.05,
@@ -360,6 +362,7 @@ function defaultVideoResolution(modelId) {
     if (id.startsWith('seedance-v1.5') || id.startsWith('happyhorse-') || id.startsWith('vidu-')) return '720p';
     if (id.startsWith('seedance-v2')) return '720p';
     if (id.startsWith('wan-')) return '720P';
+    if (id === 'sora-2-t2v') return '720p';
     if (id === 'veo-3.1-extend') return '1080p';
     return '';
 }
@@ -457,9 +460,16 @@ function videoGenerationUSD(p) {
     if (isKlingModel(modelId)) {
         let usd = KLING_PER_SECOND_USD[modelId] * duration;
         if (p.sound) {
-            usd *= 1.5;
+            usd += KLING_AUDIO_PER_SECOND_USD * duration;
         }
         return usd;
+    }
+    if (modelId.startsWith('sora-2')) {
+        let rate = 0.10;
+        if (modelId === 'sora-2-t2v-pro' || lc(p.resolution) === '1080p') {
+            rate = 0.168;
+        }
+        return rate * duration;
     }
     if (isSeedance15Model(modelId)) {
         return seedance15PerSecond(p.resolution, p.generateAudio) * duration;

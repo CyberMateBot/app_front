@@ -1,53 +1,61 @@
 /**
- * Subscription plan marketing copy — must match pkg/billing/gating.go tiers.
- * Catalog cards use min plan across variants; bullets here describe what each tier newly unlocks.
+ * Subscription plan marketing copy — must match pkg/billing/gating.go tiers
+ * and pkg/billing/defaults.go coin amounts.
+ *
+ * Coin model (Sep 2026):
+ *   - Монеты зачисляются при покупке подписки и ОСТАЮТСЯ на балансе после её окончания.
+ *   - 1 CyberCoin = 1 ₽. Цены на генерации = ~3.5× стоимость провайдера.
+ *   - Монеты не сгорают — даже без активной подписки вы можете тратить накопленный баланс
+ *     на модели своего уровня, пока они доступны.
  */
 
 export const PLAN_FEATURE_COPY = {
     ru: {
         free: [
-            '10 монет / месяц',
+            '15 монет при регистрации',
             'YandexGPT, GPT OSS 20B, DeepSeek Chat',
-            'FLUX (изображения)',
+            'FLUX Dev (изображения)',
             'Qwen3 TTS, OmniVoice, MiniMax Speech',
         ],
         freeLocked: [
-            'Видео и 3D — нет',
-            'Премиум модели — нет',
+            'Видео и 3D — недоступны',
+            'Премиум модели — недоступны',
         ],
         basic: [
-            '40 монет / месяц',
+            '160 монет при покупке',
             'Claude Haiku, Gemini Flash, GPT-4o mini, DeepSeek Flash',
             'Nano Banana, Alice AI, Seedream, Qwen Image, Z-Image',
-            'Kling Standard, Hailuo T2V',
-            'ElevenLabs, Hunyuan 3D rapid',
+            'Kling Std, Hailuo T2V (≈1–2 видео)',
+            'ElevenLabs, Hunyuan 3D Rapid',
         ],
+        basicLocked: ['Pro видео и 3D — недоступны'],
         pro: [
-            '100 монет / месяц',
+            '400 монет при покупке',
             'Claude Sonnet, GPT-5.4, DeepSeek R1, Qwen 3.6',
             'GPT Image 2, Nano Banana 2, Grok Imagine',
-            'Kling Pro, Seedance, WAN, Vidu, HappyHorse',
+            'Kling Pro, Seedance, WAN, Vidu, HappyHorse (≈2–3 видео)',
             'Mureka, ACE-Step, Tripo, Meshy 3D',
         ],
         max: [
-            '250 монет / месяц',
+            '950 монет при покупке',
             'GPT-4o, Gemini 2.5 Pro, Claude Opus 4.7, o3',
             'Nano Banana Pro',
-            'Kling 4K, Seedance 2.0, Sora, Veo',
+            'Kling 4K, Seedance 2.0, Sora, Veo (≈4–6 видео)',
             'Tripo H3.1, Rodin 3D',
         ],
         ultra: [
-            '600 монет / месяц',
+            '2600 монет при покупке',
             'Claude Opus 4.8, o1, GPT-5.5, Sora Pro',
             'Все модели без ограничений',
-            'Максимальный приоритет',
+            'Максимальный приоритет очереди',
+            'Лучшая цена за монету',
         ],
     },
     en: {
         free: [
-            '10 coins / month',
+            '15 coins on sign-up',
             'YandexGPT, GPT OSS 20B, DeepSeek Chat',
-            'FLUX (images)',
+            'FLUX Dev (images)',
             'Qwen3 TTS, OmniVoice, MiniMax Speech',
         ],
         freeLocked: [
@@ -55,31 +63,33 @@ export const PLAN_FEATURE_COPY = {
             'Premium models — unavailable',
         ],
         basic: [
-            '40 coins / month',
+            '160 coins on purchase',
             'Claude Haiku, Gemini Flash, GPT-4o mini, DeepSeek Flash',
             'Nano Banana, Alice AI, Seedream, Qwen Image, Z-Image',
-            'Kling Standard, Hailuo T2V',
-            'ElevenLabs, Hunyuan 3D rapid',
+            'Kling Std, Hailuo T2V (≈1–2 videos)',
+            'ElevenLabs, Hunyuan 3D Rapid',
         ],
+        basicLocked: ['Pro video & 3D — unavailable'],
         pro: [
-            '100 coins / month',
+            '400 coins on purchase',
             'Claude Sonnet, GPT-5.4, DeepSeek R1, Qwen 3.6',
             'GPT Image 2, Nano Banana 2, Grok Imagine',
-            'Kling Pro, Seedance, WAN, Vidu, HappyHorse',
+            'Kling Pro, Seedance, WAN, Vidu, HappyHorse (≈2–3 videos)',
             'Mureka, ACE-Step, Tripo, Meshy 3D',
         ],
         max: [
-            '250 coins / month',
+            '950 coins on purchase',
             'GPT-4o, Gemini 2.5 Pro, Claude Opus 4.7, o3',
             'Nano Banana Pro',
-            'Kling 4K, Seedance 2.0, Sora, Veo',
+            'Kling 4K, Seedance 2.0, Sora, Veo (≈4–6 videos)',
             'Tripo H3.1, Rodin 3D',
         ],
         ultra: [
-            '600 coins / month',
+            '2600 coins on purchase',
             'Claude Opus 4.8, o1, GPT-5.5, Sora Pro',
             'All models unlocked',
-            'Maximum priority',
+            'Maximum queue priority',
+            'Best price per coin',
         ],
     },
 };
@@ -93,7 +103,7 @@ export const BILLING_PLAN_FEATURES_RU = {
     free: PLAN_FEATURE_COPY.ru.free,
     freeLocked: PLAN_FEATURE_COPY.ru.freeLocked,
     basic: PLAN_FEATURE_COPY.ru.basic,
-    basicLocked: ['Pro/Max видео и 3D — нет'],
+    basicLocked: PLAN_FEATURE_COPY.ru.basicLocked,
     pro: PLAN_FEATURE_COPY.ru.pro,
     max: PLAN_FEATURE_COPY.ru.max,
     ultra: PLAN_FEATURE_COPY.ru.ultra,
