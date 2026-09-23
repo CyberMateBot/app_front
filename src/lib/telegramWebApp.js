@@ -571,6 +571,8 @@ function applyTelegramLayoutMode(tg) {
     const mode = notifyTelegramLayoutListeners(tg);
     const embedded = isTelegramDesktopEmbeddedPanel(tg);
     document.documentElement.dataset.tgLayout = mode;
+    const tgPlat = String(tg?.platform || '').toLowerCase();
+    if (tgPlat === 'android' || /android/i.test(navigator.userAgent || '')) { document.documentElement.dataset.platform = 'android'; } else if (tgPlat === 'ios' || /iphone|ipad|ipod/i.test(navigator.userAgent || '')) { document.documentElement.dataset.platform = 'ios'; }
     document.documentElement.dataset.tgDesktopEmbedded = embedded ? '1' : '0';
     if (typeof document.body !== 'undefined' && document.body) {
         document.body.dataset.tgLayout = mode;

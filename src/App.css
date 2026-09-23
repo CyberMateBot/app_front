@@ -128,17 +128,17 @@
   --cm-bubble-assistant-bg: #12141e;
   --cm-bubble-assistant-fg: #c8cad8;
   --cm-bubble-assistant-border: #252838;
-  --nav-glass-blur: blur(24px) saturate(1.5);
+  --nav-glass-blur: blur(12px);
   --nav-glass-bg: color-mix(in srgb, var(--cm-surface) 52%, transparent);
   --nav-glass-border: color-mix(in srgb, var(--cm-border) 88%, transparent);
   --nav-glass-shadow:
     0 10px 36px rgba(0, 0, 0, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  --panel-glass-blur: blur(24px) saturate(1.5);
+  --panel-glass-blur: blur(12px);
   --panel-glass-bg: color-mix(in srgb, var(--cm-surface) 42%, transparent);
   --panel-glass-border: color-mix(in srgb, var(--cm-text) 10%, transparent);
   --panel-glass-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
-  --plan-detail-glass-blur: blur(24px) saturate(1.5);
+  --plan-detail-glass-blur: blur(14px);
   --plan-detail-glass-bg: color-mix(in srgb, var(--cm-surface) 42%, transparent);
   --plan-detail-glass-border: color-mix(in srgb, var(--cm-text) 10%, transparent);
   --plan-detail-glass-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
@@ -269,17 +269,17 @@
   --cm-bubble-assistant-bg: #ffffff;
   --cm-bubble-assistant-fg: #3a4058;
   --cm-bubble-assistant-border: #d5dae6;
-  --nav-glass-blur: blur(20px) saturate(1.25);
+  --nav-glass-blur: blur(12px);
   --nav-glass-bg: color-mix(in srgb, var(--cm-surface) 62%, transparent);
   --nav-glass-border: color-mix(in srgb, var(--cm-border) 90%, transparent);
   --nav-glass-shadow:
     0 10px 30px rgba(20, 24, 36, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
-  --panel-glass-blur: blur(22px) saturate(1.25);
+  --panel-glass-blur: blur(12px);
   --panel-glass-bg: color-mix(in srgb, var(--cm-surface) 52%, transparent);
   --panel-glass-border: color-mix(in srgb, var(--cm-text) 10%, transparent);
   --panel-glass-shadow: 0 16px 36px rgba(20, 24, 36, 0.14);
-  --plan-detail-glass-blur: blur(22px) saturate(1.25);
+  --plan-detail-glass-blur: blur(14px);
   --plan-detail-glass-bg: color-mix(in srgb, var(--cm-surface) 52%, transparent);
   --plan-detail-glass-border: color-mix(in srgb, var(--cm-text) 10%, transparent);
   --plan-detail-glass-shadow: 0 20px 44px rgba(20, 24, 36, 0.14);
@@ -4702,7 +4702,7 @@
   /* Force the scroller into its own compositor layer so touch scroll
      doesn't fight the entry animation and the sticky header inside. */
   transform: translateZ(0);
-  will-change: scroll-position;
+  /* will-change: scroll-position removed for iOS 18 async compositor scrolling */
   scrollbar-width: none;
   scroll-padding-bottom: calc(var(--nav-bar-height, 80px) + 16px);
 }
@@ -6105,11 +6105,8 @@
   line-height: 1.5;
   overflow-wrap: anywhere;
   word-break: break-word;
-  /* Smooth glass finish across every bubble, distinct from the
-     surrounding aurora background. */
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 10px 30px rgba(3, 5, 20, 0.28);
+  /* Smooth solid translucent finish across bubbles without scroll blur lag */
+  box-shadow: 0 4px 16px rgba(3, 5, 20, 0.2);
 }
 
 .ai-chat__bubble p {
@@ -7768,7 +7765,7 @@
     max-width: var(--layout-max-width, 100%);
     margin-inline: auto;
     padding: 6px 4px;
-    --nav-glass-blur: blur(28px) saturate(1.6);
+    --nav-glass-blur: blur(12px);
     --nav-glass-bg: color-mix(in srgb, var(--cm-surface) 48%, transparent);
   }
 
@@ -7782,7 +7779,7 @@
     --nav-glass-shadow:
       0 10px 36px rgba(0, 0, 0, 0.38),
       inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.07));
-    --nav-glass-blur: blur(24px) saturate(1.5);
+    --nav-glass-blur: blur(12px);
   }
 
   html[data-tg-desktop-embedded='1'] .bottom-nav.bottom-nav--concept .bottom-nav__inner::before,
@@ -8395,7 +8392,7 @@ html[data-tg-layout='desktop-full'] .bottom-nav.bottom-nav--concept .bottom-nav_
   width: 100%;
   max-width: var(--layout-max-width, 100%);
   margin-inline: auto;
-  --nav-glass-blur: blur(30px) saturate(1.65);
+  --nav-glass-blur: blur(12px);
   --nav-glass-bg: color-mix(in srgb, var(--cm-surface) 46%, transparent);
 }
 
@@ -8423,7 +8420,7 @@ html[data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--concept .bottom-nav__inne
   justify-content: center;
   --nav-glass-bg: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.42));
   --nav-glass-border: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12));
-  --nav-glass-blur: blur(24px) saturate(1.5);
+  --nav-glass-blur: blur(12px);
   --nav-glass-shadow:
     0 10px 36px rgba(0, 0, 0, 0.38),
     inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.07));
@@ -8435,7 +8432,7 @@ html[data-theme='light'][data-tg-layout='mini-pc'] .bottom-nav.bottom-nav--conce
 html[data-theme='light'] .app-shell--mini-pc .bottom-nav.bottom-nav--concept .bottom-nav__inner {
   --nav-glass-bg: var(--mini-pc-nav-bg, rgba(255, 255, 255, 0.62));
   --nav-glass-border: var(--mini-pc-nav-border, rgba(20, 24, 36, 0.1));
-  --nav-glass-blur: blur(22px) saturate(1.25);
+  --nav-glass-blur: blur(12px);
   --nav-glass-shadow:
     0 10px 30px rgba(20, 24, 36, 0.1),
     inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.95));
@@ -8485,8 +8482,8 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   background: color-mix(in srgb, var(--cm-surface) 92%, transparent);
   border: 1px solid color-mix(in srgb, var(--cm-accent) 35%, transparent);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .tg-desktop-expand__text {
@@ -8636,8 +8633,8 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
   background: rgba(18, 20, 30, 0.42);
   background: var(--panel-glass-bg);
   box-shadow: var(--panel-glass-shadow);
-  -webkit-backdrop-filter: blur(24px) saturate(1.5);
-  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: var(--panel-glass-blur);
   backdrop-filter: var(--panel-glass-blur);
   overflow: hidden;
@@ -8771,7 +8768,7 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
 
 @media (min-width: 768px) {
   .app-notifications__panel {
-    --panel-glass-blur: blur(28px) saturate(1.6);
+    --panel-glass-blur: blur(12px);
     --panel-glass-bg: color-mix(in srgb, var(--cm-surface) 38%, transparent);
   }
 }
@@ -8779,7 +8776,7 @@ html[data-tg-layout='mini-pc'] .nav-button__label,
 html[data-tg-layout='desktop-full'] .app-notifications__panel,
 html[data-tg-layout='mini-pc'] .app-notifications__panel,
 html[data-tg-desktop-embedded='1'] .app-notifications__panel {
-  --panel-glass-blur: blur(30px) saturate(1.65);
+  --panel-glass-blur: blur(12px);
   --panel-glass-bg: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.42));
   --panel-glass-border: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12));
   --panel-glass-shadow:
@@ -8792,7 +8789,7 @@ html[data-theme='light'][data-tg-layout='mini-pc'] .app-notifications__panel,
 html[data-theme='light'][data-tg-desktop-embedded='1'] .app-notifications__panel {
   --panel-glass-bg: var(--mini-pc-nav-bg, rgba(255, 255, 255, 0.62));
   --panel-glass-border: var(--mini-pc-nav-border, rgba(20, 24, 36, 0.1));
-  --panel-glass-blur: blur(22px) saturate(1.25);
+  --panel-glass-blur: blur(12px);
   --panel-glass-shadow:
     0 16px 36px rgba(20, 24, 36, 0.12),
     inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.95));
@@ -8835,8 +8832,8 @@ html[data-theme='light'][data-tg-desktop-embedded='1'] .app-notifications__panel
   background: rgba(18, 20, 30, 0.42);
   background: var(--plan-detail-glass-bg);
   box-shadow: var(--plan-detail-glass-shadow);
-  -webkit-backdrop-filter: blur(24px) saturate(1.5);
-  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: var(--plan-detail-glass-blur);
   backdrop-filter: var(--plan-detail-glass-blur);
   overflow: hidden;
@@ -8963,7 +8960,7 @@ html[data-theme='light'][data-tg-desktop-embedded='1'] .app-notifications__panel
 
 @media (min-width: 768px) {
   .plan-detail-modal__panel {
-    --plan-detail-glass-blur: blur(28px) saturate(1.6);
+    --plan-detail-glass-blur: blur(14px);
     --plan-detail-glass-bg: color-mix(in srgb, var(--cm-surface) 38%, transparent);
   }
 }
@@ -8971,7 +8968,7 @@ html[data-theme='light'][data-tg-desktop-embedded='1'] .app-notifications__panel
 html[data-tg-layout='desktop-full'] .plan-detail-modal__panel,
 html[data-tg-layout='mini-pc'] .plan-detail-modal__panel,
 html[data-tg-desktop-embedded='1'] .plan-detail-modal__panel {
-  --plan-detail-glass-blur: blur(30px) saturate(1.65);
+  --plan-detail-glass-blur: blur(14px);
   --plan-detail-glass-bg: var(--mini-pc-nav-bg, rgba(10, 12, 22, 0.42));
   --plan-detail-glass-border: var(--mini-pc-nav-border, rgba(255, 255, 255, 0.12));
   --plan-detail-glass-shadow:
@@ -8984,7 +8981,7 @@ html[data-theme='light'][data-tg-layout='mini-pc'] .plan-detail-modal__panel,
 html[data-theme='light'][data-tg-desktop-embedded='1'] .plan-detail-modal__panel {
   --plan-detail-glass-bg: var(--mini-pc-nav-bg, rgba(255, 255, 255, 0.62));
   --plan-detail-glass-border: var(--mini-pc-nav-border, rgba(20, 24, 36, 0.1));
-  --plan-detail-glass-blur: blur(22px) saturate(1.25);
+  --plan-detail-glass-blur: blur(14px);
   --plan-detail-glass-shadow:
     0 20px 44px rgba(20, 24, 36, 0.12),
     inset 0 1px 0 var(--mini-pc-nav-inset, rgba(255, 255, 255, 0.95));

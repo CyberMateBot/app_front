@@ -204,7 +204,7 @@
   --cm-bubble-assistant-border: rgba(155, 175, 240, 0.14);
 
   /* Nav glass. */
-  --nav-glass-blur: blur(28px) saturate(1.6);
+  --nav-glass-blur: blur(12px);
   --nav-glass-bg:   color-mix(in srgb, #0d1030 66%, transparent);
   --nav-glass-border: rgba(155, 175, 240, 0.16);
   --nav-glass-shadow:
@@ -213,14 +213,14 @@
     0 20px 60px rgba(3, 5, 20, 0.4);
 
   /* Generic elevated glass panel. */
-  --panel-glass-blur: blur(24px) saturate(1.5);
+  --panel-glass-blur: blur(12px);
   --panel-glass-bg:   color-mix(in srgb, #0d1030 58%, transparent);
   --panel-glass-border: rgba(155, 175, 240, 0.18);
   --panel-glass-shadow:
     0 1px 0 rgba(255, 255, 255, 0.06) inset,
     0 24px 60px rgba(3, 5, 20, 0.6);
 
-  --plan-detail-glass-blur: blur(28px) saturate(1.6);
+  --plan-detail-glass-blur: blur(14px);
   --plan-detail-glass-bg:   color-mix(in srgb, #0d1030 60%, transparent);
   --plan-detail-glass-border: rgba(155, 175, 240, 0.18);
   --plan-detail-glass-shadow:
@@ -282,7 +282,7 @@
   );
   --cm-heading-glow: drop-shadow(0 1px 8px rgba(79, 143, 248, 0.18));
 
-  --nav-glass-blur: blur(22px) saturate(1.35);
+  --nav-glass-blur: blur(12px);
   --nav-glass-bg:   color-mix(in srgb, #ffffff 78%, transparent);
   --nav-glass-border: rgba(90, 110, 180, 0.18);
   --nav-glass-shadow:
@@ -348,20 +348,20 @@
 
 /* Re-map the existing decorative orbs to the aurora palette. */
 :root:not([data-theme='light']) .app-shell__orb--1 {
-  background: rgba(56, 189, 248, 0.22);
-  filter: blur(56px);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.32) 0%, rgba(56, 189, 248, 0.1) 40%, transparent 70%);
+  filter: none;
 }
 :root:not([data-theme='light']) .app-shell__orb--2 {
-  background: rgba(167, 139, 250, 0.18);
-  filter: blur(52px);
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.26) 0%, rgba(167, 139, 250, 0.08) 40%, transparent 70%);
+  filter: none;
 }
 :root:not([data-theme='light']) .app-shell__orb--3 {
-  background: rgba(232, 121, 249, 0.14);
-  filter: blur(60px);
+  background: radial-gradient(circle, rgba(232, 121, 249, 0.22) 0%, rgba(232, 121, 249, 0.06) 40%, transparent 70%);
+  filter: none;
 }
 :root:not([data-theme='light']) .app-shell__orb--4 {
-  background: rgba(103, 232, 249, 0.14);
-  filter: blur(52px);
+  background: radial-gradient(circle, rgba(103, 232, 249, 0.22) 0%, rgba(103, 232, 249, 0.06) 40%, transparent 70%);
+  filter: none;
 }
 
 
@@ -416,8 +416,8 @@
 .info-hub__faq-item,
 .subscription-concept__coin-pack {
   background: var(--cm-surface);
-  -webkit-backdrop-filter: blur(22px) saturate(1.5);
-  backdrop-filter: blur(22px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border: 0.5px solid var(--cm-border);
   border-radius: 22px;
   box-shadow:
@@ -683,14 +683,14 @@
    thin glass film rather than a solid slab. Blur is kept so ghost text
    from cards scrolling behind it still smears out. */
 :root:not([data-theme='light']) .app-shell[data-page='catalog'] .catalog-concept__sticky {
-  background: color-mix(in srgb, #05061a 6%, transparent);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  background: color-mix(in srgb, #05061a 12%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 :root[data-theme='light'] .app-shell[data-page='catalog'] .catalog-concept__sticky {
-  background: color-mix(in srgb, #f5f7ff 18%, transparent);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  background: color-mix(in srgb, #f5f7ff 22%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .catalog-concept__sticky > .catalog-concept__search {
   margin-top: 4px;
@@ -1285,8 +1285,8 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
       color-mix(in srgb, #1a1e3c 55%, transparent) 0%,
       color-mix(in srgb, #0d1030 65%, transparent) 100%
     );
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.06) inset,
     0 24px 60px rgba(3, 5, 20, 0.42);
@@ -1582,8 +1582,8 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
   border-radius: 20px;
   border: 0.5px solid var(--cm-border);
   background: color-mix(in srgb, #0d1030 82%, transparent);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   color: var(--cm-text);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.06) inset,
@@ -1623,8 +1623,8 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
   border-radius: 14px;
   border: 0.5px solid var(--cm-border);
   background: color-mix(in srgb, #0d1030 78%, transparent);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   color: var(--cm-text);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.06) inset,
@@ -1854,8 +1854,8 @@ html[data-tg-fullscreen='1'] .home-news-widget__slide-image {
 
 .app-boot {
   background: color-mix(in srgb, #0d1030 80%, transparent);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border: 0.5px solid var(--cm-border);
   color: var(--cm-text);
 }
@@ -2130,8 +2130,8 @@ html[data-tg-layout='desktop-full'] .referral-page__row {
   padding-top: 12px;
   padding-bottom: calc(14px + var(--page-pad-bottom, env(safe-area-inset-bottom, 0px)));
   background: linear-gradient(180deg, transparent 0%, rgba(4, 6, 20, 0.8) 60%, rgba(4, 6, 20, 0.95) 100%);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 
 .ai-chat__composer-field,
@@ -2321,4 +2321,22 @@ html[data-tg-layout='desktop-full'] .referral-page__row {
 :root[data-theme='light'] .ai-audio-screen--concept .ai-chat__composer,
 :root[data-theme='light'] .ai-3d-screen--concept .ai-chat__composer {
   background: linear-gradient(180deg, transparent 0%, rgba(247, 248, 255, 0.85) 60%, rgba(247, 248, 255, 0.98) 100%);
+}
+
+/* ==========================================================================
+   Android & iOS 18 Mobile Performance Optimizations
+   ========================================================================== */
+html[data-platform='android'] .bottom-nav__inner,
+html[data-platform='android'] .catalog-concept__sticky,
+html[data-platform='android'] .app-page-header,
+html[data-platform='android'] .plan-detail-modal__panel {
+  -webkit-backdrop-filter: blur(6px) !important;
+  backdrop-filter: blur(6px) !important;
+}
+
+.app-shell__orbs {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }

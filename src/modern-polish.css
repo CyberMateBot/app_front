@@ -57,7 +57,8 @@
   width: 70vw;
   height: 60vh;
   background: radial-gradient(circle, rgba(90, 70, 255, 0.1) 0%, transparent 65%);
-  filter: blur(70px);
+  filter: none;
+  will-change: transform;
   animation: mp-aurora-a 90s ease-in-out infinite;
 }
 
@@ -67,7 +68,8 @@
   width: 60vw;
   height: 55vh;
   background: radial-gradient(circle, rgba(0, 170, 255, 0.07) 0%, transparent 65%);
-  filter: blur(80px);
+  filter: none;
+  will-change: transform;
   animation: mp-aurora-b 110s ease-in-out infinite;
 }
 
@@ -83,17 +85,18 @@
 .app-shell__orb--4 {
   bottom: 8%;
   right: 12%;
-  width: 200px;
-  height: 200px;
-  background: rgba(120, 80, 255, 0.12);
-  filter: blur(46px);
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(120, 80, 255, 0.18) 0%, rgba(120, 80, 255, 0.06) 45%, transparent 70%);
+  filter: none;
+  will-change: transform;
   animation: mp-orb-float-4 150s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
   animation-delay: -36s;
 }
 
 :root[data-theme='light'] .app-shell__orb--4 {
-  background: rgba(120, 80, 255, 0.05);
-  filter: blur(58px);
+  background: radial-gradient(circle, rgba(120, 80, 255, 0.08) 0%, rgba(120, 80, 255, 0.02) 45%, transparent 70%);
+  filter: none;
 }
 
 @keyframes mp-orb-float-4 {
@@ -506,7 +509,7 @@ html[data-tg-layout='desktop-full'] .app-shell__orbs::after {
 }
 
 html[data-tg-layout='desktop-full'] .app-shell__orb {
-  filter: blur(22px) !important;
+  filter: none !important;
   animation-duration: 320s !important;
   will-change: auto;
 }
