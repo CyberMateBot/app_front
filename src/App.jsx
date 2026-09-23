@@ -254,6 +254,7 @@ import {
     fetchBillingCatalog,
     formatPackPrice,
     formatPlanPrice,
+    getCoinPackDisplayName,
     getFallbackBillingCatalog,
 } from './lib/billing.js';
 import {
@@ -1008,7 +1009,7 @@ const translations = {
         subscriptionPageSub: '5 уровней · 1 CyberCoin = {rate} ₽',
         subscriptionCurrentPlan: 'Ваш план',
         planDetailButton: 'Подробное описание плана',
-        subscriptionCoinsPerMonth: 'монет / мес',
+        subscriptionCoinsPerMonth: 'монет при покупке',
         subscriptionTimeLeft: 'Осталось',
         subscriptionRenewHint: 'Продлить подписку',
         modelLockedNotice: 'Модель «{model}» доступна с плана «{plan}»',
@@ -1698,7 +1699,7 @@ const translations = {
         subscriptionPageSub: '5 tiers · 1 CyberCoin = {rate} ₽',
         subscriptionCurrentPlan: 'Your plan',
         planDetailButton: 'Plan details',
-        subscriptionCoinsPerMonth: 'coins / mo',
+        subscriptionCoinsPerMonth: 'coins on purchase',
         subscriptionTimeLeft: 'Time left',
         subscriptionRenewHint: 'Renew subscription',
         modelLockedNotice: 'Model "{model}" requires the "{plan}" plan',
@@ -3117,7 +3118,7 @@ function App() {
         }),
         packNameResolver: (packId) => {
             const pack = (billingCatalog?.coinPacks ?? []).find((item) => item.id === packId);
-            return pack?.name ?? packId;
+            return pack ? getCoinPackDisplayName(pack, language) : packId;
         },
         modelLabelResolver: (modelId) => {
             const candidates = [
@@ -5768,15 +5769,27 @@ function App() {
                 max: text.planMaxFeatures,
                 ultra: text.planUltraFeatures,
             };
-            const displayFeatures = (Array.isArray(plan.features) && plan.features.length)
-                ? plan.features
-                : (planFeaturesMap[plan.id] ?? text.planProFeatures);
-            const displayLocked = (Array.isArray(plan.locked) && plan.locked.length)
-                ? plan.locked
-                : (plan.id === 'free' ? text.planFreeLocked : []);
+            const planLockedMap = {
+                free: text.planFreeLocked,
+                basic: text.planBasicLocked,
+                pro: text.planProLocked,
+                max: text.planMaxLocked,
+                ultra: text.planUltraLocked,
+            };
+            const displayFeatures = planFeaturesMap[plan.id]
+                ?? (Array.isArray(plan.features) && plan.features.length ? plan.features : text.planProFeatures);
+            const displayLocked = planLockedMap[plan.id]
+                ?? (Array.isArray(plan.locked) && plan.locked.length ? plan.locked : (plan.id === 'free' ? text.planFreeLocked : []));
             const isCurrent = plan.id === currentPlanId;
             const badgeClass = plan.badge_class || plan.badgeClass || 'free';
-            const coins = Number(plan.coins) || 0;
+            const planCoinsMap = {
+                free: 15,
+                basic: 160,
+                pro: 400,
+                max: 950,
+                ultra: 2600,
+            };
+            const coins = planCoinsMap[plan.id] ?? (Number(plan.coins) || 0);
             const planDef = subscriptionPlanDefs.find((entry) => entry.id === plan.id);
             const displayName = getSubscriptionPlanDisplayName(plan.id, {
                 language,
@@ -5905,31 +5918,36 @@ function App() {
     const renderCoinPackCards = () => {
         const packs = Array.isArray(billingCatalog?.coinPacks) ? billingCatalog.coinPacks : [];
 
-        return packs.map((pack) => (
-            <article key={pack.id} className="subscription-concept__coin-pack">
-                <div className="subscription-concept__coin-pack-top">
-                    <div>
-                        <div className="subscription-concept__coin-pack-name">{pack.name}</div>
-                        <div className="subscription-concept__coin-pack-coins">
-                            <CoinIcon size={15} className="profile-concept__coin-icon" />
-                            {formatNumber(pack.coins)}
+        return packs.map((pack) => {
+            const displayName = getCoinPackDisplayName(pack, language);
+            const coinsLabel = language === 'en' ? 'coins' : 'монет';
+
+            return (
+                <article key={pack.id} className="subscription-concept__coin-pack">
+                    <div className="subscription-concept__coin-pack-top">
+                        <div>
+                            <div className="subscription-concept__coin-pack-name">{displayName}</div>
+                            <div className="subscription-concept__coin-pack-coins">
+                                <CoinIcon size={16} className="profile-concept__coin-icon" />
+                                <span>{formatNumber(pack.coins)} {coinsLabel}</span>
+                            </div>
+                        </div>
+                        <div className="subscription-concept__coin-pack-price">
+                            {pack.badge ? <span className="subscription-concept__coin-pack-badge">{pack.badge}</span> : null}
+                            <span>{formatPackPrice(pack.price_rub)}</span>
                         </div>
                     </div>
-                    <div className="subscription-concept__coin-pack-price">
-                        {pack.badge ? <span className="subscription-concept__coin-pack-badge">{pack.badge}</span> : null}
-                        <span>{formatPackPrice(pack.price_rub)}</span>
-                    </div>
-                </div>
-                <button
-                    type="button"
-                    className="subscription-concept__plan-btn"
-                    disabled={checkoutPendingId === pack.id}
-                    onClick={() => handlePurchase('coin_pack', pack.id)}
-                >
-                    {checkoutPendingId === pack.id ? text.paymentCheckoutPending : text.walletCoinPackBuy}
-                </button>
-            </article>
-        ));
+                    <button
+                        type="button"
+                        className="subscription-concept__plan-btn"
+                        disabled={checkoutPendingId === pack.id}
+                        onClick={() => handlePurchase('coin_pack', pack.id)}
+                    >
+                        {checkoutPendingId === pack.id ? text.paymentCheckoutPending : text.walletCoinPackBuy}
+                    </button>
+                </article>
+            );
+        });
     };
 
     const handleStopChatGeneration = useCallback(() => {

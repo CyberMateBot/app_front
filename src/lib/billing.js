@@ -2,11 +2,38 @@ import { resolveApiUrl } from '../api/httpClient.js';
 import { BILLING_PLAN_FEATURES_RU } from './planFeatureCopy.js';
 
 export const DEFAULT_COIN_PACKS = [
-    { id: 'pack-100', name: '100 монет', coins: 100, price_rub: 129, badge: '', sort_order: 1 },
-    { id: 'pack-300', name: '300 монет', coins: 300, price_rub: 349, badge: '−10%', sort_order: 2 },
-    { id: 'pack-1000', name: '1000 монет', coins: 1000, price_rub: 1049, badge: '−18%', sort_order: 3 },
-    { id: 'pack-2500', name: '2500 монет', coins: 2500, price_rub: 2399, badge: '−26%', sort_order: 4 },
+    { id: 'pack-100', name: 'Пакет «Старт»', coins: 100, price_rub: 129, badge: '', sort_order: 1 },
+    { id: 'pack-300', name: 'Пакет «Стандарт»', coins: 300, price_rub: 349, badge: '−10%', sort_order: 2 },
+    { id: 'pack-1000', name: 'Пакет «Оптимум»', coins: 1000, price_rub: 1049, badge: '−18%', sort_order: 3 },
+    { id: 'pack-2500', name: 'Пакет «Макси»', coins: 2500, price_rub: 2399, badge: '−26%', sort_order: 4 },
 ];
+
+export const COIN_PACK_DISPLAY_NAMES = {
+    ru: {
+        'pack-100': 'Пакет «Старт»',
+        'pack-300': 'Пакет «Стандарт»',
+        'pack-1000': 'Пакет «Оптимум»',
+        'pack-2500': 'Пакет «Макси»',
+    },
+    en: {
+        'pack-100': 'Starter Pack',
+        'pack-300': 'Standard Pack',
+        'pack-1000': 'Optimum Pack',
+        'pack-2500': 'Maxi Pack',
+    },
+};
+
+export function getCoinPackDisplayName(pack, language = 'ru') {
+    const lang = language === 'en' ? 'en' : 'ru';
+    if (pack?.id && COIN_PACK_DISPLAY_NAMES[lang]?.[pack.id]) {
+        return COIN_PACK_DISPLAY_NAMES[lang][pack.id];
+    }
+    const rawName = String(pack?.name ?? '').trim();
+    if (!rawName || /^\d+\s*(монет[а-я]*|coins?|cybercoins?)$/i.test(rawName)) {
+        return lang === 'en' ? 'Coin Pack' : 'Пакет монет';
+    }
+    return rawName;
+}
 
 export const DEFAULT_SUBSCRIPTION_PLANS = [
     {
@@ -67,20 +94,39 @@ export async function fetchBillingCatalog() {
     };
 }
 
+const DEFAULT_PLAN_COINS = {
+    free: 15,
+    basic: 160,
+    pro: 400,
+    max: 950,
+    ultra: 2600,
+};
+
 function normalizePlan(plan) {
+    const defaultCoins = DEFAULT_PLAN_COINS[plan?.id] ?? 0;
+    const planCoins = Number(plan?.coins ?? 0) || 0;
     return {
         ...plan,
         price_rub: Number(plan?.price_rub ?? 0) || 0,
-        coins: Number(plan?.coins ?? 0) || 0,
+        coins: Math.max(planCoins, defaultCoins),
         popular: Boolean(plan?.popular),
         enabled: plan?.enabled !== false,
     };
 }
 
+const DEFAULT_PACK_COINS = {
+    'pack-100': 100,
+    'pack-300': 300,
+    'pack-1000': 1000,
+    'pack-2500': 2500,
+};
+
 function normalizePack(pack) {
+    const defaultCoins = DEFAULT_PACK_COINS[pack?.id] ?? 0;
+    const packCoins = Number(pack?.coins ?? 0) || 0;
     return {
         ...pack,
-        coins: Number(pack?.coins ?? 0) || 0,
+        coins: Math.max(packCoins, defaultCoins),
         price_rub: Number(pack?.price_rub ?? 0) || 0,
         enabled: pack?.enabled !== false,
     };
