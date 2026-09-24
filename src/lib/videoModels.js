@@ -10,18 +10,26 @@ import { getVideoModelCapabilities } from '../config/mediaModelOptions.js';
  */
 export function resolveVideoMediaFlags(modelId, catalogModel) {
     const local = getVideoModelCapabilities(modelId);
+    const requiresVideo = Boolean(local.requiresVideo || catalogModel?.requires_video);
+    const requiresImage = Boolean(local.requiresImage || catalogModel?.requires_image);
+    const requiresFirstFrame = Boolean(local.requiresFirstFrame);
+    const requiresLastFrame = Boolean(local.requiresLastFrame);
+    const supportsLastFrame = Boolean(
+        local.supportsLastFrame
+        || catalogModel?.supports_last_frame
+        || modelId === 'wan-2.7-flf'
+        || String(modelId || '').startsWith('kling-'),
+    );
 
     return {
-        requiresImage: Boolean(local.requiresImage || catalogModel?.requires_image),
-        requiresVideo: Boolean(local.requiresVideo || catalogModel?.requires_video),
-        requiresFirstFrame: Boolean(local.requiresFirstFrame),
-        requiresLastFrame: Boolean(local.requiresLastFrame),
+        requiresImage,
+        requiresVideo,
+        requiresFirstFrame,
+        requiresLastFrame,
         supportsOptionalImage: Boolean(
-            local.supportsOptionalImage
-            && !local.requiresImage
-            && !local.requiresFirstFrame
-            && !local.requiresLastFrame,
+            !requiresVideo && !requiresImage && !requiresFirstFrame && !requiresLastFrame,
         ),
+        supportsLastFrame,
     };
 }
 
@@ -137,4 +145,8 @@ export function klingResolutionForModel(modelId) {
     }
 
     return '';
+}
+
+export function videoModelSupportsLastFrame(modelId, catalogModel) {
+    return resolveVideoMediaFlags(modelId, catalogModel).supportsLastFrame;
 }

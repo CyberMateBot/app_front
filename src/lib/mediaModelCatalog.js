@@ -349,6 +349,9 @@ export function pickVideoGenerateParams(modelId, catalog, selected) {
         seed: 'seed',
         enable_prompt_expansion: 'enablePromptExpansion',
         go_fast: 'goFast',
+        cfg_scale: 'cfgScale',
+        bgm: 'bgm',
+        movement_amplitude: 'movementAmplitude',
     });
 }
 

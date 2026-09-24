@@ -263,6 +263,7 @@ const KLING_BASE_OPTIONS = {
     aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
     duration: { values: KLING_DURATIONS, default: 5, presets: [5, 10] },
     resolution: { values: KLING_RESOLUTIONS, default: '720p' },
+    cfgScale: { min: 0.1, max: 1.0, default: 0.5, step: 0.1 },
     negativePrompt: { default: '' },
     cameraMovement: { values: KLING_CAMERA_MOVEMENTS, default: 'auto' },
     cameraAxes: { keys: KLING_CAMERA_AXES, min: -10, max: 10, default: 0 },
@@ -271,6 +272,7 @@ const KLING_BASE_OPTIONS = {
 export const VIDEO_MODEL_CAPABILITIES = {
     'kling-v3-std': {
         supportsOptionalImage: true,
+        supportsLastFrame: true,
         options: {
             ...KLING_BASE_OPTIONS,
             resolution: { values: KLING_RESOLUTIONS, default: '720p' },
@@ -278,6 +280,7 @@ export const VIDEO_MODEL_CAPABILITIES = {
     },
     'kling-v3-pro': {
         supportsOptionalImage: true,
+        supportsLastFrame: true,
         options: {
             ...KLING_BASE_OPTIONS,
             resolution: { values: KLING_RESOLUTIONS, default: '1080p' },
@@ -286,6 +289,7 @@ export const VIDEO_MODEL_CAPABILITIES = {
     },
     'kling-v3-4k': {
         supportsOptionalImage: true,
+        supportsLastFrame: true,
         options: {
             ...KLING_BASE_OPTIONS,
             resolution: { values: KLING_RESOLUTIONS, default: '4k' },
@@ -297,7 +301,9 @@ export const VIDEO_MODEL_CAPABILITIES = {
         options: {
             aspectRatio: { values: ['21:9', '16:9', '4:3', '1:1', '3:4', '9:16'], default: '16:9' },
             duration: { values: [2, 5, 8, 10, 12], default: 5 },
+            negativePrompt: { default: '' },
             cameraFixed: { default: false },
+            seed: { default: -1 },
         },
     },
     'seedance-v1.5-i2v-fast': {
@@ -306,8 +312,10 @@ export const VIDEO_MODEL_CAPABILITIES = {
             aspectRatio: { values: SEEDANCE_V15_ASPECT, default: '16:9' },
             duration: { values: [4, 5, 8, 10, 12], default: 5 },
             resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
             generateAudio: { default: true },
             cameraFixed: { default: false },
+            seed: { default: -1 },
         },
     },
     'seedance-v1.5-t2v-fast': {
@@ -316,8 +324,10 @@ export const VIDEO_MODEL_CAPABILITIES = {
             aspectRatio: { values: SEEDANCE_V15_ASPECT, default: '16:9' },
             duration: { values: [4, 5, 8, 10, 12], default: 5 },
             resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
             generateAudio: { default: true },
             cameraFixed: { default: false },
+            seed: { default: -1 },
         },
     },
     'seedance-v1.5-i2v-spicy': {
@@ -326,21 +336,21 @@ export const VIDEO_MODEL_CAPABILITIES = {
             aspectRatio: { values: SEEDANCE_V15_ASPECT, default: '16:9' },
             duration: { values: [4, 5, 8, 10, 12], default: 5 },
             resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
             generateAudio: { default: true },
             cameraFixed: { default: false },
+            seed: { default: -1 },
         },
     },
     'seedance-v2-video-edit': {
         requiresVideo: true,
-        // Model supports an optional reference photo alongside the source
-        // video (WaveSpeed's `reference_images` param) — e.g. "replace the
-        // person in the video with the person in this photo".
         supportsOptionalImage: true,
         options: {
             aspectRatio: { values: SEEDANCE_V2_ASPECT, default: '16:9' },
             duration: { values: [4, 5, 8, 10, 12, 15], default: 5 },
             resolution: { values: ['480p', '720p', '1080p'], default: '720p' },
             turboMode: { default: false },
+            seed: { default: -1 },
         },
     },
     'seedance-v2-video-extend': {
@@ -349,38 +359,126 @@ export const VIDEO_MODEL_CAPABILITIES = {
             aspectRatio: { values: SEEDANCE_V2_ASPECT, default: '16:9' },
             duration: { values: [4, 5, 8, 10, 12, 15], default: 5 },
             resolution: { values: ['720p', '1080p'], default: '720p' },
+            seed: { default: -1 },
         },
     },
     'wan-2.5-t2v': {
         supportsOptionalImage: true,
         options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
             duration: { values: [2, 5, 10, 15], default: 5 },
             resolution: { values: ['480P', '720P', '1080P'], default: '720P' },
             negativePrompt: { default: '' },
+            seed: { default: -1 },
         },
     },
-    'wan-2.6-i2v': { requiresImage: true, options: { duration: { values: [5, 8], default: 5 }, resolution: { values: ['480P', '720P'], default: '720P' } } },
-    'wan-2.7-t2v': { supportsOptionalImage: true, options: { duration: { values: [5, 10, 15], default: 5 }, resolution: { values: ['720P', '1080P'], default: '1080P' }, negativePrompt: { default: '' } } },
+    'wan-2.6-i2v': {
+        requiresImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 8], default: 5 },
+            resolution: { values: ['480P', '720P', '1080P'], default: '720P' },
+            negativePrompt: { default: '' },
+            seed: { default: -1 },
+        },
+    },
+    'wan-2.7-t2v': {
+        supportsOptionalImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 10, 15], default: 5 },
+            resolution: { values: ['720P', '1080P'], default: '1080P' },
+            negativePrompt: { default: '' },
+            seed: { default: -1 },
+        },
+    },
     'wan-2.7-flf': {
         requiresFirstFrame: true,
         requiresLastFrame: true,
-        options: { duration: { values: [5, 10], default: 5 } },
+        supportsLastFrame: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720P', '1080P'], default: '720P' },
+            negativePrompt: { default: '' },
+            seed: { default: -1 },
+        },
     },
-    'wan-2.7-grid': { requiresImage: true, options: { duration: { values: [5, 10], default: 5 } } },
+    'wan-2.7-grid': { requiresImage: true, options: { duration: { values: [5, 10], default: 5 }, resolution: { values: ['720P', '1080P'], default: '720P' } } },
     // Supports an optional reference photo alongside the source video
     // (WaveSpeed's `images` param) for style/character/object guidance.
-    'wan-2.7-edit': { requiresVideo: true, supportsOptionalImage: true, options: {} },
-    'wan-2.2-spicy-i2v': { requiresImage: true, options: { duration: { values: [5, 8], default: 5 }, resolution: { values: ['480p', '720p'], default: '720p' } } },
-    'happyhorse-t2v': { supportsOptionalImage: true, options: { aspectRatio: { values: ['16:9', '9:16', '1:1', '4:3', '3:4'], default: '16:9' }, duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
-    'happyhorse-i2v': { requiresImage: true, options: { duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
-    'happyhorse-ref2v': { requiresImage: true, options: { duration: { values: [3, 5, 10, 15], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
+    'wan-2.7-edit': { requiresVideo: true, supportsOptionalImage: true, options: { duration: { values: [5, 10], default: 5 }, resolution: { values: ['720P', '1080P'], default: '720P' } } },
+    'wan-2.2-spicy-i2v': {
+        requiresImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 8], default: 5 },
+            resolution: { values: ['480p', '720p'], default: '720p' },
+            negativePrompt: { default: '' },
+            seed: { default: -1 },
+        },
+    },
+    'happyhorse-t2v': {
+        supportsOptionalImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1', '4:3', '3:4'], default: '16:9' },
+            duration: { values: [3, 5, 10, 15], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
+            seed: { default: -1 },
+        },
+    },
+    'happyhorse-i2v': {
+        requiresImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1', '4:3', '3:4'], default: '16:9' },
+            duration: { values: [3, 5, 10, 15], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
+            seed: { default: -1 },
+        },
+    },
+    'happyhorse-ref2v': {
+        requiresImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1', '4:3', '3:4'], default: '16:9' },
+            duration: { values: [3, 5, 10, 15], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
+            seed: { default: -1 },
+        },
+    },
     // Supports an optional reference photo alongside the source video
     // (WaveSpeed's `images` param) for style/character/object guidance.
     'happyhorse-video-edit': { requiresVideo: true, supportsOptionalImage: true, options: {} },
     'happyhorse-video-extend': { requiresVideo: true, options: { duration: { values: [3, 5, 10], default: 5 } } },
-    'sora-2-t2v': { supportsOptionalImage: true, options: { duration: { values: [5, 10], default: 5 }, resolution: { values: ['720p', '1080p'], default: '720p' } } },
-    'sora-2-i2v': { requiresImage: true, options: { duration: { values: [5, 10], default: 5 } } },
-    'sora-2-t2v-pro': { supportsOptionalImage: true, options: { duration: { values: [5, 10], default: 5 } } },
+    'sora-2-t2v': {
+        supportsOptionalImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
+        },
+    },
+    'sora-2-i2v': {
+        requiresImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
+        },
+    },
+    'sora-2-t2v-pro': {
+        supportsOptionalImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
+        },
+    },
     'veo-3.1-extend': {
         requiresVideo: true,
         options: {
@@ -391,10 +489,24 @@ export const VIDEO_MODEL_CAPABILITIES = {
             generateAudio: { default: true },
         },
     },
-    'vidu-q3-i2v-spicy': { requiresImage: true, options: { duration: { values: [1, 5, 10, 16], default: 5 }, resolution: { values: ['540p', '720p', '1080p'], default: '720p' }, generateAudio: { default: true } } },
+    'vidu-q3-i2v-spicy': {
+        requiresImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [1, 5, 10, 16], default: 5 },
+            resolution: { values: ['540p', '720p', '1080p'], default: '720p' },
+            generateAudio: { default: true },
+            movementAmplitude: { values: ['auto', 'small', 'medium', 'large'], default: 'auto' },
+            bgm: { default: true },
+            seed: { default: -1 },
+        },
+    },
     'hailuo-2.3-t2v': {
         options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
             duration: { values: [6, 10], default: 6 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
             enablePromptExpansion: { default: true },
         },
     },
@@ -402,6 +514,8 @@ export const VIDEO_MODEL_CAPABILITIES = {
         requiresImage: true,
         options: {
             duration: { values: [6, 10], default: 6 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+            negativePrompt: { default: '' },
             enablePromptExpansion: { default: true },
             goFast: { default: true },
         },
@@ -410,6 +524,7 @@ export const VIDEO_MODEL_CAPABILITIES = {
         requiresImage: true,
         options: {
             duration: { values: [5], default: 5 },
+            negativePrompt: { default: '' },
             enablePromptExpansion: { default: true },
         },
     },

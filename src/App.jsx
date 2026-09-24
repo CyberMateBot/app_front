@@ -836,7 +836,9 @@ const translations = {
         videoEditReferenceImageLabel: 'Фото-референс',
         videoEditReferenceImageHint: 'Необязательно — например, фото человека или объекта, которым нужно что-то заменить на видео',
         videoFirstFrameLabel: 'Первый кадр',
-        videoLastFrameLabel: 'Последний кадр',
+        videoLastFrameLabel: 'Конечный кадр',
+        videoLastFrameOptionalLabel: 'Конечный кадр (необязательно)',
+        videoLastFrameHint: 'Необязательный кадр для создания видео-перехода',
         videoSessionVideoHint: 'Если не загрузить новое видео, будет использовано последнее из сессии',
         imageAttachPhoto: 'Прикрепить фото',
         imageRemovePhoto: 'Убрать фото',
@@ -1527,6 +1529,8 @@ const translations = {
         videoEditReferenceImageHint: 'Optional — e.g. a photo of a person or object to swap into the video',
         videoFirstFrameLabel: 'First frame',
         videoLastFrameLabel: 'Last frame',
+        videoLastFrameOptionalLabel: 'Last frame (optional)',
+        videoLastFrameHint: 'Optional frame for transition between frames',
         videoSessionVideoHint: 'If you skip upload, the last video from this session will be used',
         imageAttachPhoto: 'Attach photo',
         imageRemovePhoto: 'Remove photo',
@@ -5233,9 +5237,19 @@ function App() {
                 || ''
             )
             : '';
-        const optionalSourceImageUrl = supportsOptionalImage && !videoSourceImageAttachment
-            ? videoSourceImageUrl.trim()
-            : '';
+                const activeStartFrameUrl = (
+            videoSourceImageUrl.trim()
+            || videoFirstFrameUrl.trim()
+            || (requiresImage ? getLastSessionSourceImageUrl(videoSessionMessages) : '')
+            || ''
+        );
+        const startAttachment = videoSourceImageAttachment || videoFirstFrameAttachment;
+        const resolvedStartFrameUrl = !startAttachment ? activeStartFrameUrl : '';
+
+        const activeLastFrameUrl = videoLastFrameUrl.trim();
+        const lastAttachment = videoLastFrameAttachment;
+        const resolvedLastFrameUrl = !lastAttachment ? activeLastFrameUrl : '';
+
         const resolvedSourceVideoUrl = requiresVideo && !videoSourceVideoAttachment
             ? (
                 videoSourceVideoUrl.trim()
@@ -5243,25 +5257,19 @@ function App() {
                 || ''
             )
             : '';
-        const resolvedFirstFrameUrl = requiresFirstFrame && !videoFirstFrameAttachment
-            ? videoFirstFrameUrl.trim()
-            : '';
-        const resolvedLastFrameUrl = requiresLastFrame && !videoLastFrameAttachment
-            ? videoLastFrameUrl.trim()
-            : '';
 
-        if (requiresImage && !resolvedSourceImageUrl && !videoSourceImageAttachment) {
+        if (requiresImage && !resolvedStartFrameUrl && !startAttachment) {
             setVideoError(text.videoSourceImageRequired);
             return;
         }
 
-        if (requiresFirstFrame && !resolvedFirstFrameUrl && !videoFirstFrameAttachment) {
-            setVideoError(language === 'ru' ? 'Укажите ссылку или загрузите первый кадр.' : 'Provide or upload the first frame.');
+        if (requiresFirstFrame && !resolvedStartFrameUrl && !startAttachment) {
+            setVideoError(language === 'ru' ? 'Укажите ссылку или загрузите начальный кадр.' : 'Provide or upload the first frame.');
             return;
         }
 
-        if (requiresLastFrame && !resolvedLastFrameUrl && !videoLastFrameAttachment) {
-            setVideoError(language === 'ru' ? 'Укажите ссылку или загрузите последний кадр.' : 'Provide or upload the last frame.');
+        if (requiresLastFrame && !resolvedLastFrameUrl && !lastAttachment) {
+            setVideoError(language === 'ru' ? 'Укажите ссылку или загрузите конечный кадр.' : 'Provide or upload the last frame.');
             return;
         }
 
@@ -5302,18 +5310,18 @@ function App() {
                 model: videoModel,
                 messages: contextMessages,
                 sessionId: videoSessionId,
-                sourceImageUrl: (resolvedSourceImageUrl || optionalSourceImageUrl) || undefined,
+                sourceImageUrl: resolvedStartFrameUrl || undefined,
                 sourceVideoUrl: resolvedSourceVideoUrl || undefined,
-                imageBase64: videoSourceImageAttachment?.base64,
-                imageMimeType: videoSourceImageAttachment?.mimeType,
+                imageBase64: startAttachment?.base64,
+                imageMimeType: startAttachment?.mimeType,
                 videoBase64: videoSourceVideoAttachment?.base64,
                 videoMimeType: videoSourceVideoAttachment?.mimeType,
-                firstFrameUrl: resolvedFirstFrameUrl || undefined,
+                firstFrameUrl: resolvedStartFrameUrl || undefined,
                 lastFrameUrl: resolvedLastFrameUrl || undefined,
-                firstFrameBase64: videoFirstFrameAttachment?.base64,
-                firstFrameMimeType: videoFirstFrameAttachment?.mimeType,
-                lastFrameBase64: videoLastFrameAttachment?.base64,
-                lastFrameMimeType: videoLastFrameAttachment?.mimeType,
+                firstFrameBase64: startAttachment?.base64,
+                firstFrameMimeType: startAttachment?.mimeType,
+                lastFrameBase64: lastAttachment?.base64,
+                lastFrameMimeType: lastAttachment?.mimeType,
                 ...videoOptionParams,
                 negativePrompt: videoOptionParams.negativePrompt ?? (
                     videoCapabilities.options?.negativePrompt
@@ -7272,84 +7280,82 @@ function App() {
                     <p className="ai-video__edit-hint">{text.videoEditTurboHint}</p>
                     ) : null}
 
-                {supportsOptionalImage ? (
-                    <MediaReferenceField
-                        kind="image"
-                        label={requiresVideo ? text.videoEditReferenceImageLabel : text.videoOptionalImageLabel}
-                        hint={requiresVideo ? text.videoEditReferenceImageHint : text.videoOptionalImageHint}
-                        url={videoSourceImageUrl}
-                        onUrlChange={setVideoSourceImageUrl}
-                        attachment={videoSourceImageAttachment}
-                        onAttachmentClear={() => setVideoSourceImageAttachment(null)}
-                        onFileSelect={handleVideoSourceImageFile}
-                        disabled={isGeneratingVideo}
-                        idPrefix="video-optional-image"
-                        language={language}
-                        urlPlaceholder={text.mediaReferenceUrlPlaceholder}
-                        uploadLabel={text.mediaReferenceUpload}
-                        dropHint={text.mediaReferenceDrop}
-                    />
-                ) : null}
+                {requiresVideo ? (
+                    supportsOptionalImage ? (
+                        <MediaReferenceField
+                            kind="image"
+                            label={text.videoEditReferenceImageLabel}
+                            hint={text.videoEditReferenceImageHint}
+                            url={videoSourceImageUrl}
+                            onUrlChange={setVideoSourceImageUrl}
+                            attachment={videoSourceImageAttachment}
+                            onAttachmentClear={() => setVideoSourceImageAttachment(null)}
+                            onFileSelect={handleVideoSourceImageFile}
+                            disabled={isGeneratingVideo}
+                            idPrefix="video-optional-image"
+                            language={language}
+                            urlPlaceholder={text.mediaReferenceUrlPlaceholder}
+                            uploadLabel={text.mediaReferenceUpload}
+                            dropHint={text.mediaReferenceDrop}
+                        />
+                    ) : null
+                ) : (
+                    <>
+                        <MediaReferenceField
+                            kind="image"
+                            label={requiresImage ? text.videoSourceImageLabel : text.videoFirstFrameLabel}
+                            hint={text.mediaReferenceImageHint}
+                            required={requiresImage || requiresFirstFrame}
+                            url={videoSourceImageUrl || videoFirstFrameUrl}
+                            onUrlChange={(val) => {
+                                setVideoSourceImageUrl(val);
+                                setVideoFirstFrameUrl(val);
+                                if (!val && !videoSourceImageAttachment && !videoFirstFrameAttachment && !requiresLastFrame) {
+                                    setVideoLastFrameUrl('');
+                                    setVideoLastFrameAttachment(null);
+                                }
+                            }}
+                            attachment={videoSourceImageAttachment || videoFirstFrameAttachment}
+                            onAttachmentClear={() => {
+                                setVideoSourceImageAttachment(null);
+                                setVideoFirstFrameAttachment(null);
+                                if (!requiresLastFrame) {
+                                    setVideoLastFrameUrl('');
+                                    setVideoLastFrameAttachment(null);
+                                }
+                            }}
+                            onFileSelect={async (file) => {
+                                await handleVideoSourceImageFile(file);
+                            }}
+                            disabled={isGeneratingVideo}
+                            idPrefix="video-source-image"
+                            language={language}
+                            urlPlaceholder={text.mediaReferenceUrlPlaceholder}
+                            uploadLabel={text.mediaReferenceUpload}
+                            dropHint={text.mediaReferenceDrop}
+                        />
 
-                {requiresFirstFrame ? (
-                    <MediaReferenceField
-                        kind="image"
-                        label={text.videoFirstFrameLabel}
-                        hint={text.mediaReferenceImageHint}
-                        required
-                        url={videoFirstFrameUrl}
-                        onUrlChange={setVideoFirstFrameUrl}
-                        attachment={videoFirstFrameAttachment}
-                        onAttachmentClear={() => setVideoFirstFrameAttachment(null)}
-                        onFileSelect={handleVideoFirstFrameFile}
-                        disabled={isGeneratingVideo}
-                        idPrefix="video-first-frame"
-                        language={language}
-                        urlPlaceholder={text.mediaReferenceUrlPlaceholder}
-                        uploadLabel={text.mediaReferenceUpload}
-                        dropHint={text.mediaReferenceDrop}
-                    />
-                ) : null}
-
-                {requiresLastFrame ? (
-                    <MediaReferenceField
-                        kind="image"
-                        label={text.videoLastFrameLabel}
-                        hint={text.mediaReferenceImageHint}
-                        required
-                        url={videoLastFrameUrl}
-                        onUrlChange={setVideoLastFrameUrl}
-                        attachment={videoLastFrameAttachment}
-                        onAttachmentClear={() => setVideoLastFrameAttachment(null)}
-                        onFileSelect={handleVideoLastFrameFile}
-                        disabled={isGeneratingVideo}
-                        idPrefix="video-last-frame"
-                        language={language}
-                        urlPlaceholder={text.mediaReferenceUrlPlaceholder}
-                        uploadLabel={text.mediaReferenceUpload}
-                        dropHint={text.mediaReferenceDrop}
-                    />
-                ) : null}
-
-                {requiresImage ? (
-                    <MediaReferenceField
-                        kind="image"
-                        label={text.videoSourceImageLabel}
-                        hint={text.mediaReferenceImageHint}
-                        required
-                        url={videoSourceImageUrl}
-                        onUrlChange={setVideoSourceImageUrl}
-                        attachment={videoSourceImageAttachment}
-                        onAttachmentClear={() => setVideoSourceImageAttachment(null)}
-                        onFileSelect={handleVideoSourceImageFile}
-                        disabled={isGeneratingVideo}
-                        idPrefix="video-source-image"
-                        language={language}
-                        urlPlaceholder={text.mediaReferenceUrlPlaceholder}
-                        uploadLabel={text.mediaReferenceUpload}
-                        dropHint={text.mediaReferenceDrop}
-                    />
-                ) : null}
+                        {(Boolean(videoSourceImageUrl.trim() || videoSourceImageAttachment || videoFirstFrameUrl.trim() || videoFirstFrameAttachment) || requiresLastFrame) ? (
+                            <MediaReferenceField
+                                kind="image"
+                                label={requiresLastFrame ? text.videoLastFrameLabel : text.videoLastFrameOptionalLabel}
+                                hint={text.videoLastFrameHint || text.mediaReferenceImageHint}
+                                required={requiresLastFrame}
+                                url={videoLastFrameUrl}
+                                onUrlChange={setVideoLastFrameUrl}
+                                attachment={videoLastFrameAttachment}
+                                onAttachmentClear={() => setVideoLastFrameAttachment(null)}
+                                onFileSelect={handleVideoLastFrameFile}
+                                disabled={isGeneratingVideo}
+                                idPrefix="video-last-frame"
+                                language={language}
+                                urlPlaceholder={text.mediaReferenceUrlPlaceholder}
+                                uploadLabel={text.mediaReferenceUpload}
+                                dropHint={text.mediaReferenceDrop}
+                            />
+                        ) : null}
+                    </>
+                )}
 
                 {requiresVideo ? (
                     <MediaReferenceField
