@@ -59,6 +59,8 @@ const MODEL_PRICES = {
     'z-image-base': 5,
     'z-image-turbo': 2,
     'grok-imagine-edit': 25,
+    'kling-image-o3': 14,
+    'kling-image-v3': 14,
 
     // Video models — base = 5-second default. Options / higher resolution
     // are surcharged on the backend by video_option_prices.go.
@@ -66,6 +68,18 @@ const MODEL_PRICES = {
     'kling-v3-std': 125,
     'kling-v3-pro': 166,
     'kling-v3-4k': 250,
+    'kling-video-o3-std': 125,
+    'kling-video-o3-pro': 166,
+    'kling-video-o3-4k': 250,
+    'kling-v3-turbo-std': 56,
+    'kling-v3-turbo-pro': 70,
+    'kling-v2.6-std': 63,
+    'kling-v2.6-pro': 105,
+    'kling-v2.1-master': 135,
+    'kling-v2.0-master': 135,
+    'kling-v1.6-std': 68,
+    'kling-v1.6-pro': 135,
+    'kling-video-o1': 166,
     seedance: 149,
     'seedance-v1-pro-i2v': 149,
     'seedance-v1.5-i2v-fast': 149,
@@ -103,6 +117,7 @@ const MODEL_PRICES = {
     mureka: 50,
     'mureka-v9': 50,
     'ace-step-1.5': 40,
+    'kling-v1-tts': 4,
 
     // 3D models.
     'hunyuan3d-v3.1-rapid': 25,

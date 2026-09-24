@@ -198,6 +198,32 @@ export const IMAGE_MODEL_DEFINITIONS = [
         page: 'ai-image',
         backendModel: 'alice-ai-art',
     },
+    {
+        id: 'kling-image-o3',
+        nameKey: 'modelKlingImageO3Name',
+        subKey: 'modelKlingImageO3Sub',
+        tab: 'photo',
+        categories: ['photo'],
+        accent: 'gold',
+        icon: Sparkles,
+        badge: 'pro',
+        page: 'ai-image',
+        backendModel: 'kling-image-o3',
+        group: 'kling-image',
+    },
+    {
+        id: 'kling-image-v3',
+        nameKey: 'modelKlingImageV3Name',
+        subKey: 'modelKlingImageV3Sub',
+        tab: 'photo',
+        categories: ['photo'],
+        accent: 'violet',
+        icon: Sparkles,
+        badge: 'new',
+        page: 'ai-image',
+        backendModel: 'kling-image-v3',
+        group: 'kling-image',
+    },
 ];
 
 const imageIds = new Set(IMAGE_MODEL_DEFINITIONS.map((model) => model.id));

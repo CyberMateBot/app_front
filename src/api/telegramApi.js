@@ -288,11 +288,25 @@ export const IMAGE_MODEL_IDS = [
     'z-image-turbo',
     'grok-imagine-edit',
     'alice-ai-art',
+    'kling-image-o3',
+    'kling-image-v3',
 ];
 export const VIDEO_MODEL_IDS = [
     'kling-v3-std',
     'kling-v3-pro',
     'kling-v3-4k',
+    'kling-video-o3-std',
+    'kling-video-o3-pro',
+    'kling-video-o3-4k',
+    'kling-v3-turbo-std',
+    'kling-v3-turbo-pro',
+    'kling-v2.6-std',
+    'kling-v2.6-pro',
+    'kling-v2.1-master',
+    'kling-v2.0-master',
+    'kling-v1.6-std',
+    'kling-v1.6-pro',
+    'kling-video-o1',
     'seedance-v1-pro-i2v',
     'seedance-v1.5-i2v-fast',
     'seedance-v1.5-t2v-fast',
@@ -327,6 +341,7 @@ export const AUDIO_MODEL_IDS = [
     'minimax-speech-2.6',
     'mureka-v9',
     'ace-step-1.5',
+    'kling-v1-tts',
 ];
 export const THREE_D_MODEL_IDS = [
     'tripo3d-v2.5-i2d',

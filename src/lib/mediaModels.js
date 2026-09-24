@@ -10,6 +10,12 @@ export { getSelectorItemForModelId as getMediaSelectorItemForModelId };
 const IMAGE_BADGE_ORDER = { new: 0, hot: 1, pro: 2 };
 
 export const IMAGE_GROUP_OVERRIDES = {
+    'kling-image': {
+        nameKey: 'modelKlingImageGroupName',
+        subKey: 'modelKlingImageGroupSub',
+        defaultModelId: 'kling-image-o3',
+        icon: Sparkles,
+    },
     'nano-banana': {
         nameKey: 'modelNanoBananaName',
         subKey: 'modelNanoBananaSub',
@@ -232,6 +238,12 @@ export function buildCatalogVideoTools(definitions) {
 }
 
 export const AUDIO_GROUP_OVERRIDES = {
+    'Kling TTS': {
+        nameKey: 'modelKlingV1TtsName',
+        subKey: 'modelKlingV1TtsSub',
+        defaultModelId: 'kling-v1-tts',
+        icon: Mic,
+    },
     'Qwen3 TTS': {
         nameKey: 'modelQwen3TtsName',
         subKey: 'modelQwen3TtsSub',

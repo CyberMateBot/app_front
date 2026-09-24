@@ -81,6 +81,19 @@ export const AUDIO_MODEL_DEFINITIONS = [
         backendModel: 'ace-step-1.5',
         group: 'ACE-Step',
     },
+    {
+        id: 'kling-v1-tts',
+        nameKey: 'modelKlingV1TtsName',
+        subKey: 'modelKlingV1TtsSub',
+        tab: 'voice',
+        categories: ['voice'],
+        accent: 'violet',
+        icon: Mic,
+        badge: 'new',
+        page: 'ai-voice',
+        backendModel: 'kling-v1-tts',
+        group: 'Kling TTS',
+    },
 ];
 
 AUDIO_MODEL_IDS.forEach((modelId) => {

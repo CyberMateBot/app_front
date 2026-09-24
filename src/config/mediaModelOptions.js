@@ -106,6 +106,30 @@ const QWEN_IMAGE_BASE_OPTIONS = {
 };
 
 export const IMAGE_MODEL_CAPABILITIES = {
+    'kling-image-o3': {
+        supportsResolution: true,
+        supportsAspectRatio: true,
+        supportsNegativePrompt: true,
+        supportsOutputFormat: true,
+        options: {
+            aspectRatio: { values: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9'], default: '1:1' },
+            resolution: { values: ['1k', '2k', '4k'], default: '1k' },
+            negativePrompt: { default: '' },
+            outputFormat: { values: ['png', 'jpeg'], default: 'png' },
+        },
+    },
+    'kling-image-v3': {
+        supportsResolution: true,
+        supportsAspectRatio: true,
+        supportsNegativePrompt: true,
+        supportsOutputFormat: true,
+        options: {
+            aspectRatio: { values: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9'], default: '1:1' },
+            resolution: { values: ['1k', '2k'], default: '1k' },
+            negativePrompt: { default: '' },
+            outputFormat: { values: ['png', 'jpeg'], default: 'png' },
+        },
+    },
     'nano-banana': {
         supportsEdit: true,
         options: {
@@ -294,6 +318,112 @@ export const VIDEO_MODEL_CAPABILITIES = {
             ...KLING_BASE_OPTIONS,
             resolution: { values: KLING_RESOLUTIONS, default: '4k' },
             sound: { default: false },
+        },
+    },
+    'kling-video-o3-std': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            resolution: { values: KLING_RESOLUTIONS, default: '720p' },
+            sound: { default: false },
+        },
+    },
+    'kling-video-o3-pro': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            resolution: { values: KLING_RESOLUTIONS, default: '1080p' },
+            sound: { default: false },
+        },
+    },
+    'kling-video-o3-4k': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            resolution: { values: KLING_RESOLUTIONS, default: '4k' },
+            sound: { default: false },
+        },
+    },
+    'kling-v3-turbo-std': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+        },
+    },
+    'kling-v3-turbo-pro': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            resolution: { values: ['720p', '1080p'], default: '1080p' },
+        },
+    },
+    'kling-v2.6-std': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+        },
+    },
+    'kling-v2.6-pro': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '1080p' },
+            sound: { default: false },
+        },
+    },
+    'kling-v2.1-master': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '1080p' },
+        },
+    },
+    'kling-v2.0-master': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '1080p' },
+        },
+    },
+    'kling-v1.6-std': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+        },
+    },
+    'kling-v1.6-pro': {
+        requiresImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '1080p' },
+        },
+    },
+    'kling-video-o1': {
+        supportsOptionalImage: true,
+        supportsLastFrame: true,
+        options: {
+            ...KLING_BASE_OPTIONS,
+            resolution: { values: KLING_RESOLUTIONS, default: '1080p' },
         },
     },
     'seedance-v1-pro-i2v': {
@@ -712,6 +842,14 @@ const QWEN3_VOICES = [
 ];
 
 export const AUDIO_MODEL_CAPABILITIES = {
+    'kling-v1-tts': {
+        supportsSpeed: true,
+        supportsTextLength: true,
+        options: {
+            speed: { values: [0.8, 1.0, 1.2, 1.5], default: 1.0 },
+            textLength: { values: [50, 100, 500, 1000, 2000], default: 100 },
+        },
+    },
     'qwen3-tts': {
         supportsClone: true,
         options: {
