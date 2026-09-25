@@ -108,7 +108,7 @@ function normalizePlan(plan) {
     return {
         ...plan,
         price_rub: Number(plan?.price_rub ?? 0) || 0,
-        coins: Math.max(planCoins, defaultCoins),
+        coins: planCoins > 0 ? planCoins : defaultCoins,
         popular: Boolean(plan?.popular),
         enabled: plan?.enabled !== false,
     };
@@ -126,7 +126,7 @@ function normalizePack(pack) {
     const packCoins = Number(pack?.coins ?? 0) || 0;
     return {
         ...pack,
-        coins: Math.max(packCoins, defaultCoins),
+        coins: packCoins > 0 ? packCoins : defaultCoins,
         price_rub: Number(pack?.price_rub ?? 0) || 0,
         enabled: pack?.enabled !== false,
     };
