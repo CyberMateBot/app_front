@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    aurora-theme.css  —  full-app visual redesign layer ("Aurora Glass").
    Loaded LAST, after design-refresh.css, so it wins the cascade.
 
@@ -2324,19 +2324,111 @@ html[data-tg-layout='desktop-full'] .referral-page__row {
 }
 
 /* ==========================================================================
-   Android & iOS 18 Mobile Performance Optimizations
+   Android & iOS Mobile Performance Optimizations
    ========================================================================== */
+
+/*
+ * Strategy: on mobile WebViews (Android + iOS) backdrop-filter is the #1
+ * GPU frame-time killer because every blurred surface forces a re-sample of
+ * the composited backdrop.  We use two levers:
+ *
+ *  1. CSS-variable override: --nav-glass-blur / --panel-glass-blur are set
+ *     to `none` so all components that read those vars get free.
+ *  2. Explicit per-element overrides for the remaining hardcoded blur()
+ *     values that don't read from a variable.
+ *
+ * Android: disable backdrop-filter entirely on most surfaces.
+ * iOS: reduce blur radius to max 4px (iOS WebKit handles small blur cheaply).
+ */
+
+/* ── 1. CSS variable reset ─────────────────────────────────────────────── */
+html[data-platform='android'],
+html[data-platform='ios'] {
+  --nav-glass-blur: none;
+  --panel-glass-blur: none;
+  --plan-detail-glass-blur: none;
+}
+
+/* ── 2. Android: kill all remaining hardcoded backdrop-filter ─────────── */
 html[data-platform='android'] .bottom-nav__inner,
 html[data-platform='android'] .catalog-concept__sticky,
 html[data-platform='android'] .app-page-header,
-html[data-platform='android'] .plan-detail-modal__panel {
-  -webkit-backdrop-filter: blur(6px) !important;
-  backdrop-filter: blur(6px) !important;
+html[data-platform='android'] .plan-detail-modal__panel,
+html[data-platform='android'] .plan-detail-modal__header,
+html[data-platform='android'] .catalog-concept__card,
+html[data-platform='android'] .profile-hub__list-item,
+html[data-platform='android'] .history-concept__item,
+html[data-platform='android'] .settings-page__option,
+html[data-platform='android'] .profile-concept__menu-item,
+html[data-platform='android'] .referral-page__row,
+html[data-platform='android'] .media-options__row,
+html[data-platform='android'] .media-reference,
+html[data-platform='android'] .ai-variant-select__pill,
+html[data-platform='android'] .ai-chat__empty,
+html[data-platform='android'] .app-boot,
+html[data-platform='android'] .ai-chat__welcome-chip {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
+/* ── 3. iOS: light blur only (≤4px) on critical elevated surfaces ──────── */
+html[data-platform='ios'] .bottom-nav__inner,
+html[data-platform='ios'] .catalog-concept__sticky,
+html[data-platform='ios'] .app-page-header,
+html[data-platform='ios'] .plan-detail-modal__panel,
+html[data-platform='ios'] .plan-detail-modal__header {
+  -webkit-backdrop-filter: blur(4px) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+html[data-platform='ios'] .catalog-concept__card,
+html[data-platform='ios'] .profile-hub__list-item,
+html[data-platform='ios'] .history-concept__item,
+html[data-platform='ios'] .settings-page__option,
+html[data-platform='ios'] .profile-concept__menu-item,
+html[data-platform='ios'] .referral-page__row,
+html[data-platform='ios'] .media-options__row,
+html[data-platform='ios'] .media-reference,
+html[data-platform='ios'] .ai-variant-select__pill,
+html[data-platform='ios'] .ai-chat__empty,
+html[data-platform='ios'] .ai-chat__welcome-chip {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ── 4. GPU compositing hint for the animated orb layer ─────────────────
+   translateZ(0) promotes the element to its own compositor layer so the
+   drift animation runs on the GPU without triggering main-thread layout. */
 .app-shell__orbs {
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* ── 5. Contain paint on scroll lists to limit repaint area ─────────────
+   `contain: layout paint` means a reflow inside one row won't cascade
+   to neighbouring rows (e.g. when typing indicator updates). */
+html[data-platform='android'] .ai-chat__messages,
+html[data-platform='ios'] .ai-chat__messages {
+  contain: layout;
+}
+
+html[data-platform='android'] .catalog-concept__grid,
+html[data-platform='ios'] .catalog-concept__grid {
+  contain: layout;
+}
+
+/* ── 6. Disable page-enter animation on very small/slow devices ─────────
+   The slide-up animation runs on transform/opacity which are GPU friendly,
+   but on Android WebView the new-page paint + transform together can
+   stutter. Replace with a simple fade. */
+html[data-platform='android'] .app-page-transition {
+  animation: mobile-page-fade-in 0.18s ease both !important;
+}
+
+@keyframes mobile-page-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }

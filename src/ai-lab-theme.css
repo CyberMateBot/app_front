@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    AI LAB THEME — Sep 2026 radical redesign
    Scope: chat / image / video / voice / 3D generation screens.
    Goal: give AI screens a distinctly different visual language from the
@@ -1290,4 +1290,87 @@
     radial-gradient(ellipse 120% 55% at 50% -10%,
       rgba(125, 211, 252, 0.16) 0%, transparent 62%),
     linear-gradient(180deg, #f7f8ff 0%, #eef1fb 100%) !important;
+}
+
+/* ==========================================================================
+   9. Android & iOS Mobile Performance Overrides (AI Lab screens)
+   ==========================================================================
+   ai-lab-theme uses !important on many backdrop-filter declarations so the
+   aurora-theme mobile block cannot override them from lower specificity.
+   This section repeats the overrides at equal or higher specificity and
+   also carries !important to win the cascade.
+   ========================================================================== */
+
+/* ── Android: remove all remaining backdrop-filter (AI screens) ─────────── */
+html[data-platform='android'] .ai-chat-screen--concept .ai-variant-select,
+html[data-platform='android'] .ai-image-screen--concept .ai-variant-select,
+html[data-platform='android'] .ai-video-screen--concept .ai-variant-select,
+html[data-platform='android'] .ai-audio-screen--concept .ai-variant-select,
+html[data-platform='android'] .ai-3d-screen--concept .ai-variant-select {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: color-mix(in srgb, var(--cm-bg) 85%, transparent) !important;
+}
+
+html[data-platform='android'] .ai-chat-screen--concept .ai-chat__welcome-card,
+html[data-platform='android'] .ai-image-screen--concept .ai-chat__welcome-card,
+html[data-platform='android'] .ai-chat-screen--concept .ai-chat__composer,
+html[data-platform='android'] .ai-image-screen--concept .ai-chat__composer,
+html[data-platform='android'] .ai-video-screen--concept .ai-chat__composer,
+html[data-platform='android'] .ai-audio-screen--concept .ai-chat__composer,
+html[data-platform='android'] .ai-3d-screen--concept .ai-chat__composer {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-platform='android'] .ai-image-screen--concept .media-picker,
+html[data-platform='android'] .ai-video-screen--concept .media-picker,
+html[data-platform='android'] .ai-audio-screen--concept .media-picker,
+html[data-platform='android'] .ai-3d-screen--concept .media-picker {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  /* Keep glass look with solid-ish bg instead of blur */
+  background: linear-gradient(135deg, rgba(14, 19, 48, 0.96) 0%, rgba(19, 25, 64, 0.94) 100%) !important;
+}
+
+/* Disable orb animations entirely on Android to reclaim GPU budget */
+html[data-platform='android'] .app-shell__orb,
+html[data-platform='android'] .app-shell__orb--1,
+html[data-platform='android'] .app-shell__orb--2,
+html[data-platform='android'] .app-shell__orb--3,
+html[data-platform='android'] .app-shell__orb--4 {
+  animation: none !important;
+  will-change: auto !important;
+}
+
+/* Disable page-enter animation slide (already done in aurora-theme),
+   also disable card-in stagger on Android to avoid layout + paint cost */
+html[data-platform='android'] .catalog-concept__card,
+html[data-platform='android'] .profile-hub__list-item {
+  animation: none !important;
+}
+
+/* ── iOS: small blur only on the composer + variant select ──────────────── */
+html[data-platform='ios'] .ai-chat-screen--concept .ai-variant-select,
+html[data-platform='ios'] .ai-image-screen--concept .ai-variant-select,
+html[data-platform='ios'] .ai-video-screen--concept .ai-variant-select,
+html[data-platform='ios'] .ai-audio-screen--concept .ai-variant-select,
+html[data-platform='ios'] .ai-3d-screen--concept .ai-variant-select {
+  -webkit-backdrop-filter: blur(4px) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+html[data-platform='ios'] .ai-chat-screen--concept .ai-chat__welcome-card,
+html[data-platform='ios'] .ai-image-screen--concept .ai-chat__welcome-card {
+  -webkit-backdrop-filter: blur(4px) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+html[data-platform='ios'] .ai-image-screen--concept .media-picker,
+html[data-platform='ios'] .ai-video-screen--concept .media-picker,
+html[data-platform='ios'] .ai-audio-screen--concept .media-picker,
+html[data-platform='ios'] .ai-3d-screen--concept .media-picker {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: linear-gradient(135deg, rgba(14, 19, 48, 0.96) 0%, rgba(19, 25, 64, 0.94) 100%) !important;
 }

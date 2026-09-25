@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --shell-bg-start: #0a0b10;
   --shell-bg-end: #0a0b10;
   --panel-soft: rgba(0, 0, 0, 0.18);
@@ -9008,4 +9008,98 @@ html[data-theme='light'][data-tg-desktop-embedded='1'] .plan-detail-modal__panel
   font-size: 10px;
   font-weight: 500;
   color: color-mix(in srgb, var(--cm-accent) 65%, var(--cm-text-muted));
+}
+
+/* ==========================================================================
+   Mobile Performance Overrides (Android & iOS) — App.css layer
+   ==========================================================================
+   App.css uses hardcoded blur() values (not CSS vars) in several places:
+   nav-bar (line ~469), chat composer variant-select (blur(14px)),
+   tg-desktop-expand, wallet modals etc.  We override them here at the end
+   of the file so they beat the earlier declarations.
+   ========================================================================== */
+
+/* ── Shared: reset CSS var tokens so all var()-based blurs collapse ────── */
+html[data-platform='android'],
+html[data-platform='ios'] {
+  --nav-glass-blur: none;
+  --panel-glass-blur: none;
+  --plan-detail-glass-blur: none;
+}
+
+/* ── Android: kill every remaining hardcoded backdrop-filter ─────────── */
+html[data-platform='android'] .bottom-nav__inner,
+html[data-platform='android'] .app-page-header,
+html[data-platform='android'] .catalog-concept__sticky,
+html[data-platform='android'] .plan-detail-modal__panel,
+html[data-platform='android'] .plan-detail-modal__header,
+html[data-platform='android'] .ai-variant-select__pill,
+html[data-platform='android'] .ai-variant-select__track,
+html[data-platform='android'] .tg-desktop-expand,
+html[data-platform='android'] .app-notifications__panel,
+html[data-platform='android'] .wallet-modal__panel,
+html[data-platform='android'] .app-notice {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Variant-select sticky row on chat/image screens */
+html[data-platform='android'] .ai-image-screen--concept .ai-variant-select,
+html[data-platform='android'] .ai-chat-screen--concept .ai-variant-select,
+html[data-platform='android'] .ai-video-screen--concept .ai-variant-select,
+html[data-platform='android'] .ai-audio-screen--concept .ai-variant-select,
+html[data-platform='android'] .ai-3d-screen--concept .ai-variant-select {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: color-mix(in srgb, var(--cm-bg) 88%, transparent) !important;
+}
+
+/* ── iOS: lightweight blur on nav only, none on list items ───────────── */
+html[data-platform='ios'] .bottom-nav__inner,
+html[data-platform='ios'] .app-page-header,
+html[data-platform='ios'] .catalog-concept__sticky {
+  -webkit-backdrop-filter: blur(4px) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+html[data-platform='ios'] .plan-detail-modal__panel,
+html[data-platform='ios'] .plan-detail-modal__header,
+html[data-platform='ios'] .ai-variant-select__pill,
+html[data-platform='ios'] .tg-desktop-expand,
+html[data-platform='ios'] .wallet-modal__panel,
+html[data-platform='ios'] .app-notifications__panel {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-platform='ios'] .ai-image-screen--concept .ai-variant-select,
+html[data-platform='ios'] .ai-chat-screen--concept .ai-variant-select,
+html[data-platform='ios'] .ai-video-screen--concept .ai-variant-select,
+html[data-platform='ios'] .ai-audio-screen--concept .ai-variant-select,
+html[data-platform='ios'] .ai-3d-screen--concept .ai-variant-select {
+  -webkit-backdrop-filter: blur(3px) !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+/* ── Smooth scrolling: promote scroll containers to compositor layer ─── */
+html[data-platform='android'] .ai-chat__messages,
+html[data-platform='ios'] .ai-chat__messages {
+  /* Isolate paint: a bubble rerender won't repaint the whole list */
+  contain: layout;
+  /* Passive scroll on mobile — don't block the compositor */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Reduce transition cost on interactive elements ─────────────────── */
+html[data-platform='android'] .bottom-nav__btn,
+html[data-platform='android'] .catalog-concept__tab,
+html[data-platform='android'] .catalog-concept__chip {
+  transition: opacity 0.12s ease !important;
+  transform: none !important;
+}
+
+html[data-platform='android'] .bottom-nav__btn:active,
+html[data-platform='android'] .catalog-concept__tab:active,
+html[data-platform='android'] .catalog-concept__chip:active {
+  opacity: 0.65 !important;
 }
