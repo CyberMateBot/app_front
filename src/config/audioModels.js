@@ -94,6 +94,32 @@ export const AUDIO_MODEL_DEFINITIONS = [
         backendModel: 'kling-v1-tts',
         group: 'Kling TTS',
     },
+    {
+        id: 'gemini-3.8-flash-tts',
+        nameKey: 'modelGemini38FlashTtsName',
+        subKey: 'modelGemini38FlashTtsSub',
+        tab: 'voice',
+        categories: ['voice'],
+        accent: 'sky',
+        icon: Volume2,
+        badge: 'new',
+        page: 'ai-voice',
+        backendModel: 'gemini-3.8-flash-tts',
+        group: 'Gemini TTS',
+    },
+    {
+        id: 'gemini-3.8-flash-lite-tts',
+        nameKey: 'modelGemini38FlashLiteTtsName',
+        subKey: 'modelGemini38FlashLiteTtsSub',
+        tab: 'voice',
+        categories: ['voice'],
+        accent: 'sky',
+        icon: Volume2,
+        badge: 'new',
+        page: 'ai-voice',
+        backendModel: 'gemini-3.8-flash-lite-tts',
+        group: 'Gemini TTS',
+    },
 ];
 
 AUDIO_MODEL_IDS.forEach((modelId) => {

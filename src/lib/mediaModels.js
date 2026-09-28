@@ -52,6 +52,12 @@ export const IMAGE_GROUP_OVERRIDES = {
         defaultModelId: 'grok-imagine-edit',
         icon: Wand2,
     },
+    'face-enhancer': {
+        nameKey: 'modelFaceEnhancerImageName',
+        subKey: 'modelFaceEnhancerImageSub',
+        defaultModelId: 'face-enhancer-image',
+        icon: Wand2,
+    },
 };
 
 export const VIDEO_GROUP_OVERRIDES = {
@@ -68,7 +74,7 @@ export const VIDEO_GROUP_OVERRIDES = {
     wan: {
         nameKey: 'modelWanGroupName',
         subKey: 'modelWanGroupSub',
-        defaultModelId: 'wan-2.7-t2v',
+        defaultModelId: 'wan-3.0-t2v',
     },
     happyhorse: {
         nameKey: 'modelHappyHorseGroupName',
@@ -88,12 +94,17 @@ export const VIDEO_GROUP_OVERRIDES = {
     vidu: {
         nameKey: 'modelViduGroupName',
         subKey: 'modelViduGroupSub',
-        defaultModelId: 'vidu-q3-i2v-spicy',
+        defaultModelId: 'vidu-q3-turbo-i2v',
     },
     hailuo: {
         nameKey: 'modelHailuoGroupName',
         subKey: 'modelHailuoGroupSub',
-        defaultModelId: 'hailuo-2.3-t2v',
+        defaultModelId: 'minimax-h3-t2v',
+    },
+    'face-enhancer': {
+        nameKey: 'modelFaceEnhancerVideoName',
+        subKey: 'modelFaceEnhancerVideoSub',
+        defaultModelId: 'face-enhancer-video',
     },
 };
 
@@ -279,6 +290,12 @@ export const AUDIO_GROUP_OVERRIDES = {
         subKey: 'modelAceStepSub',
         defaultModelId: 'ace-step-1.5',
         icon: Music2,
+    },
+    'Gemini TTS': {
+        nameKey: 'modelGeminiTtsGroupName',
+        subKey: 'modelGeminiTtsGroupSub',
+        defaultModelId: 'gemini-3.8-flash-tts',
+        icon: Volume2,
     },
 };
 

@@ -63,7 +63,7 @@ const Z_IMAGE_BASE_OPTIONS = {
 
 export function isSeedreamImageModel(modelId) {
     const id = String(modelId || '').trim();
-    return id === 'seedream-v4.5' || id === 'seedream-v5.0-lite';
+    return id.startsWith('seedream-');
 }
 
 export function getSeedreamDimensionsForAspect(aspectRatio) {
@@ -182,6 +182,20 @@ export const IMAGE_MODEL_CAPABILITIES = {
             outputFormat: { values: ['png'], default: 'png' },
         },
     },
+    'gpt-image-2.5-flare': {
+        supportsEdit: true,
+        options: {
+            aspectRatio: { values: GPT_ASPECT_RATIOS, default: '1:1' },
+            outputFormat: { values: ['png'], default: 'png' },
+        },
+    },
+    'gpt-image-2.5-sunburst': {
+        supportsEdit: true,
+        options: {
+            aspectRatio: { values: GPT_ASPECT_RATIOS, default: '16:9' },
+            outputFormat: { values: ['png'], default: 'png' },
+        },
+    },
     'flux-dev': {
         supportsEdit: true,
         options: {
@@ -219,6 +233,33 @@ export const IMAGE_MODEL_CAPABILITIES = {
             dimensions: { min: 512, max: SEEDREAM_DIMENSIONS_MAX, defaultWidth: 2048, defaultHeight: 2048 },
             outputFormat: { values: ['jpeg', 'png', 'webp'], default: 'jpeg' },
         },
+    },
+    'seedream-v5.0-pro': {
+        supportsEdit: true,
+        supportsMulti: true,
+        options: {
+            aspectRatio: {
+                values: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'],
+                default: '1:1',
+            },
+            dimensions: { min: 512, max: SEEDREAM_DIMENSIONS_MAX, defaultWidth: 2048, defaultHeight: 2048 },
+            outputFormat: { values: ['jpeg', 'png', 'webp'], default: 'jpeg' },
+        },
+    },
+    'seedream-v5.0-flash': {
+        supportsEdit: true,
+        options: {
+            aspectRatio: {
+                values: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'],
+                default: '1:1',
+            },
+            dimensions: { min: 512, max: SEEDREAM_DIMENSIONS_MAX, defaultWidth: 2048, defaultHeight: 2048 },
+            outputFormat: { values: ['jpeg', 'png', 'webp'], default: 'jpeg' },
+        },
+    },
+    'face-enhancer-image': {
+        supportsEdit: true,
+        options: {},
     },
     'qwen-image': {
         options: {
@@ -658,6 +699,116 @@ export const VIDEO_MODEL_CAPABILITIES = {
             enablePromptExpansion: { default: true },
         },
     },
+    'vidu-q3-pro-i2v': {
+        requiresImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+            generateAudio: { default: true },
+        },
+    },
+    'vidu-q3-turbo-i2v': {
+        requiresImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['540p', '720p'], default: '720p' },
+            generateAudio: { default: true },
+        },
+    },
+    'wan-3.0-t2v': {
+        supportsOptionalImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+        },
+    },
+    'wan-3.0-i2v': {
+        requiresImage: true,
+        options: {
+            duration: { values: [5], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+        },
+    },
+    'wan-3.0-ref2v': {
+        requiresImage: true,
+        options: {
+            duration: { values: [5], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+        },
+    },
+    'wan-3.0-prime-t2v': {
+        supportsOptionalImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '1080p' },
+        },
+    },
+    'wan-3.0-prime-i2v': {
+        requiresImage: true,
+        options: {
+            duration: { values: [5], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '1080p' },
+        },
+    },
+    'seedance-2.5-t2v': {
+        supportsOptionalImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+        },
+    },
+    'seedance-2.5-i2v': {
+        requiresImage: true,
+        options: {
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+        },
+    },
+    'seedance-2.5-talking-avatar': {
+        requiresImage: true,
+        options: {},
+    },
+    'seedance-2.5-video-edit': {
+        requiresVideo: true,
+        options: {},
+    },
+    'seedance-2.5-video-extend': {
+        requiresVideo: true,
+        options: {
+            duration: { values: [5], default: 5 },
+        },
+    },
+    'minimax-h3-t2v': {
+        supportsOptionalImage: true,
+        options: {
+            aspectRatio: { values: ['16:9', '9:16', '1:1'], default: '16:9' },
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+        },
+    },
+    'minimax-h3-i2v': {
+        requiresImage: true,
+        options: {
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '720p' },
+        },
+    },
+    'minimax-h3-singularity-i2v': {
+        requiresImage: true,
+        options: {
+            duration: { values: [5, 10], default: 5 },
+            resolution: { values: ['720p', '1080p'], default: '1080p' },
+        },
+    },
+    'face-enhancer-video': {
+        requiresVideo: true,
+        options: {},
+    },
 };
 
 function buildDefaults(capabilities) {
@@ -910,6 +1061,18 @@ export const AUDIO_MODEL_CAPABILITIES = {
             duration: { values: [30, 60, 120, 180, 240], presets: [30, 60, 120], default: 60 },
         },
     },
+    'gemini-3.8-flash-tts': {
+        options: {
+            voice: { values: ['Puck', 'Charon', 'Kore', 'Fenrir', 'Aoede'], default: 'Puck' },
+            speed: { values: ['0.8', '1.0', '1.2', '1.5'], default: '1.0' },
+        },
+    },
+    'gemini-3.8-flash-lite-tts': {
+        options: {
+            voice: { values: ['Puck', 'Charon', 'Kore', 'Fenrir', 'Aoede'], default: 'Puck' },
+            speed: { values: ['0.8', '1.0', '1.2', '1.5'], default: '1.0' },
+        },
+    },
 };
 
 export function getVideoModelCapabilities(modelId) {
@@ -995,6 +1158,21 @@ export const THREE_D_MODEL_CAPABILITIES = {
         },
     },
     'meshy6-t2d': {
+        options: {
+            mode: { values: ['full', 'preview'], default: 'full' },
+            artStyle: { values: ['realistic', 'sculpture'], default: 'realistic' },
+            topology: { values: ['quad', 'triangle'], default: 'quad' },
+        },
+    },
+    'meshy7.1-t2d': {
+        options: {
+            mode: { values: ['full', 'preview'], default: 'full' },
+            artStyle: { values: ['realistic', 'sculpture'], default: 'realistic' },
+            topology: { values: ['quad', 'triangle'], default: 'quad' },
+        },
+    },
+    'meshy7.1-i2d': {
+        requiresImage: true,
         options: {
             mode: { values: ['full', 'preview'], default: 'full' },
             artStyle: { values: ['realistic', 'sculpture'], default: 'realistic' },

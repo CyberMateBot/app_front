@@ -1,6 +1,6 @@
 import { getModelPrice } from './modelPrices.js';
 import { annotateModelOption } from './planGating.js';
-import { getMediaModelMinPrice } from './mediaGenerationPrice.js';
+import { getMediaModelDefaultPrice } from './mediaGenerationPrice.js';
 import { videoModelRequiresImage, videoModelRequiresVideo } from './videoModels.js';
 import { imageModelSupportsEdit } from '../config/mediaModelOptions.js';
 
@@ -71,7 +71,7 @@ function resolveMediaVariantPrice(modelId, mediaModelsCatalog, kind, priceResolv
     }
 
     const catalogModel = mediaModelsCatalog[modelId] ?? { id: modelId, kind };
-    return getMediaModelMinPrice(catalogModel);
+    return getMediaModelDefaultPrice(catalogModel, kind);
 }
 
 export function getAiVariantOptions(

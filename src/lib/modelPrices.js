@@ -61,6 +61,11 @@ const MODEL_PRICES = {
     'grok-imagine-edit': 25,
     'kling-image-o3': 14,
     'kling-image-v3': 14,
+    'gpt-image-2.5-flare': 3,
+    'gpt-image-2.5-sunburst': 6,
+    'seedream-v5.0-pro': 14,
+    'seedream-v5.0-flash': 8,
+    'face-enhancer-image': 6,
 
     // Video models — base = 5-second default. Options / higher resolution
     // are surcharged on the backend by video_option_prices.go.
@@ -87,6 +92,11 @@ const MODEL_PRICES = {
     'seedance-v1.5-i2v-spicy': 223,
     'seedance-v2-video-edit': 223,
     'seedance-v2-video-extend': 223,
+    'seedance-2.5-t2v': 220,
+    'seedance-2.5-i2v': 220,
+    'seedance-2.5-talking-avatar': 150,
+    'seedance-2.5-video-edit': 220,
+    'seedance-2.5-video-extend': 220,
     'wan-2.5-t2v': 149,
     'wan-2.6-i2v': 149,
     'wan-2.2-spicy-i2v': 149,
@@ -94,6 +104,11 @@ const MODEL_PRICES = {
     'wan-2.7-flf': 149,
     'wan-2.7-grid': 149,
     'wan-2.7-edit': 223,
+    'wan-3.0-t2v': 65,
+    'wan-3.0-i2v': 65,
+    'wan-3.0-ref2v': 75,
+    'wan-3.0-prime-t2v': 105,
+    'wan-3.0-prime-i2v': 105,
     'happyhorse-t2v': 223,
     'happyhorse-i2v': 223,
     'happyhorse-ref2v': 223,
@@ -103,10 +118,16 @@ const MODEL_PRICES = {
     'sora-2-i2v': 149,
     'sora-2-t2v-pro': 250,
     'veo-3.1-extend': 312,
-    'vidu-q3-i2v-spicy': 238,
+    'vidu-q3-i2v-spicy': 185,
+    'vidu-q3-pro-i2v': 185,
+    'vidu-q3-turbo-i2v': 100,
     'hailuo-2.3-t2v': 44,
     'hailuo-2.3-i2v-fast': 36,
     'hailuo-2.3-i2v-pro': 93,
+    'minimax-h3-t2v': 55,
+    'minimax-h3-i2v': 55,
+    'minimax-h3-singularity-i2v': 65,
+    'face-enhancer-video': 60,
 
     // Audio / TTS.
     'qwen3-tts': 4,
@@ -118,6 +139,8 @@ const MODEL_PRICES = {
     'mureka-v9': 50,
     'ace-step-1.5': 40,
     'kling-v1-tts': 4,
+    'gemini-3.8-flash-tts': 3,
+    'gemini-3.8-flash-lite-tts': 2,
 
     // 3D models.
     'hunyuan3d-v3.1-rapid': 25,
@@ -128,6 +151,8 @@ const MODEL_PRICES = {
     'tripo3d-h3.1-t2d': 55,
     'tripo3d-h3.1-i2d': 55,
     'meshy6-t2d': 48,
+    'meshy7.1-t2d': 50,
+    'meshy7.1-i2d': 50,
     'rodin-v2-i2d': 55,
     'rodin-v2.5-i2d': 55,
 };
@@ -188,7 +213,7 @@ export function formatCatalogPriceLabel({ min, max }, language = 'ru') {
         return `${min}`;
     }
 
-    return language === 'ru' ? `от ${min}` : `from ${min}`;
+    return language === 'ru' ? `От ${min}` : `From ${min}`;
 }
 
 export function formatVariantPriceLabel(price, language = 'ru') {

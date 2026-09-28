@@ -234,6 +234,21 @@ export function getMediaModelMinPrice(model) {
 }
 
 /**
+ * Returns the default base starting price for a model without hypothetical option discounts.
+ * @param {import('./types').MediaModel | null | undefined} model
+ * @param {'image'|'video'|'audio'|'3d'} [fallbackKind]
+ */
+export function getMediaModelDefaultPrice(model, fallbackKind = 'image') {
+    const modelId = model?.id ?? '';
+    const kind = model?.kind ?? fallbackKind;
+    if (typeof model?.price === 'number' && model.price > 0) {
+        return model.price;
+    }
+    return getModelPrice(modelId, kind === '3d' ? '3d' : kind);
+}
+
+
+/**
  * @param {import('./types').MediaModel | null | undefined} model
  * @param {string} optionKey
  * @param {unknown} value
