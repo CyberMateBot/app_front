@@ -9056,8 +9056,7 @@ html[data-platform='android'] .ai-3d-screen--concept .ai-variant-select {
 
 /* ── iOS: lightweight blur on nav only, none on list items ───────────── */
 html[data-platform='ios'] .bottom-nav__inner,
-html[data-platform='ios'] .app-page-header,
-html[data-platform='ios'] .catalog-concept__sticky {
+html[data-platform='ios'] .app-page-header {
   -webkit-backdrop-filter: blur(4px) !important;
   backdrop-filter: blur(4px) !important;
 }

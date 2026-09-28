@@ -682,15 +682,11 @@
    and cut the tint from 18% to a very subtle 6% so the bar reads as a
    thin glass film rather than a solid slab. Blur is kept so ghost text
    from cards scrolling behind it still smears out. */
-:root:not([data-theme='light']) .app-shell[data-page='catalog'] .catalog-concept__sticky {
-  background: color-mix(in srgb, #05061a 12%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
+:root:not([data-theme='light']) .app-shell[data-page='catalog'] .catalog-concept__sticky,
 :root[data-theme='light'] .app-shell[data-page='catalog'] .catalog-concept__sticky {
-  background: color-mix(in srgb, #f5f7ff 22%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 .catalog-concept__sticky > .catalog-concept__search {
   margin-top: 4px;
@@ -2373,7 +2369,6 @@ html[data-platform='android'] .ai-chat__welcome-chip {
 
 /* ── 3. iOS: light blur only (≤4px) on critical elevated surfaces ──────── */
 html[data-platform='ios'] .bottom-nav__inner,
-html[data-platform='ios'] .catalog-concept__sticky,
 html[data-platform='ios'] .app-page-header,
 html[data-platform='ios'] .plan-detail-modal__panel,
 html[data-platform='ios'] .plan-detail-modal__header {
