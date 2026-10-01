@@ -988,11 +988,14 @@
 
 .ai-chat-screen--concept .ai-chat__input,
 .ai-image-screen--concept .ai-chat__input,
-.ai-image-screen--concept .ai-video__prompt {
+.ai-image-screen--concept .ai-video__prompt,
+.ai-chat__composer-field textarea,
+.ai-video__composer-field textarea {
   flex: 1 1 auto !important;
   width: 100% !important;
   min-height: 30px !important;
-  max-height: 96px !important;
+  max-height: 120px !important;
+  field-sizing: content;
   padding: 5px 4px !important;
   font-size: 14px !important;
   line-height: 1.35 !important;
@@ -1002,36 +1005,70 @@
   box-shadow: none !important;
   outline: none !important;
   resize: none !important;
-  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
   appearance: none !important;
   -webkit-appearance: none !important;
-  scrollbar-width: none !important;
-  -webkit-overflow-scrolling: auto !important;
-  touch-action: manipulation !important;
-  overscroll-behavior: contain !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  overscroll-behavior-y: contain !important;
 }
-/* Kill every webkit-drawn decoration on textareas that could look
-   like the diagonal "//" strip users kept spotting. `resize:none`
-   alone doesn't always suffice on Telegram WebView; here we also
-   nuke the scrollbar corner + the scrollbar itself. */
+/* Kill webkit-drawn resize handle and scrollbar corners */
 .ai-chat-screen--concept .ai-chat__input::-webkit-resizer,
 .ai-image-screen--concept .ai-chat__input::-webkit-resizer,
 .ai-image-screen--concept .ai-video__prompt::-webkit-resizer,
+.ai-chat__composer-field textarea::-webkit-resizer,
+.ai-video__composer-field textarea::-webkit-resizer,
 .ai-chat-screen--concept .ai-chat__input::-webkit-scrollbar-corner,
 .ai-image-screen--concept .ai-chat__input::-webkit-scrollbar-corner,
 .ai-image-screen--concept .ai-video__prompt::-webkit-scrollbar-corner,
-.ai-chat-screen--concept .ai-chat__input::-webkit-scrollbar,
-.ai-image-screen--concept .ai-chat__input::-webkit-scrollbar,
-.ai-image-screen--concept .ai-video__prompt::-webkit-scrollbar {
+.ai-chat__composer-field textarea::-webkit-scrollbar-corner,
+.ai-video__composer-field textarea::-webkit-scrollbar-corner {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
   background: transparent !important;
   -webkit-appearance: none !important;
 }
+/* Subtle sleek scrollbar so user can scroll through long prompts */
+.ai-chat-screen--concept .ai-chat__input::-webkit-scrollbar,
+.ai-image-screen--concept .ai-chat__input::-webkit-scrollbar,
+.ai-image-screen--concept .ai-video__prompt::-webkit-scrollbar,
+.ai-chat__composer-field textarea::-webkit-scrollbar,
+.ai-video__composer-field textarea::-webkit-scrollbar {
+  display: block !important;
+  width: 4px !important;
+  background: transparent !important;
+}
+.ai-chat-screen--concept .ai-chat__input::-webkit-scrollbar-track,
+.ai-image-screen--concept .ai-chat__input::-webkit-scrollbar-track,
+.ai-image-screen--concept .ai-video__prompt::-webkit-scrollbar-track,
+.ai-chat__composer-field textarea::-webkit-scrollbar-track,
+.ai-video__composer-field textarea::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.ai-chat-screen--concept .ai-chat__input::-webkit-scrollbar-thumb,
+.ai-image-screen--concept .ai-chat__input::-webkit-scrollbar-thumb,
+.ai-image-screen--concept .ai-video__prompt::-webkit-scrollbar-thumb,
+.ai-chat__composer-field textarea::-webkit-scrollbar-thumb,
+.ai-video__composer-field textarea::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28) !important;
+  border-radius: 4px !important;
+}
+.ai-chat-screen--concept .ai-chat__input::-webkit-scrollbar-thumb:hover,
+.ai-image-screen--concept .ai-chat__input::-webkit-scrollbar-thumb:hover,
+.ai-image-screen--concept .ai-video__prompt::-webkit-scrollbar-thumb:hover,
+.ai-chat__composer-field textarea::-webkit-scrollbar-thumb:hover,
+.ai-video__composer-field textarea::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45) !important;
+}
 .ai-chat-screen--concept .ai-chat__input::placeholder,
 .ai-image-screen--concept .ai-chat__input::placeholder,
-.ai-image-screen--concept .ai-video__prompt::placeholder {
+.ai-image-screen--concept .ai-video__prompt::placeholder,
+.ai-chat__composer-field textarea::placeholder,
+.ai-video__composer-field textarea::placeholder {
   color: rgba(255, 255, 255, 0.42) !important;
 }
 

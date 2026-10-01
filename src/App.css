@@ -6702,7 +6702,14 @@
   flex: 1;
   min-height: 40px;
   max-height: 140px;
+  field-sizing: content;
   resize: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
   padding: 10px 4px;
   border-radius: 0;
   border: none;
