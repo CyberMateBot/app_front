@@ -171,6 +171,7 @@ import AiVariantSelect from './Components/AiVariantSelect.jsx';
 import ChatMessageBubble from './Components/ChatMessageBubble.jsx';
 import MediaMessageBubble from './Components/MediaMessageBubble.jsx';
 import MediaModelOptionsBar from './Components/MediaModelOptionsBar.jsx';
+import PromptTextarea from './Components/PromptTextarea.jsx';
 import {
     IMAGE_MODEL_DEFINITIONS,
 } from './config/aiModels.js';
@@ -7008,13 +7009,12 @@ function App() {
                                 </button>
                             </div>
                         ) : null}
-                        <textarea
+                        <PromptTextarea
                             className="ai-chat__input"
                             value={textPrompt}
                             onChange={(event) => setTextPrompt(event.target.value)}
                             onKeyDown={handleChatComposerKeyDown}
                             placeholder={text.chatPlaceholder}
-                            rows={2}
                             disabled={isGeneratingText}
                         />
                     </div>
@@ -7286,14 +7286,13 @@ function App() {
                                 </button>
                             </div>
                         ) : null}
-                        <textarea
+                        <PromptTextarea
                             id="ai-image-prompt"
                             className="ai-chat__input"
                             value={imagePrompt}
                             onChange={(event) => setImagePrompt(event.target.value)}
                             onKeyDown={handleImageComposerKeyDown}
                             placeholder={promptPlaceholder}
-                            rows={2}
                             disabled={isGeneratingImage}
                         />
                     </div>
@@ -7607,14 +7606,13 @@ function App() {
 
                 <footer className="ai-video__composer">
                     <div className="ai-video__composer-field">
-                        <textarea
+                        <PromptTextarea
                             id="ai-video-prompt"
                             className="ai-video__prompt"
                             aria-label={text.videoPromptLabel}
                             value={videoPrompt}
                             onChange={(event) => setVideoPrompt(event.target.value)}
                             placeholder={promptPlaceholder}
-                            rows={2}
                             disabled={isGeneratingVideo}
                         />
                     </div>
@@ -7872,14 +7870,13 @@ function App() {
                                 </button>
                             </div>
                         ) : null}
-                        <textarea
+                        <PromptTextarea
                             id="ai-voice-prompt"
                             className="ai-chat__input"
                             value={audioPrompt}
                             onChange={(event) => setAudioPrompt(event.target.value)}
                             onKeyDown={handleAudioComposerKeyDown}
                             placeholder={promptPlaceholder}
-                            rows={2}
                             disabled={isGeneratingAudio}
                         />
                     </div>
@@ -8108,14 +8105,13 @@ function App() {
                             </div>
                         ) : null}
 
-                        <textarea
+                        <PromptTextarea
                             id="ai-3d-prompt"
                             className="ai-video__prompt"
                             aria-label={promptOptional ? `${text.threeDPromptLabel} (${language === 'ru' ? 'опционально' : 'optional'})` : text.threeDPromptLabel}
                             value={threeDPrompt}
                             onChange={(event) => setThreeDPrompt(event.target.value)}
                             placeholder={text.threeDPromptPlaceholder}
-                            rows={2}
                             disabled={isGeneratingThreeD}
                         />
                     </div>
